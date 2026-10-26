@@ -1,0 +1,3 @@
+# Copy to config/local.neon (gitignored) for machine-specific overrides.
+parameters:
+	locale: cs

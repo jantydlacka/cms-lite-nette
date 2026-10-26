@@ -1,0 +1,3 @@
+# Loaded after common.neon/services.neon by App\Bootstrap::bootForTests().
+services:
+	tracy.logger: Tests\FakeLogger

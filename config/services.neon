@@ -1,0 +1,7 @@
+services:
+	router: App\Core\RouterFactory::createRouter
+
+decorator:
+	App\Presentation\BasePresenter:
+		setup:
+			- setLocale(%locale%)
