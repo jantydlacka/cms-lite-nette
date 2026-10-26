@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Fails when a migration that exists in <base> was modified, deleted, renamed or changed type.
+# Added files are fine. Usage: bin/check-migrations-immutable [base]   (default: origin/main)
+set -eu
+
+base="${1:-origin/main}"
+cd "$(git rev-parse --show-toplevel)"
+
+if ! git rev-parse --verify --quiet "${base}^{commit}" > /dev/null; then
+	echo "ERROR: base '${base}' not found" >&2
+	exit 2
+fi
+
+changed="$(git diff --name-status --diff-filter=MDRT "${base}...HEAD" -- migrations/)"
+if [ -n "$changed" ]; then
+	echo "ERROR: released migrations must not be edited, deleted or renamed (write a new migration):" >&2
+	echo "$changed" >&2
+	exit 1
+fi

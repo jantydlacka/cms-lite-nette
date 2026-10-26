@@ -224,6 +224,18 @@ test('/en/ without an English homepage is not found', function () use ($app): vo
 });
 
 
+test('/en/ renders the English homepage once its translation is published', function () use ($app): void {
+	$home = (int) $app->container->getByType(SettingRepository::class)->get('homepage');
+	$app->container->getByType(PageService::class)->saveTranslation(new SavePageTranslation($home, 'en', 'Home', 'home', 'Text of **Home**.', 'About Home', PublicationStatus::Published));
+
+	$result = $app->get('/en/');
+
+	Assert::same(200, $result->code);
+	Assert::same('Home', $result->text('page-title'));
+	Assert::contains('<html lang="en">', $result->body);
+});
+
+
 test('a Czech path under /en/ is not found, without a fallback language', function () use ($app): void {
 	assertNotFound($app->get('/en/o-nas'));
 });

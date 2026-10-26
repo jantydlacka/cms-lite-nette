@@ -48,7 +48,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Independent of the PHP version, so one matrix job is enough.
       - name: Check released migrations are unchanged
+        if: ${{ matrix.php == '8.4' }}
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
@@ -59,6 +61,8 @@ jobs:
             base="origin/${BASE_REF}"
           elif [ -n "$BEFORE" ] && [ "$BEFORE" != 0000000000000000000000000000000000000000 ] && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
             base="$BEFORE"
+          elif git rev-parse --verify --quiet origin/main > /dev/null; then
+            base="$(git merge-base origin/main HEAD)"
           else
             base="HEAD~1"
           fi

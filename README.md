@@ -24,6 +24,8 @@ docker compose exec app bin/console migrations:continue
 
 Migration files are ordered by file name across all groups (`structures`, `basic-data`, `dummy-data`), not per group: a new file must sort after the latest one already executed (use the next date/number prefix), or the runner refuses it.
 
+Released migrations are never edited; a fix is always a new migration.
+
 Then open <http://localhost:8080>.
 
 On Linux the `.env` line matters: the container runs as `CMS_UID:CMS_GID` (default `1000:1000`), and files it creates in the bind-mounted project belong to that user. `.env` must contain the actual numbers (Compose does not evaluate `$(id -u)` inside `.env`); the command above writes them (it replaces any earlier `CMS_UID`/`CMS_GID` lines, so running it twice adds no duplicates).
@@ -86,7 +88,7 @@ E2E_BASE_URL=http://localhost:8080 npx playwright test
 
 Set `E2E_BASE_URL` to your `CMS_HTTP_PORT`. Against a debug-mode stack (`NETTE_DEBUG=1`) the 404 checks fail and the Tracy bar logs console errors; add `E2E_IGNORE_CONSOLE_PATTERN=_tracy_bar` to skip those, see [`spec/README.md`](spec/README.md). Return to development mode with `unset NETTE_DEBUG CMS_DEMO_DATA; rm -rf temp/cache; docker compose up -d --wait`.
 
-The pre-push hook and CI also run `bin/check-migrations-immutable [base]`, which fails when a migration that exists in the base branch was modified, deleted or renamed. The hook compares against `origin/main` and prints a warning and skips the check when that ref does not exist.
+The pre-push hook and CI also run `bin/check-migrations-immutable [base]`, which fails when a migration that exists in the base branch was modified, deleted or renamed. The hook compares against `origin/main`; without it, against the merge base with the local `main` branch. It prints a warning and skips the check when neither exists or when `main` itself is checked out.
 
 ## Deployment note
 
