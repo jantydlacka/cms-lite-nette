@@ -73,8 +73,10 @@ End-to-end tests run from the host against a running stack and need Node.js 20 o
 
 ```bash
 cd e2e && npm ci && npx playwright install chromium
-E2E_BASE_URL=http://localhost:8080 npx playwright test
+E2E_BASE_URL=http://localhost:8080 E2E_IGNORE_CONSOLE_PATTERN=_tracy_bar npx playwright test
 ```
+
+`E2E_IGNORE_CONSOLE_PATTERN` skips console errors of the Tracy debug bar, which is present in debug mode; see [`spec/README.md`](spec/README.md).
 
 ## Deployment note
 

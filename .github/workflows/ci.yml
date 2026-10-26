@@ -127,6 +127,8 @@ jobs:
         working-directory: e2e
         env:
           E2E_BASE_URL: http://localhost:8080
+          # The debug bar of the dev stack logs its own storage errors.
+          E2E_IGNORE_CONSOLE_PATTERN: _tracy_bar
         run: npx playwright test
 
       - name: Upload Playwright report

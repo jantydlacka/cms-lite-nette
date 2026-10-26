@@ -1,5 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 
+/**
+ * Optional regex (E2E_IGNORE_CONSOLE_PATTERN) for browser errors raised by an implementation's
+ * development tooling rather than by the page itself; such errors are not part of the contract.
+ */
+const ignoredConsole = process.env.E2E_IGNORE_CONSOLE_PATTERN ? new RegExp(process.env.E2E_IGNORE_CONSOLE_PATTERN) : null;
+
 const theme = (page: Page) => page.evaluate(() => document.documentElement.dataset.theme);
 
 /** Records data-theme at DOMContentLoaded, i.e. in the first rendered DOM. */
@@ -19,6 +25,11 @@ test('site name is visible', async ({ page }) => {
 	await expect(page.getByTestId('site-name')).toBeVisible();
 });
 
+test('homepage shows its main heading', async ({ page }) => {
+	await page.goto('/');
+	await expect(page.getByTestId('home-title')).toHaveText('Vítejte');
+});
+
 test('theme toggle changes the theme and the choice survives a reload', async ({ page }) => {
 	await page.goto('/');
 	const before = await theme(page);
@@ -35,6 +46,8 @@ test('toggle switches dark to light and keeps aria-pressed in sync', async ({ pa
 	await page.evaluate(() => localStorage.setItem('cms-theme', 'dark'));
 	await page.reload();
 	const toggle = page.getByTestId('theme-toggle');
+	// The accessible name names the dark mode, so aria-pressed reads as "dark mode on/off".
+	await expect(toggle).toHaveAccessibleName('Tmavý režim');
 	expect(await theme(page)).toBe('dark');
 	await expect(toggle).toHaveAttribute('aria-pressed', 'true');
 
@@ -71,8 +84,7 @@ test.describe('localStorage unavailable', () => {
 		expect(await theme(page)).toBe('light');
 		await page.waitForTimeout(300);
 
-		// The debug bar (dev mode only) is not ours and does not guard its own storage access.
-		expect(errors.filter((message) => !message.includes('_tracy_bar'))).toEqual([]);
+		expect(errors.filter((message) => ignoredConsole === null || !ignoredConsole.test(message))).toEqual([]);
 	});
 });
 
