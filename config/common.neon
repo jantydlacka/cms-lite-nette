@@ -1,8 +1,14 @@
 includes:
 	- console.neon
 
+extensions:
+	cms: App\Core\DI\CmsExtension
+
 parameters:
 	locale: cs
+
+cms:
+	siteName: CMS Lite # placeholder, override in config/local.neon
 
 application:
 	errorPresenter:

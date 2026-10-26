@@ -1,0 +1,20 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Model;
+
+final readonly class CmsConfig
+{
+	/**
+	 * @param list<string> $locales
+	 */
+	public function __construct(
+		public string $siteName,
+		public string $defaultLocale,
+		public array $locales,
+		public int $newsPerPage,
+		public bool $demoData,
+	) {
+	}
+}
