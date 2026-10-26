@@ -5,7 +5,7 @@
 
 A small, well-structured CMS built on [Nette](https://nette.org): pages, news, images and a contact form. It is the first of a planned family, `cms-lite-<framework>`: every implementation follows the same specification in [`spec/`](spec/) and is checked by the same browser-level end-to-end suite in `e2e/`.
 
-Status: phase 1 (skeleton) is done - application bootstrap, Docker setup, migrations, translator, clock, a homepage layout with light/dark theme, quality gate and CI configuration. Pages, news, images and the contact form come in later phases. The CI workflow is configured but has not run yet, so there are no published runs.
+Status: phase 1 (skeleton) is done - application bootstrap, Docker setup, migrations, translator, clock, a homepage layout with light/dark theme, quality gate and CI configuration. Pages, news, images and the contact form come in later phases. The CI workflow is configured but has not run yet, so there are no published runs, and the coverage badge shows as broken until the first CI run on `main` publishes it.
 
 ## Quick start
 
@@ -14,6 +14,8 @@ Requires only Docker (with Compose).
 ```bash
 git clone https://github.com/jantydlacka/cms-lite-nette.git
 cd cms-lite-nette
+# Linux: run the app container as your user, so vendor/, temp/ and log/ stay yours
+printf 'CMS_UID=%s\nCMS_GID=%s\n' "$(id -u)" "$(id -g)" >> .env
 docker compose up -d --build
 docker compose exec app composer install
 docker compose up -d --wait
@@ -22,16 +24,30 @@ docker compose exec app bin/console migrations:continue
 
 Then open <http://localhost:8080>.
 
+On Linux the `.env` line matters: the container runs as `CMS_UID:CMS_GID` (default `1000:1000`), and files it creates in the bind-mounted project belong to that user. `.env` must contain the actual numbers (Compose does not evaluate `$(id -u)` inside `.env`); the `printf` above writes them.
+
 The order matters: the container health check requests the homepage, which needs `vendor/`, so the first `up` cannot become healthy until `composer install` has run; the second `up -d --wait` waits for that.
 
-Host ports can be changed in a `.env` file next to `docker-compose.yml`:
+Both ports are published on `127.0.0.1` only. They can be changed in `.env`:
 
 ```
 CMS_HTTP_PORT=8081
-CMS_DB_PORT=3308
+CMS_DB_HOST_PORT=3308
 ```
 
 Optional `config/local.neon` (gitignored) is loaded when present, for machine-specific overrides.
+
+### Environment variables
+
+| Variable | Used by | Meaning |
+| --- | --- | --- |
+| `CMS_UID`, `CMS_GID` | Compose | User and group the app container runs as; default `1000`. |
+| `CMS_HTTP_PORT` | Compose | Host port of the web server; default `8080`. |
+| `CMS_DB_HOST_PORT` | Compose | Host port of the bundled MySQL; default `3307`. |
+| `MYSQL_ROOT_PASSWORD` | Compose | Root password of the bundled MySQL, also passed to the app as `CMS_DB_PASSWORD`; default `root`. |
+| `NETTE_DEBUG` | App | `1` = debug mode (Tracy, translator in strict mode); any other value or unset = production. Compose sets `1` unless overridden. |
+| `CMS_DEMO_DATA` | App | `1` = migrations include demo data, any other value = no demo data; unset follows debug mode. |
+| `CMS_DB_HOST`, `CMS_DB_PORT`, `CMS_DB_NAME`, `CMS_DB_USER`, `CMS_DB_PASSWORD` | App | Database connection. Compose sets them for the bundled MySQL (`CMS_DB_PORT` is the port inside the Docker network, `3306`, not the host port). In debug mode unset or empty values fall back to `127.0.0.1`, `3306`, `cms`, `root`, `root`; in production every one must be set and non-empty, otherwise the application refuses to boot. |
 
 ### Development mode
 
@@ -45,7 +61,7 @@ Everything runs inside the container:
 docker compose exec app composer qa
 ```
 
-`composer qa` runs lint (PHP, NEON, Latte), coding standard, PHPStan at level max without a baseline, Psalm taint analysis, the Nette Tester suite (which includes the architecture rules) and the forbidden-words check. Psalm taint analysis covers SQL, file paths and shell commands; it does not cover XSS, which Latte's autoescaping handles.
+`composer qa` runs lint (PHP, NEON, Latte), coding standard, PHPStan at level max without a baseline, Psalm taint analysis, the forbidden-words check and the Nette Tester suite (which includes the architecture rules); `composer qa:checks` runs everything except the test suite. Psalm taint analysis covers SQL, file paths and shell commands; it does not cover XSS, which Latte's autoescaping handles.
 
 Install the git hooks (pre-commit and pre-push run parts of the gate):
 
@@ -53,7 +69,7 @@ Install the git hooks (pre-commit and pre-push run parts of the gate):
 docker compose exec app composer hooks:install
 ```
 
-End-to-end tests run from the host against a running stack:
+End-to-end tests run from the host against a running stack and need Node.js 20 or newer on the host (only for these tests):
 
 ```bash
 cd e2e && npm ci && npx playwright install chromium
