@@ -1,0 +1,17 @@
+extensions:
+	console: Contributte\Console\DI\ConsoleExtension(%consoleMode%)
+	migrations: Nextras\Migrations\Bridges\NetteDI\MigrationsExtension
+
+console:
+	name: cms-lite-nette
+
+migrations:
+	dir: %appDir%/../migrations
+	driver: mysql
+	dbal: nette
+	withDummyData: %demoData%
+
+database:
+	dsn: 'mysql:host=%dbHost%;dbname=%dbName%'
+	user: %dbUser%
+	password: %dbPassword%

@@ -1,3 +1,6 @@
+includes:
+	- console.neon
+
 parameters:
 	locale: cs
 
