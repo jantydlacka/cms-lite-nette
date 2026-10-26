@@ -145,9 +145,10 @@ final class Bootstrap
 	{
 		$configurator = new Configurator();
 		$configurator->setDebugMode($debugMode);
+		$demoData = self::isDemoData(getenv('CMS_DEMO_DATA'), $debugMode);
 		$configurator->addStaticParameters([
 			'wwwDir' => self::ROOT . '/www',
-			'demoData' => self::isDemoData(getenv('CMS_DEMO_DATA'), $debugMode),
+			'demoData' => $demoData,
 		]);
 		// Dynamic, so credentials stay out of the compiled container cache.
 		$env = [];
@@ -158,6 +159,10 @@ final class Bootstrap
 		$configurator->setTempDirectory($tempDir);
 		$configurator->addConfig(self::ROOT . '/config/common.neon');
 		$configurator->addConfig(self::ROOT . '/config/services.neon');
+		// Demo pages include an English translation, so the demo needs the second language enabled.
+		if ($demoData) {
+			$configurator->addConfig(self::ROOT . '/config/demo.neon');
+		}
 
 		// Tests load config/test.neon only: a local override must not redirect them to another database.
 		$local = self::ROOT . '/config/local.neon';

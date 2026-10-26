@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Bootstrap;
+use App\Model\CmsConfig;
 use Nette\Utils\FileSystem;
 use Tester\Assert;
 
@@ -149,4 +150,27 @@ test('test containers recompile edited templates', function (): void {
 	Assert::same('second', renderInChildProcess($file));
 
 	FileSystem::delete($dir);
+});
+
+
+test('demo data adds the second language, production keeps the default locale only', function (): void {
+	$locales = static function (string $demoData): array {
+		putenv('CMS_DEMO_DATA=' . $demoData);
+		try {
+			$config = Bootstrap::bootForTests()->createContainer()->getByType(CmsConfig::class);
+		} finally {
+			putenv('CMS_DEMO_DATA');
+		}
+
+		return $config->locales;
+	};
+
+	Assert::same(['cs', 'en'], $locales('1'));
+	Assert::same(['cs'], $locales('0'));
+});
+
+
+test('tests keep a single locale when CMS_DEMO_DATA is unset', function (): void {
+	putenv('CMS_DEMO_DATA');
+	Assert::same(['cs'], Bootstrap::bootForTests()->createContainer()->getByType(CmsConfig::class)->locales);
 });

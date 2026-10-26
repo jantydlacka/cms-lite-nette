@@ -72,10 +72,24 @@ final class TestDatabase
 		}
 
 		$groups = [$structures, self::group('basic-data', self::MIGRATIONS_DIR . '/basic-data', ['structures'])];
+		// Nextras orders files globally across groups, so extra fixtures need names sorting after all executed ones (hence 2099-...).
 		foreach ($extraBasicDataDirs as $i => $dir) {
 			$groups[] = self::group('basic-data-extra-' . $i, $dir, ['basic-data']);
 		}
 		self::migrate($connection, $groups);
+	}
+
+
+	/** Runs the dummy-data group on top of what prepare() left. */
+	public static function loadDummyData(Container $container): void
+	{
+		$connection = $container->getByType(Connection::class);
+		self::assertTestDatabase($connection->fetchField('SELECT DATABASE()'));
+		self::migrate($connection, [
+			self::group('structures', self::MIGRATIONS_DIR . '/structures', []),
+			self::group('basic-data', self::MIGRATIONS_DIR . '/basic-data', ['structures']),
+			self::group('dummy-data', self::MIGRATIONS_DIR . '/dummy-data', ['basic-data']),
+		]);
 	}
 
 

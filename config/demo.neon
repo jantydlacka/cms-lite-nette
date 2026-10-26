@@ -1,0 +1,3 @@
+# Loaded when demo data is enabled (CMS_DEMO_DATA); the demo pages include an English translation.
+cms:
+	locales: [cs, en]

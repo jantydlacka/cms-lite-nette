@@ -22,6 +22,8 @@ docker compose up -d --wait
 docker compose exec app bin/console migrations:continue
 ```
 
+Migration files are ordered by file name across all groups (`structures`, `basic-data`, `dummy-data`), not per group: a new file must sort after the latest one already executed (use the next date/number prefix), or the runner refuses it.
+
 Then open <http://localhost:8080>.
 
 On Linux the `.env` line matters: the container runs as `CMS_UID:CMS_GID` (default `1000:1000`), and files it creates in the bind-mounted project belong to that user. `.env` must contain the actual numbers (Compose does not evaluate `$(id -u)` inside `.env`); the command above writes them (it replaces any earlier `CMS_UID`/`CMS_GID` lines, so running it twice adds no duplicates).
@@ -53,7 +55,7 @@ Optional `config/local.neon` (gitignored) is loaded when present, for machine-sp
 
 ### Development mode
 
-`NETTE_DEBUG=1` is the default in the compose setup. In this mode an unknown URL shows the Tracy error screen, not the 404 page. Set `NETTE_DEBUG=0` (in `.env` or the shell, then `docker compose up -d`) to see production behaviour. `CMS_DEMO_DATA=1` or `0` forces demo data on or off; when unset it follows debug mode.
+`NETTE_DEBUG=1` is the default in the compose setup. In this mode an unknown URL shows the Tracy error screen, not the 404 page. Set `NETTE_DEBUG=0` (in `.env` or the shell, then `docker compose up -d`) to see production behaviour. `CMS_DEMO_DATA=1` or `0` forces demo data on or off; when unset it follows debug mode. Demo data also enables the `en` language; to enable a second language without it, add `cms: locales: [cs, en]` to `config/local.neon`.
 
 ## Quality
 
