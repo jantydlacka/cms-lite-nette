@@ -13,9 +13,17 @@ final readonly class HttpResult
 		public int $code,
 		public ?string $location,
 		public string $body,
+		/** @var array<string, string> lower-cased name => value */
+		public array $headers,
 		/** The container that served the request (logger, services). */
 		public Container $container,
 	) {
+	}
+
+
+	public function header(string $name): ?string
+	{
+		return $this->headers[strtolower($name)] ?? null;
 	}
 
 

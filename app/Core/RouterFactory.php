@@ -24,6 +24,8 @@ final class RouterFactory
 		uasort($prefixes, static fn (string $a, string $b): int => ($a === '') <=> ($b === ''));
 
 		$router = new RouteList();
+		// An underscore never occurs in a path, so this cannot shadow a page.
+		$router->addRoute('_health', 'Health:default');
 		foreach ($prefixes as $locale => $prefix) {
 			// Route masks match with an optional trailing slash; Presenter canonicalization turns that into a 301.
 			$router->addRoute($prefix, [

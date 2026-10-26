@@ -28,7 +28,7 @@ Then open <http://localhost:8080>.
 
 On Linux the `.env` line matters: the container runs as `CMS_UID:CMS_GID` (default `1000:1000`), and files it creates in the bind-mounted project belong to that user. `.env` must contain the actual numbers (Compose does not evaluate `$(id -u)` inside `.env`); the command above writes them (it replaces any earlier `CMS_UID`/`CMS_GID` lines, so running it twice adds no duplicates).
 
-The order matters: the container health check requests the homepage, which needs `vendor/`, so the first `up` cannot become healthy until `composer install` has run; the second `up -d --wait` waits for that.
+The order matters: the container health check requests `/_health`, which needs `vendor/`, so the first `up` cannot become healthy until `composer install` has run; the second `up -d --wait` waits for that. `/_health` does not use the database, so it turns healthy before the migrations run; it answers `503` while an asset the layout needs is missing.
 
 Database settings come from the `CMS_DB_*` environment variables. In production all of them must be set and non-empty, otherwise boot fails; the development defaults apply only in debug mode. `config/local.neon` (gitignored), if present, is loaded in every mode and may override any setting, including `database:`, on top of those values.
 
@@ -84,7 +84,7 @@ E2E_BASE_URL=http://localhost:8080 E2E_IGNORE_CONSOLE_PATTERN=_tracy_bar npx pla
 
 ## Deployment note
 
-Asset URLs are emitted as absolute URLs using the request host. Behind a TLS-terminating reverse proxy, configure trusted proxies and HTTPS detection in the application; otherwise the browser receives `http://` asset URLs on an HTTPS page (mixed content).
+Asset URLs and redirect `Location` headers are absolute URLs built from the request `Host`, so set `ServerName` (or trusted proxies) at deployment. Behind a TLS-terminating reverse proxy, configure trusted proxies and HTTPS detection in the application; otherwise the browser receives `http://` asset URLs on an HTTPS page (mixed content).
 
 Deploy `www/assets/` together with the templates: when an asset file referenced by a template is missing, the page breaks in production mode – the response still has status 200, but the HTML stops inside `<head>` and the generic server error screen follows (the error is logged).
 

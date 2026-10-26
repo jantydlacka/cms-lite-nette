@@ -20,8 +20,8 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      # Content check: a PHP fatal page (e.g. missing vendor/) also answers 200.
-      test: ["CMD-SHELL", "curl -fsS http://localhost/ | grep -q 'data-testid=\"site-name\"'"]
+      # Content check: a PHP fatal page (e.g. missing vendor/) also answers 200. /_health needs no database.
+      test: ["CMD-SHELL", "curl -fsS http://localhost/_health | grep -qx ok"]
       interval: 5s
       timeout: 5s
       retries: 20

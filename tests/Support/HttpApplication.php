@@ -64,6 +64,7 @@ final class HttpApplication
 			$response->getCode(),
 			$location !== null && str_starts_with($location, self::BASE_URL) ? substr($location, strlen(self::BASE_URL)) : $location,
 			$body,
+			$response->getHeaders(),
 			$container,
 		);
 	}
