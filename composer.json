@@ -49,7 +49,7 @@
 		}
 	},
 	"scripts": {
-		"lint": "parallel-lint app tests",
+		"lint": "parallel-lint app tests bin/console bin/coverage-badge.php",
 		"lint:neon": ["neon-lint config", "neon-lint lang"],
 		"lint:latte": "latte-lint app",
 		"cs": "ecs check --no-progress-bar",

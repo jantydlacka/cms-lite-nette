@@ -1,0 +1,177 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    name: QA (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.3', '8.4']
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    env:
+      CMS_DB_HOST: 127.0.0.1
+      CMS_DB_PORT: '3306'
+      CMS_DB_USER: root
+      CMS_DB_PASSWORD: root
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: pcov
+          extensions: pdo_mysql, intl, mbstring
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      # The forbidden-words list lives outside the repository; the check prints
+      # "no word list, skipped" here.
+      - name: Run QA
+        run: composer qa
+
+      - name: Collect coverage
+        if: matrix.php == '8.4'
+        run: composer test:coverage
+
+      - name: Upload coverage report
+        if: matrix.php == '8.4'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+          if-no-files-found: error
+
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CMS_HTTP_PORT: '8080'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Export runner user for the app container
+        run: |
+          echo "CMS_UID=$(id -u)" >> "$GITHUB_ENV"
+          echo "CMS_GID=$(id -g)" >> "$GITHUB_ENV"
+
+      # The app healthcheck needs vendor/, so it only turns healthy after composer install.
+      - name: Start the stack
+        run: docker compose up -d --build
+
+      - name: Install dependencies
+        run: docker compose exec -T app composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Wait for the app to become healthy
+        run: docker compose up -d --wait
+
+      - name: Migrate with demo data
+        run: docker compose exec -T -e CMS_DEMO_DATA=1 app bin/console migrations:reset
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('e2e/package-lock.json') }}
+
+      - name: Install Playwright
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run Playwright
+        working-directory: e2e
+        env:
+          E2E_BASE_URL: http://localhost:8080
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          if-no-files-found: warn
+
+      - name: Show container logs
+        if: failure()
+        run: docker compose logs --no-color
+
+  badge:
+    name: Coverage badge
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: qa
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage
+
+      - name: Render badge
+        run: php bin/coverage-badge.php coverage.xml coverage.svg
+
+      # Publishes only coverage.svg, as a fresh single-commit history, and only
+      # to the "badges" branch (explicit refspec).
+      - name: Publish to the badges branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          dir="$(mktemp -d)"
+          cp coverage.svg "$dir/coverage.svg"
+          cd "$dir"
+          git init --quiet --initial-branch=badges
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add coverage.svg
+          git commit --quiet -m 'chore: update coverage badge'
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" refs/heads/badges:refs/heads/badges

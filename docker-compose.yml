@@ -19,7 +19,8 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost/"]
+      # Content check: a PHP fatal page (e.g. missing vendor/) also answers 200.
+      test: ["CMD-SHELL", "curl -fsS http://localhost/ | grep -q 'data-testid=\"site-name\"'"]
       interval: 5s
       timeout: 5s
       retries: 20

@@ -14,7 +14,7 @@ use SlevomatCodingStandard\Sniffs\Variables\UselessVariableSniff;
 use Symplify\EasyCodingStandard\Config\ECSConfig;
 
 return ECSConfig::configure()
-	->withPaths([__DIR__ . '/app', __DIR__ . '/tests', __DIR__ . '/config', __DIR__ . '/www'])
+	->withPaths([__DIR__ . '/app', __DIR__ . '/tests', __DIR__ . '/config', __DIR__ . '/www', __DIR__ . '/bin/console', __DIR__ . '/bin/coverage-badge.php'])
 	->withRootFiles()
 	->withFileExtensions(['php', 'phpt'])
 	->withSpacing(indentation: 'tab')

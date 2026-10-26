@@ -11,6 +11,8 @@
 >
 	<projectFiles>
 		<directory name="app"/>
+		<file name="bin/console"/>
+		<file name="bin/coverage-badge.php"/>
 		<ignoreFiles>
 			<directory name="vendor"/>
 		</ignoreFiles>
