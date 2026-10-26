@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -eu
+. "$(dirname "$0")/common.sh"
+
+require_stack
+dc composer lint
+dc composer cs
+check_forbidden_words

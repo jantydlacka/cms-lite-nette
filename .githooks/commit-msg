@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -eu
+. "$(dirname "$0")/common.sh"
+
+require_stack
+# $1 is relative to the repository root, which is mounted in the container.
+check_forbidden_words --message "$1"

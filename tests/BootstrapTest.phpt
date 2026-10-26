@@ -7,7 +7,7 @@ use Tester\Assert;
 
 require __DIR__ . '/bootstrap.php';
 
-test('debug mode is enabled only by the exact value 1', function () {
+test('debug mode is enabled only by the exact value 1', function (): void {
 	Assert::true(Bootstrap::isDebugMode('1'));
 	Assert::false(Bootstrap::isDebugMode('0'));
 	Assert::false(Bootstrap::isDebugMode(false));

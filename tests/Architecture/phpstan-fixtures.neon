@@ -1,0 +1,19 @@
+# Analyses only fixtures/ with the real architecture rules; used by ArchitectureRulesTest.phpt.
+includes:
+	- ../../vendor/phpat/phpat/extension.neon
+
+parameters:
+	level: 0
+	paths:
+		- fixtures
+	tmpDir: ../../temp/phpstan-fixtures
+	parallel:
+		maximumNumberOfProcesses: 1
+	phpat:
+		ignore_built_in_classes: true
+
+services:
+	-
+		class: Tests\Architecture\ArchitectureTest
+		tags:
+			- phpat.test

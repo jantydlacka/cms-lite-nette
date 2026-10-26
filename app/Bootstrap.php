@@ -32,7 +32,8 @@ final class Bootstrap
 	public static function bootForTests(): Configurator
 	{
 		// NETTE_TESTER_THREAD is set by Nette Tester for parallel workers.
-		$configurator = self::createConfigurator(self::ROOT . '/temp/tests/' . (getenv('NETTE_TESTER_THREAD') ?: 'main'));
+		$thread = getenv('NETTE_TESTER_THREAD');
+		$configurator = self::createConfigurator(self::ROOT . '/temp/tests/' . ($thread === false ? 'main' : $thread));
 		$configurator->setDebugMode(false);
 		$configurator->addConfig(self::ROOT . '/config/test.neon');
 
@@ -42,7 +43,7 @@ final class Bootstrap
 
 	private static function createConfigurator(string $tempDir): Configurator
 	{
-		$configurator = new Configurator;
+		$configurator = new Configurator();
 		$configurator->setTempDirectory($tempDir);
 		$configurator->addConfig(self::ROOT . '/config/common.neon');
 		$configurator->addConfig(self::ROOT . '/config/services.neon');

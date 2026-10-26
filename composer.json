@@ -47,5 +47,28 @@
 		"allow-plugins": {
 			"dealerdirect/phpcodesniffer-composer-installer": true
 		}
+	},
+	"scripts": {
+		"lint": "parallel-lint app tests",
+		"lint:neon": "neon-lint config",
+		"lint:latte": "latte-lint app",
+		"cs": "ecs check --no-progress-bar",
+		"cs:fix": "ecs check --fix --no-progress-bar",
+		"phpstan": "phpstan analyse --no-progress --memory-limit=1G",
+		"psalm:taint": "psalm --taint-analysis --no-cache --no-progress",
+		"test": "tester tests -C -j 4",
+		"test:coverage": "tester tests -C -j 4 --coverage coverage.xml --coverage-src app",
+		"qa": [
+			"@composer validate --strict",
+			"@lint",
+			"@lint:neon",
+			"@lint:latte",
+			"@cs",
+			"@phpstan",
+			"@psalm:taint",
+			"@test",
+			"bin/check-forbidden-words ${CMS_FORBIDDEN_WORDS:-_local/forbidden-words.txt}"
+		],
+		"hooks:install": "git config core.hooksPath .githooks"
 	}
 }

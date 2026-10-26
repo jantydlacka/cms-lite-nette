@@ -1,0 +1,27 @@
+includes:
+	- vendor/phpstan/phpstan-strict-rules/rules.neon
+	- vendor/phpstan/phpstan-deprecation-rules/rules.neon
+	- vendor/phpstan/phpstan-nette/extension.neon
+	- vendor/phpat/phpat/extension.neon
+
+parameters:
+	level: max
+	fileExtensions:
+		- php
+		- phpt
+	paths:
+		- app
+		- tests
+	# Fixtures intentionally violate the architecture rules; they are analysed
+	# on their own by tests/Architecture/ArchitectureRulesTest.phpt.
+	excludePaths:
+		- tests/Architecture/fixtures
+	tmpDir: temp/phpstan
+	phpat:
+		ignore_built_in_classes: true
+
+services:
+	-
+		class: Tests\Architecture\ArchitectureTest
+		tags:
+			- phpat.test

@@ -10,7 +10,7 @@ final class RouterFactory
 {
 	public static function createRouter(): RouteList
 	{
-		$router = new RouteList;
+		$router = new RouteList();
 		$router->addRoute('', 'Front:Home:default');
 
 		return $router;

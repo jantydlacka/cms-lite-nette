@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# Usage: bin/check-forbidden-words [file-with-patterns]
+#        bin/check-forbidden-words --message <commit-message-file>
+#
+# The second form checks only the given commit message file (commit-msg hook).
+#
+# Without an argument the list is taken from $CMS_FORBIDDEN_WORDS, falling back
+# to _local/forbidden-words.txt.
+#
+# Scans files in the git index (what would be committed) and all commit messages
+# of the current repository for the
+# case-insensitive extended regexes listed (one per line) in the given file.
+# Prints only locations (file:line, commit hash), never the matched text.
+# Exit codes: 0 = clean or no list, 1 = match found, 2 = usage or invalid list.
+set -u
+
+message_file=""
+if [ "${1:-}" = "--message" ]; then
+	message_file="${2:-}"
+	shift 2 || { echo "usage: $0 --message <file> [word-list]" >&2; exit 2; }
+	if [ ! -f "$message_file" ]; then
+		echo "usage: $0 --message <file> [word-list]" >&2
+		exit 2
+	fi
+fi
+list="${1:-${CMS_FORBIDDEN_WORDS:-_local/forbidden-words.txt}}"
+if [ ! -f "$list" ]; then
+	echo "no word list, skipped"
+	exit 0
+fi
+
+patterns="$(mktemp)"
+trap 'rm -f "$patterns"' EXIT
+grep -vE '^[[:space:]]*(#.*)?$' "$list" > "$patterns"
+if [ ! -s "$patterns" ]; then
+	echo "no word list, skipped"
+	exit 0
+fi
+
+found=0
+
+# Validate the patterns without leaking them through error messages.
+rc=0
+printf '' | grep -qiEf "$patterns" 2> /dev/null || rc=$?
+if [ "$rc" -gt 1 ]; then
+	echo "invalid pattern in word list" >&2
+	exit 2
+fi
+
+if [ -n "$message_file" ]; then
+	if grep -qiEf "$patterns" "$message_file"; then
+		echo "commit message: $message_file"
+		exit 1
+	fi
+	exit 0
+fi
+
+# --null emits "path NUL line NUL content", so paths containing ":" stay intact.
+while IFS= read -r -d '' path && IFS= read -r -d '' line && IFS= read -r _content; do
+	echo "$path:$line"
+	found=1
+done < <(git grep --cached --null -I -n -i -E -f "$patterns" -- ':!.gitignore' 2> /dev/null)
+
+if git rev-parse --verify -q HEAD > /dev/null; then
+	while read -r commit; do
+		if git log -1 --format=%B "$commit" | grep -qiEf "$patterns"; then
+			echo "commit message: $commit"
+			found=1
+		fi
+	done < <(git log --format=%H)
+fi
+
+exit "$found"

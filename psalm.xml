@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<!-- Used only for taint analysis: composer psalm:taint -->
+<psalm
+	errorLevel="8"
+	findUnusedCode="false"
+	findUnusedBaselineEntry="false"
+	resolveFromConfigFile="true"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="https://getpsalm.org/schema/config"
+	xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"
+>
+	<projectFiles>
+		<directory name="app"/>
+		<ignoreFiles>
+			<directory name="vendor"/>
+		</ignoreFiles>
+	</projectFiles>
+</psalm>

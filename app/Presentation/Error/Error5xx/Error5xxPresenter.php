@@ -6,6 +6,7 @@ namespace App\Presentation\Error\Error5xx;
 
 use App\Presentation\BasePresenter;
 use Nette\Application\Request;
+use Throwable;
 use Tracy\ILogger;
 
 final class Error5xxPresenter extends BasePresenter
@@ -20,13 +21,13 @@ final class Error5xxPresenter extends BasePresenter
 	protected function startup(): void
 	{
 		parent::startup();
-		if (!$this->getRequest()?->isMethod(Request::FORWARD)) {
+		if (!$this->getRequest()->isMethod(Request::FORWARD)) {
 			$this->error();
 		}
 	}
 
 
-	public function renderDefault(\Throwable $exception): void
+	public function renderDefault(Throwable $exception): void
 	{
 		$this->logger->log($exception, ILogger::EXCEPTION);
 		$this->getHttpResponse()->setCode(500);
