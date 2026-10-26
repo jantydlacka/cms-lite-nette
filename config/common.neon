@@ -18,6 +18,7 @@ latte:
 	strictTypes: true
 	extensions:
 		- Latte\Essential\TranslatorExtension
+		- App\Core\Latte\CmsLatteExtension
 
 assets:
 	mapping:

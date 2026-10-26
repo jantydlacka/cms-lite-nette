@@ -10,3 +10,4 @@ services:
 	- App\Model\Page\FlatPagePathStrategy
 	- App\Model\Page\ReservedSegments
 	- App\Model\Page\PageService
+	- App\Core\Markdown\CommonMarkRenderer
