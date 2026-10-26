@@ -26,6 +26,10 @@ assets:
 session:
 	autoStart: false
 
+http:
+	headers:
+		X-Powered-By: null # do not advertise the framework
+
 database:
 	dsn: 'mysql:host=%dbHost%;port=%dbPort%;dbname=%dbName%'
 	user: %dbUser%
