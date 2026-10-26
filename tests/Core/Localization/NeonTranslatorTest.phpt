@@ -15,7 +15,7 @@ require __DIR__ . '/../../bootstrap.php';
 
 function translator(bool $strict = true, ?FakeLogger $logger = null, string $dir = __DIR__ . '/fixtures'): NeonTranslator
 {
-	return new NeonTranslator($dir, new CurrentLocale(new CmsConfig('Demo', 'cs', ['cs'], 10, false)), $strict, $logger ?? new FakeLogger());
+	return new NeonTranslator($dir, new CurrentLocale(new CmsConfig('Demo', 'cs', ['cs'], 10)), $strict, $logger ?? new FakeLogger());
 }
 
 
@@ -73,18 +73,18 @@ test('a missing key returns the key and logs a warning otherwise', function (): 
 
 
 test('current locale defaults and validates', function (): void {
-	$locale = new CurrentLocale(new CmsConfig('Demo', 'cs', ['cs'], 10, false));
+	$locale = new CurrentLocale(new CmsConfig('Demo', 'cs', ['cs'], 10));
 	Assert::same('cs', $locale->get());
 	Assert::exception(fn () => $locale->set('en'), InvalidArgumentException::class);
 
-	$multi = new CurrentLocale(new CmsConfig('Demo', 'cs', ['cs', 'en'], 10, false));
+	$multi = new CurrentLocale(new CmsConfig('Demo', 'cs', ['cs', 'en'], 10));
 	$multi->set('en');
 	Assert::same('en', $multi->get());
 });
 
 
 test('switching locale uses the matching catalog and switches back', function (): void {
-	$locale = new CurrentLocale(new CmsConfig('Demo', 'cs', ['cs', 'en'], 10, false));
+	$locale = new CurrentLocale(new CmsConfig('Demo', 'cs', ['cs', 'en'], 10));
 	$translator = new NeonTranslator(__DIR__ . '/fixtures', $locale, true, new FakeLogger());
 	Assert::same('Stránka byla uložena.', $translator->translate('page.saved'));
 	$locale->set('en');

@@ -14,7 +14,7 @@ use Tester\Assert;
 require __DIR__ . '/../../bootstrap.php';
 
 /** Compiles a container from a cms: section only; no database is touched. */
-function compile(string $cms, bool $demoData = false): Container
+function compile(string $cms): Container
 {
 	$dir = sys_get_temp_dir();
 	$dir .= '/cms-extension-' . bin2hex(random_bytes(6));
@@ -26,7 +26,6 @@ function compile(string $cms, bool $demoData = false): Container
 		$configurator = new Configurator();
 		$configurator->setDebugMode(false);
 		$configurator->setTempDirectory($dir);
-		$configurator->addStaticParameters(['demoData' => $demoData]);
 		$configurator->addConfig($file);
 
 		return $configurator->createContainer();
@@ -42,13 +41,6 @@ test('defaults are applied', function (): void {
 	Assert::same('cs', $config->defaultLocale);
 	Assert::same(['cs'], $config->locales);
 	Assert::same(10, $config->newsPerPage);
-	Assert::false($config->demoData);
-});
-
-
-test('demoData defaults to the demoData parameter and can be overridden', function (): void {
-	Assert::true(compile("\tsiteName: Demo", true)->getByType(CmsConfig::class)->demoData);
-	Assert::false(compile("\tsiteName: Demo\n\tdemoData: no", true)->getByType(CmsConfig::class)->demoData);
 });
 
 
@@ -78,6 +70,8 @@ $invalid = [
 	'uppercase locale code' => ["\tsiteName: Demo\n\tlocales: [CZ]", '%a%locales%a%'],
 	'newsPerPage below 1' => ["\tsiteName: Demo\n\tnewsPerPage: 0", '%a%newsPerPage%a%'],
 	'unknown key' => ["\tsiteName: Demo\n\tfoo: 1", '%a%foo%a%'],
+	// Demo data come only from the static %demoData% parameter (env CMS_DEMO_DATA or debug mode).
+	'demoData key' => ["\tsiteName: Demo\n\tdemoData: no", '%a%demoData%a%'],
 ];
 
 foreach ($invalid as $name => [$cms, $message]) {

@@ -17,10 +17,6 @@ final class CmsExtension extends CompilerExtension
 {
 	public function getConfigSchema(): Schema
 	{
-		// Same source of truth as the console extension: the static %demoData% parameter.
-		$demoData = $this->getContainerBuilder()->parameters['demoData'] ?? false;
-		assert(is_bool($demoData));
-
 		return Expect::structure([
 			'siteName' => Expect::string()->required()->assert(static fn (mixed $name): bool => is_string($name) && trim($name) !== '', 'siteName must not be empty'),
 			'defaultLocale' => Expect::string('cs'),
@@ -30,7 +26,6 @@ final class CmsExtension extends CompilerExtension
 				->mergeDefaults(false)
 				->assert(static fn (mixed $locales): bool => is_array($locales) && count($locales) === count(array_unique($locales, SORT_REGULAR)), 'locales must not contain duplicates'),
 			'newsPerPage' => Expect::int(10)->min(1),
-			'demoData' => Expect::bool($demoData),
 		])->assert(
 			static fn (mixed $config): bool => $config instanceof stdClass
 				&& is_array($config->locales)
@@ -49,7 +44,6 @@ final class CmsExtension extends CompilerExtension
 				$config->defaultLocale,
 				$config->locales,
 				$config->newsPerPage,
-				$config->demoData,
 			]);
 	}
 }

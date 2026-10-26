@@ -14,7 +14,6 @@ final readonly class CmsConfig
 		public string $defaultLocale,
 		public array $locales,
 		public int $newsPerPage,
-		public bool $demoData,
 	) {
 	}
 }
