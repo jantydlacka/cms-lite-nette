@@ -43,7 +43,26 @@ jobs:
       CMS_DB_USER: root
       CMS_DB_PASSWORD: root
     steps:
+      # Full history: the migration guard diffs against the base branch.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check released migrations are unchanged
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = pull_request ]; then
+            base="origin/${BASE_REF}"
+          elif [ -n "$BEFORE" ] && [ "$BEFORE" != 0000000000000000000000000000000000000000 ] && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            base="$BEFORE"
+          else
+            base="HEAD~1"
+          fi
+          bin/check-migrations-immutable "$base"
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -85,6 +104,9 @@ jobs:
     timeout-minutes: 25
     env:
       CMS_HTTP_PORT: '8080'
+      # The contract is production behaviour.
+      NETTE_DEBUG: '0'
+      CMS_DEMO_DATA: '1'
     steps:
       - uses: actions/checkout@v4
 
@@ -104,7 +126,7 @@ jobs:
         run: docker compose up -d --wait
 
       - name: Migrate with demo data
-        run: docker compose exec -T -e CMS_DEMO_DATA=1 app bin/console migrations:reset
+        run: docker compose exec -T app bin/console migrations:reset
 
       - uses: actions/setup-node@v4
         with:
@@ -128,8 +150,6 @@ jobs:
         working-directory: e2e
         env:
           E2E_BASE_URL: http://localhost:8080
-          # The debug bar of the dev stack logs its own storage errors.
-          E2E_IGNORE_CONSOLE_PATTERN: _tracy_bar
         run: npx playwright test
 
       - name: Upload Playwright report

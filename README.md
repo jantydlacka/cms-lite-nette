@@ -73,18 +73,26 @@ Install the git hooks (pre-commit and pre-push run parts of the gate):
 docker compose exec app composer hooks:install
 ```
 
-End-to-end tests run from the host against a running stack and need Node.js 20 or newer on the host (only for these tests):
+End-to-end tests run from the host against a running stack and need Node.js 20 or newer on the host (only for these tests). The contract is production behaviour, so run the stack with `NETTE_DEBUG=0` and the demo data loaded (`CMS_DEMO_DATA=1` for the web container as well, since the demo data enables the `en` language); clear the container cache first, because production mode does not refresh it:
 
 ```bash
+rm -rf temp/cache
+export NETTE_DEBUG=0 CMS_DEMO_DATA=1
+docker compose up -d --wait
+docker compose exec -T app bin/console migrations:reset
 cd e2e && npm ci && npx playwright install chromium
-E2E_BASE_URL=http://localhost:8080 E2E_IGNORE_CONSOLE_PATTERN=_tracy_bar npx playwright test
+E2E_BASE_URL=http://localhost:8080 npx playwright test
 ```
 
-`E2E_IGNORE_CONSOLE_PATTERN` skips console errors of the Tracy debug bar, which is present in debug mode; see [`spec/README.md`](spec/README.md).
+Set `E2E_BASE_URL` to your `CMS_HTTP_PORT`. Against a debug-mode stack (`NETTE_DEBUG=1`) the 404 checks fail and the Tracy bar logs console errors; add `E2E_IGNORE_CONSOLE_PATTERN=_tracy_bar` to skip those, see [`spec/README.md`](spec/README.md). Return to development mode with `unset NETTE_DEBUG CMS_DEMO_DATA; rm -rf temp/cache; docker compose up -d --wait`.
+
+The pre-push hook and CI also run `bin/check-migrations-immutable [base]`, which fails when a migration that exists in the base branch was modified, deleted or renamed. The hook compares against `origin/main` and prints a warning and skips the check when that ref does not exist.
 
 ## Deployment note
 
 Asset URLs and redirect `Location` headers are absolute URLs built from the request `Host`, so set `ServerName` (or trusted proxies) at deployment. Behind a TLS-terminating reverse proxy, configure trusted proxies and HTTPS detection in the application; otherwise the browser receives `http://` asset URLs on an HTTPS page (mixed content).
+
+Clear `temp/cache` on every deploy: in production mode the container and template caches are not rebuilt when the code changes.
 
 Deploy `www/assets/` together with the templates: when an asset file referenced by a template is missing, the page breaks in production mode – the response still has status 200, but the HTML stops inside `<head>` and the generic server error screen follows (the error is logged).
 

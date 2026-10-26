@@ -9,6 +9,8 @@ services:
       - "127.0.0.1:${CMS_HTTP_PORT:-8080}:80"
     environment:
       NETTE_DEBUG: "${NETTE_DEBUG:-1}"
+      # Passed through only when set on the host; unset follows debug mode. The web server needs it too: demo data enables the `en` language.
+      CMS_DEMO_DATA:
       CMS_DB_HOST: db
       CMS_DB_PORT: "3306"
       CMS_DB_NAME: cms
