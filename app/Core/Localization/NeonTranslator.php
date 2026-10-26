@@ -12,7 +12,7 @@ use Tracy\ILogger;
 
 /**
  * Flat dotted keys in `<langDir>/<locale>.neon`; a value is a string or a plural map `{one, few, other}`.
- * Plural keys take only an int count, no named parameters. A literal `%name%` cannot be escaped in translations yet.
+ * Plural keys take the count as a positional int or a named `count` (int), and may use other named parameters alongside it. A literal `%name%` cannot be escaped in translations yet.
  * Catalog errors (malformed or missing file) throw in non-strict mode too, deliberately; strict only affects missing keys and parameter mismatches.
  * Plural rules are Czech for every locale until another language needs its own.
  */

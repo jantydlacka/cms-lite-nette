@@ -49,6 +49,7 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           coverage: pcov
+          ini-values: date.timezone=UTC
           extensions: pdo_mysql, intl, mbstring
           tools: composer:v2
 

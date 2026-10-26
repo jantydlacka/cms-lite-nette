@@ -3,3 +3,4 @@ services:
 	- App\Core\Localization\CurrentLocale
 	translator: App\Core\Localization\NeonTranslator(langDir: %appDir%/../lang, strict: %debugMode%)
 	- App\Core\SystemClock
+	- App\Core\Database\ExplorerTransaction

@@ -15,7 +15,7 @@ Requires only Docker (with Compose).
 git clone https://github.com/jantydlacka/cms-lite-nette.git
 cd cms-lite-nette
 # Linux: run the app container as your user, so vendor/, temp/ and log/ stay yours
-printf 'CMS_UID=%s\nCMS_GID=%s\n' "$(id -u)" "$(id -g)" >> .env
+touch .env && sed -i '/^CMS_[UG]ID=/d' .env && printf 'CMS_UID=%s\nCMS_GID=%s\n' "$(id -u)" "$(id -g)" >> .env
 docker compose up -d --build
 docker compose exec app composer install
 docker compose up -d --wait
@@ -24,9 +24,11 @@ docker compose exec app bin/console migrations:continue
 
 Then open <http://localhost:8080>.
 
-On Linux the `.env` line matters: the container runs as `CMS_UID:CMS_GID` (default `1000:1000`), and files it creates in the bind-mounted project belong to that user. `.env` must contain the actual numbers (Compose does not evaluate `$(id -u)` inside `.env`); the `printf` above writes them.
+On Linux the `.env` line matters: the container runs as `CMS_UID:CMS_GID` (default `1000:1000`), and files it creates in the bind-mounted project belong to that user. `.env` must contain the actual numbers (Compose does not evaluate `$(id -u)` inside `.env`); the command above writes them (it replaces any earlier `CMS_UID`/`CMS_GID` lines, so running it twice adds no duplicates).
 
 The order matters: the container health check requests the homepage, which needs `vendor/`, so the first `up` cannot become healthy until `composer install` has run; the second `up -d --wait` waits for that.
+
+Database settings come from the `CMS_DB_*` environment variables. In production all of them must be set and non-empty, otherwise boot fails; the development defaults apply only in debug mode. `config/local.neon` (gitignored), if present, is loaded in every mode and may override any setting, including `database:`, on top of those values.
 
 Both ports are published on `127.0.0.1` only. They can be changed in `.env`:
 
