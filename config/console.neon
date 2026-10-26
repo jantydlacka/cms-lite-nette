@@ -10,8 +10,3 @@ migrations:
 	driver: mysql
 	dbal: nette
 	withDummyData: %demoData%
-
-database:
-	dsn: 'mysql:host=%dbHost%;dbname=%dbName%'
-	user: %dbUser%
-	password: %dbPassword%

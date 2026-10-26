@@ -16,3 +16,8 @@ latte:
 
 session:
 	autoStart: false
+
+database:
+	dsn: 'mysql:host=%dbHost%;port=%dbPort%;dbname=%dbName%'
+	user: %dbUser%
+	password: %dbPassword%

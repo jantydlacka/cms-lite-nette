@@ -4,18 +4,21 @@ declare(strict_types=1);
 
 namespace App;
 
+use InvalidArgumentException;
 use Nette\Bootstrap\Configurator;
 use Nette\DI\Container;
 
 final class Bootstrap
 {
+	public const TEST_DB_PREFIX = 'cms_test_';
+
 	private const ROOT = __DIR__ . '/..';
 
 
 	public static function bootWebApplication(): Container
 	{
 		$debug = self::isDebugMode(getenv('NETTE_DEBUG'));
-		$configurator = self::createConfigurator(self::ROOT . '/temp', $debug);
+		$configurator = self::createConfigurator(self::ROOT . '/temp', $debug, true);
 		$configurator->enableTracy(self::ROOT . '/log');
 
 		return $configurator->createContainer();
@@ -44,18 +47,32 @@ final class Bootstrap
 	}
 
 
+	/** Name of the database for a Nette Tester thread (false = not running under parallel workers). */
+	public static function testDatabaseName(string|false $thread): string
+	{
+		if ($thread !== false && preg_match('~^\d+$~', $thread) !== 1) {
+			throw new InvalidArgumentException('Tester thread must be numeric.');
+		}
+
+		return self::TEST_DB_PREFIX . ($thread === false ? '0' : $thread);
+	}
+
+
 	public static function bootForTests(): Configurator
 	{
 		// NETTE_TESTER_THREAD is set by Nette Tester for parallel workers.
 		$thread = getenv('NETTE_TESTER_THREAD');
-		$configurator = self::createConfigurator(self::ROOT . '/temp/tests/' . ($thread === false ? 'main' : $thread), false);
+		$database = self::testDatabaseName($thread);
+		$configurator = self::createConfigurator(self::ROOT . '/temp/tests/' . ($thread === false ? 'main' : $thread), false, false);
 		$configurator->addConfig(self::ROOT . '/config/test.neon');
+		// Forced, never read from CMS_DB_NAME: tests must not be able to reach the dev database.
+		$configurator->addDynamicParameters(['dbName' => $database]);
 
 		return $configurator;
 	}
 
 
-	private static function createConfigurator(string $tempDir, bool $debugMode): Configurator
+	private static function createConfigurator(string $tempDir, bool $debugMode, bool $withLocalConfig): Configurator
 	{
 		$configurator = new Configurator();
 		$configurator->setDebugMode($debugMode);
@@ -65,6 +82,7 @@ final class Bootstrap
 		// Dynamic, so credentials stay out of the compiled container cache.
 		$configurator->addDynamicParameters([
 			'dbHost' => self::env('CMS_DB_HOST', '127.0.0.1'),
+			'dbPort' => self::env('CMS_DB_PORT', '3306'),
 			'dbName' => self::env('CMS_DB_NAME', 'cms'),
 			'dbUser' => self::env('CMS_DB_USER', 'root'),
 			'dbPassword' => self::env('CMS_DB_PASSWORD', 'root'),
@@ -73,8 +91,9 @@ final class Bootstrap
 		$configurator->addConfig(self::ROOT . '/config/common.neon');
 		$configurator->addConfig(self::ROOT . '/config/services.neon');
 
+		// Tests load config/test.neon only: a local override must not redirect them to another database.
 		$local = self::ROOT . '/config/local.neon';
-		if (is_file($local)) {
+		if ($withLocalConfig && is_file($local)) {
 			$configurator->addConfig($local);
 		}
 

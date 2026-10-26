@@ -9,6 +9,7 @@ use Nette\Application\Responses\TextResponse;
 use Nette\DI\Container;
 use Stringable;
 use Tester\Environment;
+use Tests\Support\TestDatabase;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -17,7 +18,11 @@ Environment::setupFunctions();
 
 function container(): Container
 {
-	return Bootstrap::bootForTests()->createContainer();
+	// Every call wipes the thread database (prepare() runs per call).
+	$container = Bootstrap::bootForTests()->createContainer();
+	TestDatabase::prepare($container);
+
+	return $container;
 }
 
 
