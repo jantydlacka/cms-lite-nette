@@ -20,7 +20,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['8.3', '8.4']
+        include:
+          - php: '8.3'
+            coverage: false
+          - php: '8.4'
+            coverage: true
     services:
       mysql:
         image: mysql:8.4
@@ -54,14 +58,20 @@ jobs:
       # The forbidden-words list lives outside the repository; the check prints
       # "no word list, skipped" here.
       - name: Run QA
+        if: ${{ !matrix.coverage }}
         run: composer qa
 
-      - name: Collect coverage
-        if: matrix.php == '8.4'
+      # Same as "composer qa", but the suite runs once, with coverage.
+      - name: Run QA checks
+        if: ${{ matrix.coverage }}
+        run: composer qa:checks
+
+      - name: Run tests with coverage
+        if: ${{ matrix.coverage }}
         run: composer test:coverage
 
       - name: Upload coverage report
-        if: matrix.php == '8.4'
+        if: ${{ matrix.coverage }}
         uses: actions/upload-artifact@v4
         with:
           name: coverage
