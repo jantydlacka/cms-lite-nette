@@ -5,7 +5,7 @@ Translation keys with their Czech text (`lang/cs.neon`). Every UI string goes th
 | Key | Czech |
 |-----|-------|
 | `front.home.welcome` | Vítejte |
-| `front.theme.toggle` | Přepnout vzhled |
+| `front.theme.dark` | Tmavý režim |
 | `error.404.title` | Stránka nenalezena |
 | `error.4xx.title` | Požadavek nelze vyřídit |
 | `error.500.title` | Něco se pokazilo |

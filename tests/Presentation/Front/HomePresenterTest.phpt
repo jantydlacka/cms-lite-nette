@@ -37,7 +37,7 @@ test('home page has site name, theme toggle and assets, with the mode script bef
 	$page = html($response);
 
 	Assert::match('%A%data-testid="site-name"%a?%>CMS Lite</a>%A%', $page);
-	Assert::match('%A%data-testid="theme-toggle"%A%', $page);
+	Assert::match('%A%data-testid="theme-toggle" aria-label="Tmavý režim"%A%', $page);
 	Assert::match('%A%/assets/front.css%A%', $page);
 	Assert::match('%A%/assets/front.js%A%', $page);
 	Assert::match('%A%<title>CMS Lite</title>%A%', $page);
