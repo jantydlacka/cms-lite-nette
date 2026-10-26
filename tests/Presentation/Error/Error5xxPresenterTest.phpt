@@ -24,7 +24,7 @@ test('500 error page sets the status code, renders the message and logs the exce
 	Assert::type(TextResponse::class, $response);
 	assert($response instanceof TextResponse);
 	Assert::same(500, $container->getByType(IResponse::class)->getCode());
-	Assert::contains('Something went wrong', html($response));
+	Assert::contains('Něco se pokazilo', html($response));
 	$logger = $container->getService('tracy.logger');
 	assert($logger instanceof FakeLogger);
 	Assert::same([[$exception, ILogger::EXCEPTION]], $logger->records);

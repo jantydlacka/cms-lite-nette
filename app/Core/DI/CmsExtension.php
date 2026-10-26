@@ -22,7 +22,7 @@ final class CmsExtension extends CompilerExtension
 		assert(is_bool($demoData));
 
 		return Expect::structure([
-			'siteName' => Expect::string()->required(),
+			'siteName' => Expect::string()->required()->assert(static fn (mixed $name): bool => is_string($name) && trim($name) !== '', 'siteName must not be empty'),
 			'defaultLocale' => Expect::string('cs'),
 			'locales' => Expect::listOf(Expect::string()->pattern('[a-z]{2}'))
 				->min(1)

@@ -22,5 +22,15 @@ test('404 error page sets the status code and renders the message', function ():
 	Assert::type(TextResponse::class, $response);
 	assert($response instanceof TextResponse);
 	Assert::same(404, $container->getByType(IResponse::class)->getCode());
-	Assert::contains('Page not found', html($response));
+	Assert::contains('Stránka nenalezena', html($response));
+});
+
+
+test('other 4xx codes use the generic title', function (): void {
+	$presenter = container()->getByType(IPresenterFactory::class)->createPresenter('Error:Error4xx');
+
+	$response = $presenter->run(new Request('Error:Error4xx', Request::FORWARD, ['exception' => new BadRequestException('', 403)]));
+
+	assert($response instanceof TextResponse);
+	Assert::contains('Požadavek nelze vyřídit', html($response));
 });

@@ -1,0 +1,6 @@
+page.saved: Stránka byla uložena.
+page.count:
+	one: '%count% stránka'
+	few: '%count% stránky'
+	other: '%count% stránek'
+page.greeting: 'Ahoj, %name%!'

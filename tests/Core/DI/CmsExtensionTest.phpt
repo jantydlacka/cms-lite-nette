@@ -69,6 +69,8 @@ test('explicit values are used', function (): void {
 
 $invalid = [
 	'missing siteName' => ["\tnewsPerPage: 3", '%a%siteName%a%'],
+	'empty siteName' => ["\tsiteName: ''", '%a%siteName%a%'],
+	'blank siteName' => ["\tsiteName: '  '", '%a%siteName%a%'],
 	'default locale not in locales' => ["\tsiteName: Demo\n\tdefaultLocale: en\n\tlocales: [cs]", '%a%defaultLocale%a%'],
 	'empty locales' => ["\tsiteName: Demo\n\tlocales: []", '%a%locales%a%'],
 	'duplicate locales' => ["\tsiteName: Demo\n\tlocales: [cs, cs]", '%a%locales%a%'],

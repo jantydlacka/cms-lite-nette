@@ -4,9 +4,6 @@ includes:
 extensions:
 	cms: App\Core\DI\CmsExtension
 
-parameters:
-	locale: cs
-
 cms:
 	siteName: CMS Lite # placeholder, override in config/local.neon
 
@@ -19,6 +16,8 @@ application:
 
 latte:
 	strictTypes: true
+	extensions:
+		- Latte\Essential\TranslatorExtension
 
 session:
 	autoStart: false

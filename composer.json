@@ -50,7 +50,7 @@
 	},
 	"scripts": {
 		"lint": "parallel-lint app tests",
-		"lint:neon": "neon-lint config",
+		"lint:neon": ["neon-lint config", "neon-lint lang"],
 		"lint:latte": "latte-lint app",
 		"cs": "ecs check --no-progress-bar",
 		"cs:fix": "ecs check --fix --no-progress-bar",

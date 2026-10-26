@@ -21,6 +21,8 @@ final class Error4xxPresenter extends BasePresenter
 
 	public function renderDefault(BadRequestException $exception): void
 	{
-		$this->getHttpResponse()->setCode($exception->getHttpCode());
+		$code = $exception->getHttpCode();
+		$this->getHttpResponse()->setCode($code);
+		$this->template->titleKey = $code === 404 ? 'error.404.title' : 'error.4xx.title';
 	}
 }

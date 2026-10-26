@@ -1,7 +1,4 @@
 services:
 	router: App\Core\RouterFactory::createRouter
-
-decorator:
-	App\Presentation\BasePresenter:
-		setup:
-			- setLocale(%locale%)
+	- App\Core\Localization\CurrentLocale
+	translator: App\Core\Localization\NeonTranslator(langDir: %appDir%/../lang, strict: %debugMode%)
