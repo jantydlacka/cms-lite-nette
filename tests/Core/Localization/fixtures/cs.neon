@@ -4,3 +4,7 @@ page.count:
 	few: '%count% stránky'
 	other: '%count% stránek'
 page.greeting: 'Ahoj, %name%!'
+page.countByName:
+	one: '%name% má %count% stránku'
+	few: '%name% má %count% stránky'
+	other: '%name% má %count% stránek'

@@ -7,9 +7,14 @@ use App\Core\Localization\MissingTranslationException;
 use App\Core\Localization\NeonTranslator;
 use App\Core\Localization\PluralRules;
 use App\Model\CmsConfig;
+use Latte\CompileException;
+use Latte\Essential\TranslatorExtension;
+use Latte\Loaders\StringLoader;
+use Nette\Bridges\ApplicationLatte\LatteFactory;
 use Tester\Assert;
 use Tests\FakeLogger;
 use Tracy\ILogger;
+use function Tests\container;
 
 require __DIR__ . '/../../bootstrap.php';
 
@@ -184,5 +189,118 @@ foreach (['null' => null, 'array' => ['x'], 'object' => new stdClass(), 'true' =
 		Assert::same('Ahoj, %name%!', translator(false, $logger)->translate('page.greeting', ['name' => $value]));
 		Assert::count(1, $logger->records);
 		Assert::same(ILogger::WARNING, $logger->records[0][1]);
+	});
+}
+
+
+test('named arguments equal an array of named values', function (): void {
+	Assert::same('Ahoj, Jana!', translator()->translate('page.greeting', name: 'Jana'));
+	Assert::same('Ahoj, 7!', translator()->translate('page.greeting', name: 7));
+});
+
+
+test('an unused named argument throws in strict mode and warns otherwise', function (): void {
+	Assert::exception(fn () => translator(true)->translate('page.saved', foo: 'x'), InvalidArgumentException::class, "%a%unused parameter 'foo'%a%");
+
+	$logger = new FakeLogger();
+	Assert::same('Stránka byla uložena.', translator(false, $logger)->translate('page.saved', foo: 'x'));
+	Assert::count(1, $logger->records);
+	Assert::same(ILogger::WARNING, $logger->records[0][1]);
+});
+
+
+test('a missing named argument is reported', function (): void {
+	Assert::exception(fn () => translator(true)->translate('page.greeting', other: 'x'), InvalidArgumentException::class, 'Placeholder %a%');
+});
+
+
+test('an invalid named value is reported', function (): void {
+	Assert::exception(fn () => translator(true)->translate('page.greeting', name: null), InvalidArgumentException::class, "%a%'name'%a%");
+});
+
+
+test('mixing a positional and named arguments is reported', function (): void {
+	Assert::exception(fn () => translator(true)->translate('page.count', 3, name: 'x'), InvalidArgumentException::class);
+	Assert::exception(fn () => translator(true)->translate('page.greeting', ['name' => 'a'], name: 'x'), InvalidArgumentException::class);
+
+	$logger = new FakeLogger();
+	Assert::same('3 stránky', translator(false, $logger)->translate('page.count', 3, name: 'x'));
+	Assert::count(1, $logger->records);
+	Assert::same(ILogger::WARNING, $logger->records[0][1]);
+});
+
+
+test('a named count selects the plural form', function (): void {
+	Assert::same('3 stránky', translator()->translate('page.count', count: 3));
+	Assert::same('Jana má 3 stránky', translator()->translate('page.countByName', count: 3, name: 'Jana'));
+	Assert::same('Jana má 5 stránek', translator()->translate('page.countByName', ['count' => 5, 'name' => 'Jana']));
+	Assert::same('Jana má 1 stránku', translator()->translate('page.countByName', count: 1, name: 'Jana'));
+});
+
+
+foreach (['string' => '3', 'float' => 1.5, 'null' => null] as $type => $value) {
+	test("a named count of type $type is rejected on a plural key", function () use ($value): void {
+		Assert::exception(fn () => translator(true)->translate('page.count', count: $value), InvalidArgumentException::class);
+		Assert::exception(fn () => translator(false)->translate('page.count', count: $value), InvalidArgumentException::class);
+	});
+}
+
+
+test('a named count on a scalar key is an ordinary parameter', function (): void {
+	$logger = new FakeLogger();
+	Assert::same('Ahoj, 4!', translator(true, $logger)->translate('page.greeting', name: 4));
+	Assert::exception(fn () => translator(true)->translate('page.saved', count: 3), InvalidArgumentException::class, "%a%unused parameter 'count'%a%");
+	Assert::same('Stránka byla uložena.', translator(false, $logger)->translate('page.saved', count: 3));
+	Assert::count(1, $logger->records);
+});
+
+
+test('mixing an array and named arguments warns when not strict', function (): void {
+	$logger = new FakeLogger();
+	Assert::same('Ahoj, a!', translator(false, $logger)->translate('page.greeting', ['name' => 'a'], name: 'x'));
+	Assert::count(1, $logger->records);
+	Assert::same(ILogger::WARNING, $logger->records[0][1]);
+});
+
+
+test('a non-scalar named argument warns when not strict', function (): void {
+	$logger = new FakeLogger();
+	Assert::same('Ahoj, %name%!', translator(false, $logger)->translate('page.greeting', name: ['x']));
+	Assert::count(1, $logger->records);
+	Assert::same(ILogger::WARNING, $logger->records[0][1]);
+});
+
+
+test('a plural key rejects named arguments without a count', function (): void {
+	Assert::exception(fn () => translator(true)->translate('page.count', name: 'x'), InvalidArgumentException::class);
+});
+
+
+test('a plural count needs no %count% and an extra argument warns when not strict', function (): void {
+	$logger = new FakeLogger();
+	Assert::same('5 stránek', translator(false, $logger)->translate('page.count', 5));
+	Assert::same([], $logger->records);
+
+	Assert::same('5 stránek', translator(false, $logger)->translate('page.count', 5, 'extra'));
+	Assert::count(1, $logger->records);
+	Assert::same(ILogger::WARNING, $logger->records[0][1]);
+});
+
+
+$latte = function (?string $key, string $template): string {
+	$engine = container()->getByType(LatteFactory::class)->create();
+	$engine->setLoader(new StringLoader());
+	$engine->addExtension(new TranslatorExtension(translator(true), $key));
+
+	return $engine->renderToString($template);
+};
+// Compile-time translation wraps the translator's exception in a CompileException.
+foreach (['runtime filter' => [null, InvalidArgumentException::class], 'compile-time' => ['cs', CompileException::class]] as $mode => [$key, $failure]) {
+	test("Latte passes named arguments to translate(): $mode", function () use ($latte, $key, $failure): void {
+		Assert::same('Ahoj, Jana!', $latte($key, "{_page.greeting, name: 'Jana'}"));
+		Assert::same('Ahoj, Eva!', $latte($key, "{var \$n = 'Eva'}{_page.greeting, name: \$n}"));
+		Assert::same('5 stránek', $latte($key, '{_page.count, count: 5}'));
+		Assert::same('Jana má 2 stránky', $latte($key, "{_page.countByName, count: 2, name: 'Jana'}"));
+		Assert::exception(fn () => $latte($key, "{_page.saved, foo: 'x'}"), $failure, "%a%unused parameter 'foo'%a%");
 	});
 }

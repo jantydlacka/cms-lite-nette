@@ -33,6 +33,8 @@ final class NeonTranslator implements Translator
 
 	/**
 	 * First parameter: int = plural count (`%count%`), array = named `%name%` replacements.
+	 * Named arguments (`translate('k', name: 'Jana')`) are the same as one array of named values; they cannot be mixed with positional ones.
+	 * A plural key takes its count from the positional int or from the named `count`.
 	 */
 	public function translate(string|Stringable $message, mixed ...$parameters): string
 	{
@@ -42,6 +44,7 @@ final class NeonTranslator implements Translator
 			return $this->missing($key);
 		}
 
+		$parameters = $this->normalize($key, $parameters);
 		$first = $parameters[0] ?? null;
 		if (array_key_exists(0, $parameters) && !is_int($first) && !is_array($first)) {
 			throw new InvalidArgumentException("Parameter of '$key' must be an int count or an array of named values, " . get_debug_type($first) . ' given.');
@@ -49,11 +52,12 @@ final class NeonTranslator implements Translator
 
 		$plural = is_array($entry);
 		if (is_array($entry)) {
-			if (!is_int($first)) {
-				throw new InvalidArgumentException("Plural key '$key' needs an int count as the first parameter.");
+			$count = is_array($first) ? ($first['count'] ?? null) : $first;
+			if (!is_int($count)) {
+				throw new InvalidArgumentException("Plural key '$key' needs an int count, positional or as the named argument 'count'.");
 			}
 
-			$text = $entry[PluralRules::cs($first)];
+			$text = $entry[PluralRules::cs($count)];
 		} else {
 			$text = $entry;
 		}
@@ -65,6 +69,28 @@ final class NeonTranslator implements Translator
 			is_array($first) => $this->replaceNamed($key, $text, $first),
 			default => $text,
 		};
+	}
+
+
+	/**
+	 * @param array<int|string, mixed> $parameters
+	 * @return array<int, mixed>
+	 */
+	private function normalize(string $key, array $parameters): array
+	{
+		$positional = array_values(array_filter($parameters, is_int(...), ARRAY_FILTER_USE_KEY));
+		$named = array_filter($parameters, is_string(...), ARRAY_FILTER_USE_KEY);
+		if ($named === []) {
+			return $positional;
+		}
+
+		if ($positional !== []) {
+			$this->problem("Named arguments cannot be combined with positional ones in '$key'; the named ones were ignored.");
+
+			return $positional;
+		}
+
+		return [$named];
 	}
 
 
@@ -84,7 +110,7 @@ final class NeonTranslator implements Translator
 
 		// A plural count always selects the form, so it counts as used even without %count%.
 		foreach (array_diff($provided, $needed, $plural ? ['count'] : []) as $name) {
-			$this->problem("Parameter '$name' is not used by '$key'.");
+			$this->problem("Translation '$key' got an unused parameter '$name'.");
 		}
 
 		if ($argCount > 1) {
