@@ -4,10 +4,15 @@ document.addEventListener('DOMContentLoaded', function () {
 	if (!button) {
 		return;
 	}
+	var root = document.documentElement;
+	var sync = function () {
+		button.setAttribute('aria-pressed', root.getAttribute('data-theme') === 'dark' ? 'true' : 'false');
+	};
+	sync();
 	button.addEventListener('click', function () {
-		var root = document.documentElement;
 		var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
 		root.setAttribute('data-theme', next);
+		sync();
 		try {
 			localStorage.setItem('cms-theme', next);
 		} catch (e) {}

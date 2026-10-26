@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Core\DI\AutoRefreshConfigurator;
 use InvalidArgumentException;
 use Nette\Bootstrap\Configurator;
 use Nette\DI\Container;
@@ -63,7 +64,7 @@ final class Bootstrap
 		// NETTE_TESTER_THREAD is set by Nette Tester for parallel workers.
 		$thread = getenv('NETTE_TESTER_THREAD');
 		$database = self::testDatabaseName($thread);
-		$configurator = self::createConfigurator(self::ROOT . '/temp/tests/' . ($thread === false ? 'main' : $thread), false, false);
+		$configurator = self::createConfigurator(self::ROOT . '/temp/tests/' . ($thread === false ? 'main' : $thread), false, false, true);
 		$configurator->addConfig(self::ROOT . '/config/test.neon');
 		// Forced, never read from CMS_DB_NAME: tests must not be able to reach the dev database.
 		$configurator->addDynamicParameters(['dbName' => $database]);
@@ -72,9 +73,9 @@ final class Bootstrap
 	}
 
 
-	private static function createConfigurator(string $tempDir, bool $debugMode, bool $withLocalConfig): Configurator
+	private static function createConfigurator(string $tempDir, bool $debugMode, bool $withLocalConfig, bool $autoRefresh = false): Configurator
 	{
-		$configurator = new Configurator();
+		$configurator = $autoRefresh ? new AutoRefreshConfigurator() : new Configurator();
 		$configurator->setDebugMode($debugMode);
 		$configurator->addStaticParameters([
 			'wwwDir' => self::ROOT . '/www',

@@ -2,4 +2,5 @@
 services:
 	tracy.logger: Tests\FakeLogger
 	# Strict even though debugMode is off: a typo'd key must fail CI.
-	translator: App\Core\Localization\NeonTranslator(langDir: %appDir%/../lang, strict: true)
+	translator:
+		arguments: [strict: true]
