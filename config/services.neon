@@ -5,3 +5,4 @@ services:
 	- App\Core\SystemClock
 	- App\Core\Database\ExplorerTransaction
 	- App\Model\Page\Database\DatabasePageRepository
+	- App\Model\Setting\Database\DatabaseSettingRepository
