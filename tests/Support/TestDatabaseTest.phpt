@@ -135,3 +135,29 @@ test('prepare() refuses when the actual connection is outside the test prefix, t
 		$connection->query('DROP DATABASE ?name', $probe);
 	}
 });
+
+
+test('prepare() rebuilds a database whose migration checksum no longer matches', function () use ($container, $connection, $fixtures): void {
+	TestDatabase::prepare($container);
+	$connection->query("UPDATE migrations SET checksum = 'stale' WHERE `group` = 'structures'");
+
+	TestDatabase::prepare($container, $fixtures);
+
+	Assert::same(0, $connection->fetchField("SELECT COUNT(*) FROM migrations WHERE checksum = 'stale'"));
+	Assert::same(1, $connection->fetchField("SELECT COUNT(*) FROM setting WHERE `key` = 'test.marker'"));
+	$connection->query("INSERT INTO setting (`key`, `locale`, `value`) VALUES ('after-heal', '', 'x')");
+	Assert::same(2, $connection->fetchField('SELECT COUNT(*) FROM setting'));
+	TestDatabase::prepare($container);
+});
+
+
+test('prepare() resets AUTO_INCREMENT even when the rows were already deleted', function () use ($container, $connection): void {
+	TestDatabase::prepare($container);
+	$connection->query("INSERT INTO page (created_at, updated_at) VALUES (NOW(), NOW())");
+	$connection->query('DELETE FROM page');
+
+	TestDatabase::prepare($container);
+	$connection->query("INSERT INTO page (created_at, updated_at) VALUES (NOW(), NOW())");
+	Assert::same(1, $connection->fetchField('SELECT MIN(id) FROM page'));
+	TestDatabase::prepare($container);
+});

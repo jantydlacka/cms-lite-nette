@@ -13,6 +13,7 @@ use Nextras\Migrations\Drivers\MySqlDriver;
 use Nextras\Migrations\Engine\Runner;
 use Nextras\Migrations\Entities\Group;
 use Nextras\Migrations\Extensions\SqlHandler;
+use Nextras\Migrations\LogicException as MigrationsLogicException;
 
 /** One MySQL database per Nette Tester thread, so parallel test files never share data. */
 final class TestDatabase
@@ -38,6 +39,34 @@ final class TestDatabase
 	 */
 	public static function prepare(Container $container, array $extraBasicDataDirs = []): void
 	{
+		try {
+			self::doPrepare($container, $extraBasicDataDirs);
+		} catch (MigrationsLogicException) {
+			// The runner rejects a stale database (edited or removed migration file, unfinished run): rebuild it once.
+			self::recreate($container);
+			self::doPrepare($container, $extraBasicDataDirs);
+		}
+	}
+
+
+	/** Drops and recreates the thread database and re-selects it on the container's connection. */
+	private static function recreate(Container $container): void
+	{
+		$params = $container->getParameters();
+		$database = $params['dbName'];
+		assert(is_string($database) && is_string($params['dbHost']) && is_string($params['dbPort']) && is_string($params['dbUser']) && is_string($params['dbPassword']));
+		self::assertTestDatabase($database);
+
+		$admin = new Connection('mysql:host=' . $params['dbHost'] . ';port=' . $params['dbPort'], $params['dbUser'], $params['dbPassword']);
+		$admin->query('DROP DATABASE IF EXISTS ?name', $database);
+		$admin->query('CREATE DATABASE ?name CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci', $database);
+		$container->getByType(Connection::class)->query('USE ?name', $database);
+	}
+
+
+	/** @param list<string> $extraBasicDataDirs */
+	private static function doPrepare(Container $container, array $extraBasicDataDirs): void
+	{
 		$params = $container->getParameters();
 		$database = $params['dbName'];
 		assert(is_string($database) && is_string($params['dbHost']) && is_string($params['dbPort']) && is_string($params['dbUser']) && is_string($params['dbPassword']));
@@ -58,18 +87,7 @@ final class TestDatabase
 
 		self::migrate($connection, [$structures]);
 
-		$connection->query('SET FOREIGN_KEY_CHECKS = 0');
-		try {
-			foreach ($connection->fetchAll('SHOW FULL TABLES WHERE Table_type = ?', 'BASE TABLE') as $row) {
-				$table = array_values((array) $row)[0];
-				assert(is_string($table));
-				if ($table !== self::MIGRATIONS_TABLE) {
-					$connection->query('TRUNCATE TABLE ?name', $table);
-				}
-			}
-		} finally {
-			$connection->query('SET FOREIGN_KEY_CHECKS = 1');
-		}
+		self::truncateDirtyTables($connection);
 
 		$groups = [$structures, self::group('basic-data', self::MIGRATIONS_DIR . '/basic-data', ['structures'])];
 		// Nextras orders files globally across groups, so extra fixtures need names sorting after all executed ones (hence 2099-...).
@@ -77,6 +95,38 @@ final class TestDatabase
 			$groups[] = self::group('basic-data-extra-' . $i, $dir, ['basic-data']);
 		}
 		self::migrate($connection, $groups);
+	}
+
+
+	/**
+	 * TRUNCATE is a DDL statement and dominates the cost of prepare(): empty tables are left alone,
+	 * tables with an AUTO_INCREMENT counter in use are truncated (resets it), the rest are emptied with DELETE.
+	 */
+	private static function truncateDirtyTables(Connection $connection): void
+	{
+		// MySQL 8 caches information_schema statistics (a day by default); a stale AUTO_INCREMENT would skip a dirty table.
+		$connection->query('SET SESSION information_schema_stats_expiry = 0');
+		$tables = $connection->fetchAll(
+			'SELECT TABLE_NAME AS name, AUTO_INCREMENT AS next FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = ? AND TABLE_NAME <> ?',
+			'BASE TABLE',
+			self::MIGRATIONS_TABLE,
+		);
+
+		$connection->query('SET FOREIGN_KEY_CHECKS = 0');
+		try {
+			foreach ($tables as $row) {
+				$table = $row->name;
+				assert(is_string($table));
+				if ($row->next > 1) {
+					$connection->query('TRUNCATE TABLE ?name', $table);
+				} elseif ((bool) $connection->fetchField('SELECT EXISTS(SELECT 1 FROM ?name)', $table)) {
+					// Without an AUTO_INCREMENT counter DELETE leaves the same state and, unlike TRUNCATE, is not DDL.
+					$connection->query('DELETE FROM ?name', $table);
+				}
+			}
+		} finally {
+			$connection->query('SET FOREIGN_KEY_CHECKS = 1');
+		}
 	}
 
 
