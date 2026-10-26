@@ -149,3 +149,40 @@ foreach ($mismatches as $name => [$key, $args]) {
 		Assert::same(ILogger::WARNING, $logger->records[0][1]);
 	});
 }
+
+
+test('an explicit null first parameter is rejected', function (): void {
+	Assert::exception(fn () => translator(true)->translate('page.saved', null), InvalidArgumentException::class);
+	Assert::exception(fn () => translator(false)->translate('page.saved', null), InvalidArgumentException::class);
+});
+
+
+test('named values may be strings, numbers and Stringable objects', function (): void {
+	$logger = new FakeLogger();
+	$stringable = new class() implements Stringable {
+		public function __toString(): string
+		{
+			return 'Eva';
+		}
+	};
+	Assert::same('Ahoj, 7!', translator(true, $logger)->translate('page.greeting', ['name' => 7]));
+	Assert::same('Ahoj, 1.5!', translator(true, $logger)->translate('page.greeting', ['name' => 1.5]));
+	Assert::same('Ahoj, Eva!', translator(true, $logger)->translate('page.greeting', ['name' => $stringable]));
+	Assert::same([], $logger->records);
+});
+
+
+foreach (['null' => null, 'array' => ['x'], 'object' => new stdClass(), 'true' => true, 'false' => false] as $type => $value) {
+	test("named value of type $type throws in strict mode and warns otherwise", function () use ($value): void {
+		Assert::exception(
+			fn () => translator(true)->translate('page.greeting', ['name' => $value]),
+			InvalidArgumentException::class,
+			"%a%'name'%a%page.greeting%a%",
+		);
+
+		$logger = new FakeLogger();
+		Assert::same('Ahoj, %name%!', translator(false, $logger)->translate('page.greeting', ['name' => $value]));
+		Assert::count(1, $logger->records);
+		Assert::same(ILogger::WARNING, $logger->records[0][1]);
+	});
+}

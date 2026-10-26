@@ -43,7 +43,7 @@ final class NeonTranslator implements Translator
 		}
 
 		$first = $parameters[0] ?? null;
-		if ($first !== null && !is_int($first) && !is_array($first)) {
+		if (array_key_exists(0, $parameters) && !is_int($first) && !is_array($first)) {
 			throw new InvalidArgumentException("Parameter of '$key' must be an int count or an array of named values, " . get_debug_type($first) . ' given.');
 		}
 
@@ -62,7 +62,7 @@ final class NeonTranslator implements Translator
 
 		return match (true) {
 			is_int($first) => str_replace('%count%', (string) $first, $text),
-			is_array($first) => $this->replaceNamed($text, $first),
+			is_array($first) => $this->replaceNamed($key, $text, $first),
 			default => $text,
 		};
 	}
@@ -96,12 +96,15 @@ final class NeonTranslator implements Translator
 	/**
 	 * @param array<mixed> $values
 	 */
-	private function replaceNamed(string $text, array $values): string
+	private function replaceNamed(string $key, string $text, array $values): string
 	{
 		$replace = [];
 		foreach ($values as $name => $value) {
-			if (is_scalar($value) || $value instanceof Stringable) {
+			// Bool is rejected too: an implicit cast would print '1' or nothing.
+			if (is_string($value) || is_int($value) || is_float($value) || $value instanceof Stringable) {
 				$replace['%' . $name . '%'] = (string) $value;
+			} else {
+				$this->problem("Value of '$name' for '$key' must be a string, number or Stringable, " . get_debug_type($value) . ' given.');
 			}
 		}
 
