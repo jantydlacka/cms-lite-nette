@@ -10,9 +10,9 @@ use Tester\Assert;
 require __DIR__ . '/../bootstrap.php';
 
 /**
- * Parses the messages table; every row after the header and separator must be a key/text row.
+ * Parses the messages table; every row after the header and separator must be a key/Czech/English row.
  *
- * @return array<string, string> key => text
+ * @return array<string, array{cs: string, en: string}> key => texts
  */
 function specMessages(string $markdown): array
 {
@@ -29,7 +29,7 @@ function specMessages(string $markdown): array
 			continue;
 		}
 
-		$match = Strings::match($line, '~^\|\s*`([^`]+)`\s*\|\s*(\S.*?)\s*\|$~');
+		$match = Strings::match($line, '~^\|\s*`([^`]+)`\s*\|\s*([^|\s][^|]*?)\s*\|\s*([^|\s][^|]*?)\s*\|$~');
 		if ($match === null) {
 			throw new UnexpectedValueException('Malformed messages table row on line ' . ($number + 1) . '.');
 		}
@@ -37,31 +37,36 @@ function specMessages(string $markdown): array
 			throw new UnexpectedValueException("Duplicate key '{$match[1]}' on line " . ($number + 1) . '.');
 		}
 
-		$messages[$match[1]] = $match[2];
+		$messages[$match[1]] = ['cs' => $match[2], 'en' => $match[3]];
 	}
 
 	return $messages;
 }
 
 
-test('spec/messages.md lists exactly the keys and texts of lang/cs.neon', function (): void {
-	$catalog = Neon::decode(FileSystem::read(__DIR__ . '/../../lang/cs.neon'));
-	assert(is_array($catalog));
+test('spec/messages.md lists exactly the keys and texts of lang/cs.neon and lang/en.neon', function (): void {
 	$spec = specMessages(FileSystem::read(__DIR__ . '/../../spec/messages.md'));
-
 	Assert::notSame([], $spec);
-	Assert::equal($catalog, $spec);
+
+	foreach (['cs', 'en'] as $locale) {
+		$catalog = Neon::decode(FileSystem::read(__DIR__ . "/../../lang/$locale.neon"));
+		assert(is_array($catalog));
+		Assert::equal($catalog, array_map(static fn (array $texts): string => $texts[$locale], $spec), $locale);
+	}
 });
 
 
-$header = "| Key | Czech |\n|-----|-------|\n";
+$header = "| Key | Czech | English |\n|-----|-------|---------|\n";
 
 foreach ([
-	'key without backticks' => "| a.b | Text |",
+	'key without backticks' => "| a.b | Text | Text |",
 	'missing text' => "| `a.b` |",
-	'empty text' => "| `a.b` |  |",
-	'missing closing pipe' => "| `a.b` | Text",
-	'duplicate key' => "| `a.b` | One |\n| `a.b` | Two |",
+	'missing English text' => "| `a.b` | Text |",
+	'empty text' => "| `a.b` |  | Text |",
+	'empty English text' => "| `a.b` | Text |  |",
+	'extra column' => "| `a.b` | Text | Text | Text |",
+	'missing closing pipe' => "| `a.b` | Text | Text",
+	'duplicate key' => "| `a.b` | One | One |\n| `a.b` | Two | Two |",
 ] as $name => $rows) {
 	test("malformed table row is rejected: $name", function () use ($header, $rows): void {
 		Assert::exception(fn () => specMessages($header . $rows), UnexpectedValueException::class);
@@ -70,5 +75,5 @@ foreach ([
 
 
 test('a well-formed table parses', function () use ($header): void {
-	Assert::same(['a.b' => 'Text'], specMessages("# Title\n\n" . $header . "| `a.b` | Text |\n"));
+	Assert::same(['a.b' => ['cs' => 'Text', 'en' => 'Words']], specMessages("# Title\n\n" . $header . "| `a.b` | Text | Words |\n"));
 });

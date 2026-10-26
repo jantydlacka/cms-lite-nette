@@ -1,0 +1,28 @@
+{* Content of a page translation; shared by the homepage and the other pages. Expects $page, $breadcrumbs and $homepageId. *}
+{layout '../@layout.latte'}
+
+{block title}{$page->title} | {$siteName}{/block}
+
+{block head}
+	<meta n:if="$page->metaDescription !== ''" name="description" content="{$page->metaDescription}">
+{/block}
+
+{block content}
+<nav n:if="count($breadcrumbs) > 1" class="breadcrumbs" aria-label="{_front.breadcrumbs.label}" data-testid="breadcrumbs">
+	<ol>
+		<li n:foreach="$breadcrumbs as $crumb">
+			{if $iterator->last}
+				<span aria-current="page">{$crumb->title}</span>
+			{else}
+				<a href="{if $crumb->pageId === $homepageId}{plink :Front:Home:default}{else}{plink :Front:Page:default, path: $crumb->path}{/if}">{$crumb->title}</a> <span class="breadcrumbs-separator" aria-hidden="true">›</span>
+			{/if}
+		</li>
+	</ol>
+</nav>
+<article>
+	<h1 data-testid="page-title">{$page->title}</h1>
+	<div data-testid="page-content">
+		{$page->content|markdown}
+	</div>
+</article>
+{/block}

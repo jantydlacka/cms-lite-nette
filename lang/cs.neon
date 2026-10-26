@@ -1,6 +1,7 @@
-front.home.welcome: Vítejte
+front.theme.label: Vzhled
 front.theme.dark: Tmavý režim
+front.menu.label: Hlavní menu
+front.breadcrumbs.label: Drobečková navigace
 error.404.title: Stránka nenalezena
 error.4xx.title: Požadavek nelze vyřídit
 error.500.title: Něco se pokazilo
-front.theme.label: Vzhled

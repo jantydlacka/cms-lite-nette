@@ -1,1 +1,4 @@
 page.saved: Page saved.
+page.count:
+	one: '%count% page'
+	other: '%count% pages'

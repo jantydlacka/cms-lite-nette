@@ -1,0 +1,6 @@
+# Routes the error presenters as ordinary requests, which no production route does.
+services:
+	router:
+		setup:
+			- prepend(Nette\Application\Routers\Route('direct-error-4xx', 'Error:Error4xx:default'))
+			- prepend(Nette\Application\Routers\Route('direct-error-5xx', 'Error:Error5xx:default'))

@@ -11,14 +11,13 @@ use Stringable;
 use Tracy\ILogger;
 
 /**
- * Flat dotted keys in `<langDir>/<locale>.neon`; a value is a string or a plural map `{one, few, other}`.
+ * Flat dotted keys in `<langDir>/<locale>.neon`; a value is a string or a plural map with exactly the forms of the locale (PluralRules).
  * Plural keys take the count as a positional int or a named `count` (int), and may use other named parameters alongside it. A literal `%name%` cannot be escaped in translations yet.
  * Catalog errors (malformed or missing file) throw in non-strict mode too, deliberately; strict only affects missing keys and parameter mismatches.
- * Plural rules are Czech for every locale until another language needs its own.
  */
 final class NeonTranslator implements Translator
 {
-	/** @var array<string, array<string, string|array{one: string, few: string, other: string}>> */
+	/** @var array<string, array<string, string|array<string, string>>> */
 	private array $catalogs = [];
 
 
@@ -39,7 +38,8 @@ final class NeonTranslator implements Translator
 	public function translate(string|Stringable $message, mixed ...$parameters): string
 	{
 		$key = (string) $message;
-		$entry = $this->catalog($this->locale->get())[$key] ?? null;
+		$locale = $this->locale->get();
+		$entry = $this->catalog($locale)[$key] ?? null;
 		if ($entry === null) {
 			return $this->missing($key);
 		}
@@ -57,7 +57,7 @@ final class NeonTranslator implements Translator
 				throw new InvalidArgumentException("Plural key '$key' needs an int count, positional or as the named argument 'count'.");
 			}
 
-			$text = $entry[PluralRules::cs($count)];
+			$text = $entry[PluralRules::form($locale, $count)];
 		} else {
 			$text = $entry;
 		}
@@ -162,7 +162,7 @@ final class NeonTranslator implements Translator
 
 
 	/**
-	 * @return array<string, string|array{one: string, few: string, other: string}>
+	 * @return array<string, string|array<string, string>>
 	 */
 	private function catalog(string $locale): array
 	{
@@ -172,7 +172,7 @@ final class NeonTranslator implements Translator
 				throw new InvalidArgumentException("Translation file '$file' not found.");
 			}
 
-			$this->catalogs[$locale] = $this->validate(Neon::decodeFile($file), $file);
+			$this->catalogs[$locale] = $this->validate(Neon::decodeFile($file), $file, PluralRules::for($locale));
 		}
 
 		return $this->catalogs[$locale];
@@ -180,9 +180,10 @@ final class NeonTranslator implements Translator
 
 
 	/**
-	 * @return array<string, string|array{one: string, few: string, other: string}>
+	 * @param list<string> $forms
+	 * @return array<string, string|array<string, string>>
 	 */
-	private function validate(mixed $data, string $file): array
+	private function validate(mixed $data, string $file, array $forms): array
 	{
 		if (!is_array($data)) {
 			throw new InvalidArgumentException("Translation file '$file' must be a map.");
@@ -199,19 +200,19 @@ final class NeonTranslator implements Translator
 				continue;
 			}
 
-			if (
-				!is_array($value)
-				|| count($value) !== 3
-				|| array_diff(array_keys($value), ['one', 'few', 'other']) !== []
-			) {
-				throw new InvalidArgumentException("Translation '$key' in '$file' must be a string or a map with exactly the keys one, few, other.");
+			if (!is_array($value) || count($value) !== count($forms) || array_diff(array_keys($value), $forms) !== []) {
+				throw new InvalidArgumentException("Translation '$key' in '$file' must be a string or a map with exactly the keys " . implode(', ', $forms) . '.');
 			}
 
-			if (!is_string($value['one']) || !is_string($value['few']) || !is_string($value['other'])) {
-				throw new InvalidArgumentException("Plural forms of '$key' in '$file' must be strings.");
+			$plural = [];
+			foreach ($forms as $form) {
+				if (!is_string($value[$form])) {
+					throw new InvalidArgumentException("Plural forms of '$key' in '$file' must be strings.");
+				}
+				$plural[$form] = $value[$form];
 			}
 
-			$catalog[$key] = ['one' => $value['one'], 'few' => $value['few'], 'other' => $value['other']];
+			$catalog[$key] = $plural;
 		}
 
 		return $catalog;

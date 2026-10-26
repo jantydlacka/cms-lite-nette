@@ -26,3 +26,82 @@
 	padding-block: 2rem;
 	color: var(--pico-muted-color);
 }
+
+/* Block, not the framework's flex nav; `nav.` selectors outweigh its `nav ul:first-of-type` margins. */
+.site-menu {
+	display: block;
+}
+
+nav.site-menu ul {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem var(--cms-gap);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.site-menu > ul {
+	padding-bottom: var(--cms-gap);
+	border-bottom: 1px solid var(--pico-muted-border-color);
+}
+
+nav.site-menu li {
+	display: flex;
+	align-items: baseline;
+	gap: 0.25rem var(--cms-gap);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/* Child items follow their parent in a smaller size. */
+.site-menu li ul {
+	font-size: 0.875em;
+}
+
+.site-menu a,
+.breadcrumbs a {
+	margin: 0;
+	padding: 0;
+}
+
+.site-menu a {
+	text-decoration: none;
+}
+
+.site-menu a[aria-current="page"] {
+	font-weight: 700;
+	text-decoration: underline;
+}
+
+.breadcrumbs {
+	display: block;
+}
+
+nav.breadcrumbs ol {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+	margin: 0 0 var(--cms-gap);
+	padding: 0;
+	list-style: none;
+	font-size: 0.875em;
+}
+
+nav.breadcrumbs li {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/* Drop the zero-width character the framework floats before every nav item. */
+nav.site-menu li::before,
+nav.breadcrumbs li::before {
+	content: none;
+}
+
+.breadcrumbs-separator {
+	margin-left: 0.25rem;
+	color: var(--pico-muted-color);
+}

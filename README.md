@@ -86,6 +86,8 @@ E2E_BASE_URL=http://localhost:8080 E2E_IGNORE_CONSOLE_PATTERN=_tracy_bar npx pla
 
 Asset URLs are emitted as absolute URLs using the request host. Behind a TLS-terminating reverse proxy, configure trusted proxies and HTTPS detection in the application; otherwise the browser receives `http://` asset URLs on an HTTPS page (mixed content).
 
+Deploy `www/assets/` together with the templates: when an asset file referenced by a template is missing, the page breaks in production mode – the response still has status 200, but the HTML stops inside `<head>` and the generic server error screen follows (the error is logged).
+
 ## Documentation
 
 - [`docs/design.md`](docs/design.md) - architecture and decisions

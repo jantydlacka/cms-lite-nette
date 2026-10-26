@@ -1,0 +1,3 @@
+# Routing tests need a second language (production default is cs only).
+cms:
+	locales: [cs, en]

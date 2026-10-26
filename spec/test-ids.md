@@ -6,7 +6,11 @@ Elements the end-to-end tests locate by `data-testid`.
 |---------|---------|
 | `site-name` | Site name link in the page header; text is the configured site name. |
 | `theme-toggle` | Button in the header that switches between light and dark mode. |
-| `home-title` | Main heading of the homepage. |
+| `menu` | Main menu (`<nav>`) of the public pages; absent on error pages. |
+| `menu-item` | Link of one menu item; the item of the shown page has `aria-current="page"`. |
+| `breadcrumbs` | Breadcrumb navigation from the top-level page down to the shown page; only for nested pages. |
+| `page-title` | Main heading of a page, the homepage included. |
+| `page-content` | Rendered content of a page. |
 
 ## Theme contract
 

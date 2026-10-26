@@ -52,9 +52,44 @@ foreach ($cases as [$count, $expected]) {
 
 
 test('plural rules use the absolute value', function (): void {
-	Assert::same('one', PluralRules::cs(-1));
-	Assert::same('few', PluralRules::cs(-3));
-	Assert::same('other', PluralRules::cs(-5));
+	Assert::same('one', PluralRules::form('cs', -1));
+	Assert::same('few', PluralRules::form('cs', -3));
+	Assert::same('other', PluralRules::form('cs', -5));
+	Assert::same('one', PluralRules::form('en', -1));
+	Assert::same('other', PluralRules::form('en', -3));
+});
+
+
+test('plural forms are per language', function (): void {
+	Assert::same(['one', 'few', 'other'], PluralRules::for('cs'));
+	Assert::same(['one', 'other'], PluralRules::for('en'));
+	foreach ([0 => 'other', 1 => 'one', 2 => 'other', 4 => 'other', 5 => 'other', 21 => 'other'] as $n => $form) {
+		Assert::same($form, PluralRules::form('en', $n));
+	}
+});
+
+
+test('an unknown language has no plural rules', function (): void {
+	Assert::exception(fn () => PluralRules::for('de'), InvalidArgumentException::class, '%a%de%a%');
+	Assert::exception(fn () => PluralRules::form('de', 1), InvalidArgumentException::class, '%a%de%a%');
+});
+
+
+test('an English plural uses the English forms', function (): void {
+	$locale = new CurrentLocale(new CmsConfig('Demo', 'cs', ['cs', 'en'], 10));
+	$locale->set('en');
+	$translator = new NeonTranslator(__DIR__ . '/fixtures', $locale, true, new FakeLogger());
+	Assert::same('1 page', $translator->translate('page.count', 1));
+	Assert::same('3 pages', $translator->translate('page.count', 3));
+	Assert::same('0 pages', $translator->translate('page.count', 0));
+});
+
+
+test('a plural map must have exactly the forms of its language', function (): void {
+	$locale = new CurrentLocale(new CmsConfig('Demo', 'cs', ['cs', 'en'], 10));
+	$locale->set('en');
+	$translator = new NeonTranslator(__DIR__ . '/fixtures/invalid/en-with-few', $locale, false, new FakeLogger());
+	Assert::exception(fn () => $translator->translate('a.b', 1), InvalidArgumentException::class, "%a%'a.b'%a%en.neon%a%one, other%a%");
 });
 
 

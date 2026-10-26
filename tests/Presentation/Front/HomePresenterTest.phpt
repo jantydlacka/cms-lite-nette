@@ -3,39 +3,30 @@
 declare(strict_types=1);
 
 use App\Core\Localization\MissingTranslationException;
+use App\Model\Page\PageRepository;
+use App\Model\Page\PageService;
+use App\Model\Page\SavePageTranslation;
+use App\Model\PublicationStatus;
+use App\Model\Setting\SettingRepository;
 use Latte\Loaders\StringLoader;
-use Nette\Application\IPresenterFactory;
-use Nette\Application\Request;
-use Nette\Application\Responses\TextResponse;
-use Nette\Application\UI\Presenter;
 use Nette\Bridges\ApplicationLatte\LatteFactory;
 use Tester\Assert;
+use Tests\Support\HttpApplication;
 use function Tests\container;
-use function Tests\html;
 
 require __DIR__ . '/../../bootstrap.php';
 
-test('home page renders a document with the default language', function (): void {
-	$presenter = container()->getByType(IPresenterFactory::class)->createPresenter('Front:Home');
-	assert($presenter instanceof Presenter);
-	$presenter->autoCanonicalize = false;
-
-	$response = $presenter->run(new Request('Front:Home', 'GET', ['action' => 'default']));
-
-	Assert::type(TextResponse::class, $response);
-	assert($response instanceof TextResponse);
-	Assert::contains('<html lang="cs">', html($response));
-});
-
-
 test('home page has site name, theme toggle and assets, with the mode script before the stylesheet', function (): void {
-	$presenter = container()->getByType(IPresenterFactory::class)->createPresenter('Front:Home');
-	assert($presenter instanceof Presenter);
-	$presenter->autoCanonicalize = false;
-	$response = $presenter->run(new Request('Front:Home', 'GET', ['action' => 'default']));
-	assert($response instanceof TextResponse);
-	$page = html($response);
+	$app = HttpApplication::boot();
+	$id = $app->container->getByType(PageRepository::class)->createPage(null, 0, true);
+	$app->container->getByType(PageService::class)->saveTranslation(new SavePageTranslation($id, 'cs', 'Úvod', 'uvod', 'Text', '', PublicationStatus::Published));
+	$app->container->getByType(SettingRepository::class)->set('homepage', (string) $id);
 
+	$result = $app->get('/');
+	$page = $result->body;
+
+	Assert::same(200, $result->code);
+	Assert::contains('<html lang="cs">', $page);
 	Assert::match('%A%data-testid="site-name"%a?%>CMS Lite</a>%A%', $page);
 	Assert::match('%A%data-testid="theme-toggle" aria-label="Tmavý režim"%A%', $page);
 	Assert::match('%A%/assets/front.css%A%', $page);
@@ -45,6 +36,14 @@ test('home page has site name, theme toggle and assets, with the mode script bef
 	$script = strpos($page, "localStorage.getItem('cms-theme')");
 	$css = strpos($page, '/assets/vendor/pico.min.css');
 	Assert::true($script !== false && $css !== false && $script < $css);
+});
+
+
+test('without a homepage / is not found', function (): void {
+	$result = HttpApplication::boot()->get('/');
+
+	Assert::same(404, $result->code);
+	Assert::same('Stránka nenalezena', $result->text('error-title'));
 });
 
 

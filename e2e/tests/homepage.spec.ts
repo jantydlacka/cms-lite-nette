@@ -27,7 +27,7 @@ test('site name is visible', async ({ page }) => {
 
 test('homepage shows its main heading', async ({ page }) => {
 	await page.goto('/');
-	await expect(page.getByTestId('home-title')).toHaveText('Vítejte');
+	await expect(page.getByTestId('page-title')).toHaveText('Úvod');
 });
 
 test('theme toggle changes the theme and the choice survives a reload', async ({ page }) => {

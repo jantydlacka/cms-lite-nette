@@ -1,13 +1,15 @@
 services:
 	router: App\Core\RouterFactory::createRouter
+	- App\Core\Routing\PrefixLocaleStrategy
 	- App\Core\Localization\CurrentLocale
 	translator: App\Core\Localization\NeonTranslator(langDir: %appDir%/../lang, strict: %debugMode%)
 	- App\Core\SystemClock
 	- App\Core\Database\ExplorerTransaction
-	- App\Model\Page\Database\DatabasePageRepository
+	pageRepository: App\Model\Page\Database\DatabasePageRepository # named so a test can replace it
 	- App\Model\Setting\Database\DatabaseSettingRepository
-	- App\Model\Redirect\Database\DatabasePathRedirectRepository
+	pathRedirectRepository: App\Model\Redirect\Database\DatabasePathRedirectRepository # named so a test can replace it
 	- App\Model\Page\FlatPagePathStrategy
 	- App\Model\Page\ReservedSegments
 	- App\Model\Page\PageService
+	- App\Model\Page\Homepage
 	- App\Core\Markdown\CommonMarkRenderer
