@@ -212,3 +212,28 @@ test('reports paths containing a colon intact', function (): void {
 	Assert::same(1, $code);
 	Assert::contains("a:b.txt:2\n", $output);
 });
+
+
+test('reports an indexed path that matches, even when the content is clean', function (): void {
+	$dir = repository("clean\n");
+	mkdir($dir . '/docs');
+	file_put_contents($dir . '/docs/My-ForbiddenWord-notes.txt', "clean\n");
+	git($dir, 'add', 'docs/My-ForbiddenWord-notes.txt');
+	[$code, $output] = run($dir, WORD_LIST);
+	cleanup($dir);
+
+	Assert::same(1, $code);
+	Assert::contains("file name: docs/My-ForbiddenWord-notes.txt\n", $output);
+});
+
+
+test('does not report a cleanly named file with clean content', function (): void {
+	$dir = repository("clean\n");
+	file_put_contents($dir . '/other.txt', "clean\n");
+	git($dir, 'add', 'other.txt');
+	[$code, $output] = run($dir, WORD_LIST);
+	cleanup($dir);
+
+	Assert::same(0, $code);
+	Assert::notContains('file name', $output);
+});

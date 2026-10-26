@@ -7,7 +7,7 @@
 # Without an argument the list is taken from $CMS_FORBIDDEN_WORDS, falling back
 # to _local/forbidden-words.txt.
 #
-# Scans files in the git index (what would be committed) and all commit messages
+# Scans files and file names in the git index (what would be committed) and all commit messages
 # of the current repository for the
 # case-insensitive extended regexes listed (one per line) in the given file.
 # Prints only locations (file:line, commit hash), never the matched text.
@@ -60,6 +60,14 @@ while IFS= read -r -d '' path && IFS= read -r -d '' line && IFS= read -r _conten
 	echo "$path:$line"
 	found=1
 done < <(git grep --cached --null -I -n -i -E -f "$patterns" -- ':!.gitignore' 2> /dev/null)
+
+# Paths in the index; the path itself is the finding.
+while IFS= read -r -d '' path; do
+	if printf '%s' "$path" | grep -qiEf "$patterns"; then
+		echo "file name: $path"
+		found=1
+	fi
+done < <(git ls-files --cached -z -- ':!.gitignore' 2> /dev/null)
 
 if git rev-parse --verify -q HEAD > /dev/null; then
 	while read -r commit; do
