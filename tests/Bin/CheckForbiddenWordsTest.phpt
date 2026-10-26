@@ -237,3 +237,16 @@ test('does not report a cleanly named file with clean content', function (): voi
 	Assert::same(0, $code);
 	Assert::notContains('file name', $output);
 });
+
+
+test('.gitignore is scanned like any other tracked file', function (): void {
+	$dir = repository("clean\n");
+	file_put_contents($dir . '/.gitignore', "/forbiddenword/\n");
+	git($dir, 'add', '.gitignore');
+	[$code, $output] = run($dir, WORD_LIST);
+	cleanup($dir);
+
+	Assert::same(1, $code);
+	Assert::contains('.gitignore:1', $output);
+	Assert::notContains('forbiddenword', $output);
+});
