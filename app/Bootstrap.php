@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use Nette\Bootstrap\Configurator;
 use Nette\DI\Container;
 use Nette\Utils\Finder;
+use RuntimeException;
 
 final class Bootstrap
 {
@@ -15,11 +16,19 @@ final class Bootstrap
 
 	private const ROOT = __DIR__ . '/..';
 
+	private const DB_ENV = [
+		'dbHost' => ['CMS_DB_HOST', '127.0.0.1'],
+		'dbPort' => ['CMS_DB_PORT', '3306'],
+		'dbName' => ['CMS_DB_NAME', 'cms'],
+		'dbUser' => ['CMS_DB_USER', 'root'],
+		'dbPassword' => ['CMS_DB_PASSWORD', 'root'],
+	];
+
 
 	public static function bootWebApplication(): Container
 	{
 		$debug = self::isDebugMode(getenv('NETTE_DEBUG'));
-		$configurator = self::createConfigurator(self::ROOT . '/temp', $debug, true);
+		$configurator = self::createConfigurator(self::ROOT . '/temp', $debug, true, allowDatabaseDefaults: $debug);
 		$configurator->enableTracy(self::ROOT . '/log');
 
 		return $configurator->createContainer();
@@ -40,11 +49,31 @@ final class Bootstrap
 	}
 
 
-	private static function env(string $name, string $default): string
+	/**
+	 * Database connection parameters from CMS_DB_* variables. Unset or empty variables take the
+	 * development defaults only when allowed (debug mode, tests); otherwise boot fails.
+	 *
+	 * @param array<string, string|false> $env
+	 * @return array<string, string> dbHost, dbPort, dbName, dbUser, dbPassword
+	 */
+	public static function databaseParameters(array $env, bool $allowDefaults): array
 	{
-		$value = getenv($name);
+		$parameters = [];
+		$missing = [];
+		foreach (self::DB_ENV as $parameter => [$name, $default]) {
+			$value = $env[$name] ?? false;
+			if ($value === false || $value === '') {
+				$missing[] = $name;
+				$value = $default;
+			}
+			$parameters[$parameter] = $value;
+		}
 
-		return $value === false || $value === '' ? $default : $value;
+		if ($missing !== [] && !$allowDefaults) {
+			throw new RuntimeException('Database is not configured; set these environment variables (defaults apply only in debug mode): ' . implode(', ', $missing) . '.');
+		}
+
+		return $parameters;
 	}
 
 
@@ -64,7 +93,7 @@ final class Bootstrap
 		// NETTE_TESTER_THREAD is set by Nette Tester for parallel workers.
 		$thread = getenv('NETTE_TESTER_THREAD');
 		$database = self::testDatabaseName($thread);
-		$configurator = self::createConfigurator(self::ROOT . '/temp/tests/' . ($thread === false ? 'main' : $thread), false, false);
+		$configurator = self::createConfigurator(self::ROOT . '/temp/tests/' . ($thread === false ? 'main' : $thread), false, false, allowDatabaseDefaults: true);
 		$configurator->addConfig(self::ROOT . '/config/test.neon');
 		// Tests run with debug off, so the container is never auto-refreshed; static parameters are part of its cache key.
 		$configurator->addStaticParameters(['testContainerFingerprint' => self::testContainerFingerprint(self::ROOT)]);
@@ -112,7 +141,7 @@ final class Bootstrap
 	}
 
 
-	private static function createConfigurator(string $tempDir, bool $debugMode, bool $withLocalConfig): Configurator
+	private static function createConfigurator(string $tempDir, bool $debugMode, bool $withLocalConfig, bool $allowDatabaseDefaults): Configurator
 	{
 		$configurator = new Configurator();
 		$configurator->setDebugMode($debugMode);
@@ -121,13 +150,11 @@ final class Bootstrap
 			'demoData' => self::isDemoData(getenv('CMS_DEMO_DATA'), $debugMode),
 		]);
 		// Dynamic, so credentials stay out of the compiled container cache.
-		$configurator->addDynamicParameters([
-			'dbHost' => self::env('CMS_DB_HOST', '127.0.0.1'),
-			'dbPort' => self::env('CMS_DB_PORT', '3306'),
-			'dbName' => self::env('CMS_DB_NAME', 'cms'),
-			'dbUser' => self::env('CMS_DB_USER', 'root'),
-			'dbPassword' => self::env('CMS_DB_PASSWORD', 'root'),
-		]);
+		$env = [];
+		foreach (self::DB_ENV as [$name]) {
+			$env[$name] = getenv($name);
+		}
+		$configurator->addDynamicParameters(self::databaseParameters($env, $allowDatabaseDefaults));
 		$configurator->setTempDirectory($tempDir);
 		$configurator->addConfig(self::ROOT . '/config/common.neon');
 		$configurator->addConfig(self::ROOT . '/config/services.neon');

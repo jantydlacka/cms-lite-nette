@@ -76,3 +76,42 @@ test('bootForTests keys the container by the fingerprint', function (): void {
 	Assert::type('string', $parameters['testContainerFingerprint'] ?? null);
 	Assert::same(Bootstrap::testContainerFingerprint(dirname(__DIR__)), $parameters['testContainerFingerprint']);
 });
+
+
+const DB_ENV = ['CMS_DB_HOST' => 'db', 'CMS_DB_PORT' => '3310', 'CMS_DB_NAME' => 'site', 'CMS_DB_USER' => 'app', 'CMS_DB_PASSWORD' => 'secret'];
+
+
+test('database parameters come from the environment', function (): void {
+	$expected = ['dbHost' => 'db', 'dbPort' => '3310', 'dbName' => 'site', 'dbUser' => 'app', 'dbPassword' => 'secret'];
+	Assert::same($expected, Bootstrap::databaseParameters(DB_ENV, false));
+	Assert::same($expected, Bootstrap::databaseParameters(DB_ENV, true));
+});
+
+
+test('database defaults apply to unset or empty variables when allowed', function (): void {
+	Assert::same(
+		['dbHost' => '127.0.0.1', 'dbPort' => '3306', 'dbName' => 'cms', 'dbUser' => 'root', 'dbPassword' => 'root'],
+		Bootstrap::databaseParameters([], true),
+	);
+	Assert::same('root', Bootstrap::databaseParameters(['CMS_DB_PASSWORD' => ''] + DB_ENV, true)['dbPassword']);
+	Assert::same('3306', Bootstrap::databaseParameters(['CMS_DB_PORT' => false] + DB_ENV, true)['dbPort']);
+});
+
+
+test('without defaults every unset or empty database variable is reported', function (): void {
+	Assert::exception(
+		fn () => Bootstrap::databaseParameters([], false),
+		RuntimeException::class,
+		'%a%CMS_DB_HOST, CMS_DB_PORT, CMS_DB_NAME, CMS_DB_USER, CMS_DB_PASSWORD.',
+	);
+	Assert::exception(
+		fn () => Bootstrap::databaseParameters(['CMS_DB_PASSWORD' => ''] + DB_ENV, false),
+		RuntimeException::class,
+		'%a%: CMS_DB_PASSWORD.',
+	);
+	Assert::exception(
+		fn () => Bootstrap::databaseParameters(['CMS_DB_USER' => false] + DB_ENV, false),
+		RuntimeException::class,
+		'%a%: CMS_DB_USER.',
+	);
+});
