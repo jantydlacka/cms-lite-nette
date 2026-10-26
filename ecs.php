@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use PHP_CodeSniffer\Standards\Generic\Sniffs\WhiteSpace\DisallowSpaceIndentSniff;
 use SlevomatCodingStandard\Sniffs\Namespaces\ReferenceUsedNamesOnlySniff;
 use SlevomatCodingStandard\Sniffs\Namespaces\UnusedUsesSniff;
 use SlevomatCodingStandard\Sniffs\TypeHints\DeclareStrictTypesSniff;
@@ -19,14 +18,12 @@ return ECSConfig::configure()
 	->withFileExtensions(['php', 'phpt'])
 	->withSpacing(indentation: 'tab')
 	->withPreparedSets(psr12: true)
-	->withRules([
-		DisallowSpaceIndentSniff::class,
-	])
 	->withConfiguredRule(DeclareStrictTypesSniff::class, [
 		'declareOnFirstLine' => false,
 		'linesCountBeforeDeclare' => 1,
 		'spacesCountAroundEqualsSign' => 0,
 	])
+	// Tabs are enforced by IndentationTypeFixer (withSpacing); ECS drops DisallowSpaceIndentSniff as its duplicate.
 	->withRules([
 		ParameterTypeHintSniff::class,
 		PropertyTypeHintSniff::class,
