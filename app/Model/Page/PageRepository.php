@@ -13,7 +13,19 @@ interface PageRepository
 	public function findTranslation(int $pageId, string $locale): ?PageTranslation;
 
 
+	/** Must run inside a transaction: takes a row lock (SELECT ... FOR UPDATE) on (pageId, locale). Any publication status. */
+	public function lockTranslation(int $pageId, string $locale): ?PageTranslation;
+
+
 	public function getPage(int $pageId): ?Page;
+
+
+	/**
+	 * Direct children ordered by position then id.
+	 *
+	 * @return list<Page>
+	 */
+	public function findChildren(int $pageId): array;
 
 
 	/**
@@ -37,7 +49,11 @@ interface PageRepository
 	public function createPage(?int $parentId, int $position, bool $inMenu): int;
 
 
-	/** Inserts or updates by (pageId, locale); updatedAt of the argument is ignored, the clock is used. */
+	/**
+	 * Inserts or updates by (pageId, locale); updatedAt of the argument is ignored, the clock is used.
+	 *
+	 * @throws InvalidSlugException when the (locale, path) pair belongs to another page
+	 */
 	public function saveTranslation(PageTranslation $translation): void;
 
 

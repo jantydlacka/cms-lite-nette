@@ -6,3 +6,7 @@ services:
 	- App\Core\Database\ExplorerTransaction
 	- App\Model\Page\Database\DatabasePageRepository
 	- App\Model\Setting\Database\DatabaseSettingRepository
+	- App\Model\Redirect\Database\DatabasePathRedirectRepository
+	- App\Model\Page\FlatPagePathStrategy
+	- App\Model\Page\ReservedSegments
+	- App\Model\Page\PageService

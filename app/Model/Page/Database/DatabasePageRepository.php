@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Model\Page\Database;
 
+use App\Model\Page\InvalidSlugException;
 use App\Model\Page\MenuItem;
 use App\Model\Page\Page;
 use App\Model\Page\PageRepository;
@@ -12,14 +13,17 @@ use App\Model\PublicationStatus;
 use DateTimeImmutable;
 use DateTimeZone;
 use Nette\Database\Explorer;
+use Nette\Database\Row;
 use Nette\Database\Table\ActiveRow;
 use Nette\Database\Table\Selection;
+use Nette\Database\UniqueConstraintViolationException;
 use Psr\Clock\ClockInterface;
 use UnexpectedValueException;
 
 final class DatabasePageRepository implements PageRepository
 {
 	private const FORMAT = 'Y-m-d H:i:s';
+	private const PATH_KEY = 'uq_page_translation_path';
 
 
 	public function __construct(
@@ -52,11 +56,35 @@ final class DatabasePageRepository implements PageRepository
 	}
 
 
+	public function lockTranslation(int $pageId, string $locale): ?PageTranslation
+	{
+		$row = $this->explorer->query(
+			'SELECT *, CAST(updated_at AS CHAR) AS updated_at_text FROM page_translation WHERE page_id = ? AND locale = ? FOR UPDATE',
+			$pageId,
+			$locale,
+		)->fetch();
+
+		return $row === null ? null : $this->hydrateTranslation($row);
+	}
+
+
 	public function getPage(int $pageId): ?Page
 	{
 		$row = $this->explorer->table('page')->get($pageId);
 
 		return $row === null ? null : $this->hydratePage($row);
+	}
+
+
+	/** @return list<Page> */
+	public function findChildren(int $pageId): array
+	{
+		$children = [];
+		foreach ($this->explorer->table('page')->where('parent_id', $pageId)->order('position, id') as $row) {
+			$children[] = $this->hydratePage($row);
+		}
+
+		return $children;
 	}
 
 
@@ -141,14 +169,19 @@ final class DatabasePageRepository implements PageRepository
 			->where('locale', $translation->locale);
 
 		// Not ON DUPLICATE KEY UPDATE: a clash on the (locale, path) unique key would overwrite another page's row.
-		if ($existing->count('*') > 0) {
-			$existing->update($values);
-		} else {
-			$this->explorer->table('page_translation')->insert($values + [
-				'page_id' => $translation->pageId,
-				'locale' => $translation->locale,
-				'created_at' => $now,
-			]);
+		try {
+			if ($existing->count('*') > 0) {
+				$existing->update($values);
+			} else {
+				$this->explorer->table('page_translation')->insert($values + [
+					'page_id' => $translation->pageId,
+					'locale' => $translation->locale,
+					'created_at' => $now,
+				]);
+			}
+		} catch (UniqueConstraintViolationException $e) {
+			// Only the path key means "slug taken"; a clash on the primary key is a different problem and must surface.
+			throw str_contains($e->getMessage(), self::PATH_KEY) ? new InvalidSlugException(InvalidSlugException::TAKEN, $e) : $e;
 		}
 	}
 
@@ -192,7 +225,7 @@ final class DatabasePageRepository implements PageRepository
 	}
 
 
-	private function hydrateTranslation(ActiveRow $row): PageTranslation
+	private function hydrateTranslation(ActiveRow|Row $row): PageTranslation
 	{
 		return new PageTranslation(
 			self::int($row->page_id),

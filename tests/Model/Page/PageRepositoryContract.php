@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Model\Page;
 
 use App\Model\Page\MenuItem;
+use App\Model\Page\Page;
 use App\Model\Page\PageRepository;
 use App\Model\Page\PageTranslation;
 use App\Model\PublicationStatus;
@@ -169,6 +170,31 @@ final class PageRepositoryContract
 			Assert::false($repo->isPathTaken('en', 'o-nas', null));
 			Assert::false($repo->isPathTaken('cs', 'jine', null));
 			Assert::false($repo->isPathTaken('cs', 'O-NAS', null));
+		});
+
+		test('findChildren returns direct children ordered by position then id', function () use ($repo, $reset): void {
+			$reset();
+			$root = $repo->createPage(null, 0, true);
+			$late = $repo->createPage($root, 5, true);
+			$early = $repo->createPage($root, 1, true);
+			$tie = $repo->createPage($root, 1, false);
+			$grandchild = $repo->createPage($early, 0, true);
+
+			Assert::same([$early, $tie, $late], array_map(static fn (Page $p): int => $p->id, $repo->findChildren($root)));
+			Assert::same([$grandchild], array_map(static fn (Page $p): int => $p->id, $repo->findChildren($early)));
+			Assert::same([], $repo->findChildren($grandchild));
+			Assert::same([], $repo->findChildren($root + 1000));
+		});
+
+		test('lockTranslation returns the row of any status or null', function () use ($repo, $reset): void {
+			$reset();
+			$id = $repo->createPage(null, 0, true);
+			$repo->saveTranslation(self::translation($id, 'cs', 'koncept', 'Koncept', PublicationStatus::Draft));
+
+			Assert::same('koncept', $repo->lockTranslation($id, 'cs')?->path);
+			Assert::same(PublicationStatus::Draft, $repo->lockTranslation($id, 'cs')?->status);
+			Assert::null($repo->lockTranslation($id, 'en'));
+			Assert::null($repo->lockTranslation($id + 1000, 'cs'));
 		});
 	}
 
