@@ -105,7 +105,7 @@ final class Bootstrap
 
 
 	/**
-	 * Hash of config/lang contents and of path + mtime + size of every app/ PHP file.
+	 * Hash of config/lang contents and of path + mtime + size of every app/ PHP and Latte file.
 	 * Code is keyed by mtime and size, so an edit that keeps both unchanged within the same second is not detected.
 	 */
 	public static function testContainerFingerprint(string $rootDir): string
@@ -116,7 +116,7 @@ final class Bootstrap
 				$parts[] = substr($path, strlen($rootDir)) . ':' . hash_file('xxh128', $path);
 			}
 		}
-		foreach (self::sortedFiles($rootDir . '/app', '*.php', true) as $path) {
+		foreach ([...self::sortedFiles($rootDir . '/app', '*.php', true), ...self::sortedFiles($rootDir . '/app', '*.latte', true)] as $path) {
 			$parts[] = substr($path, strlen($rootDir)) . ':' . filemtime($path) . ':' . filesize($path);
 		}
 

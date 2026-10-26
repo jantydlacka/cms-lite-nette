@@ -25,7 +25,7 @@ test('demo data follows debug mode unless CMS_DEMO_DATA is set', function (): vo
 });
 
 
-/** @return array{string, callable(): void} temp root with config/, lang/ and app/ */
+/** @return array{string, callable(): void} temp root with config/, lang/ and app/ (PHP and Latte) */
 function fingerprintRoot(): array
 {
 	$root = sys_get_temp_dir() . '/fp-' . bin2hex(random_bytes(4));
@@ -35,12 +35,13 @@ function fingerprintRoot(): array
 	file_put_contents($root . '/config/common.neon', "a: 1\n");
 	file_put_contents($root . '/lang/cs.neon', "b: 1\n");
 	file_put_contents($root . '/app/Sub/Foo.php', '<?php // foo');
+	file_put_contents($root . '/app/Sub/default.latte', 'foo');
 
 	return [$root, static fn () => FileSystem::delete($root)];
 }
 
 
-test('test container fingerprint is stable and reacts to config and code changes', function (): void {
+test('test container fingerprint is stable and reacts to config, code and template changes', function (): void {
 	[$root, $cleanup] = fingerprintRoot();
 	$base = Bootstrap::testContainerFingerprint($root);
 	Assert::same($base, Bootstrap::testContainerFingerprint($root));
@@ -65,7 +66,12 @@ test('test container fingerprint is stable and reacts to config and code changes
 	file_put_contents($root . '/app/Sub/Foo.php', '<?php // foo, longer');
 	touch($root . '/app/Sub/Foo.php', (int) $mtime);
 	clearstatcache();
-	Assert::notSame($touched, Bootstrap::testContainerFingerprint($root));
+	$resized = Bootstrap::testContainerFingerprint($root);
+	Assert::notSame($touched, $resized);
+
+	file_put_contents($root . '/app/Sub/default.latte', 'foo, longer');
+	clearstatcache();
+	Assert::notSame($resized, Bootstrap::testContainerFingerprint($root));
 
 	$cleanup();
 });
@@ -114,4 +120,33 @@ test('without defaults every unset or empty database variable is reported', func
 		RuntimeException::class,
 		'%a%: CMS_DB_USER.',
 	);
+});
+
+
+/** Renders a template in a fresh PHP process, as a direct `tester` run of another test would. */
+function renderInChildProcess(string $file): string
+{
+	$code = 'require $argv[1]; echo App\\Bootstrap::bootForTests()->createContainer()'
+		. '->getByType(Nette\\Bridges\\ApplicationLatte\\LatteFactory::class)->create()->renderToString($argv[2]);';
+	$process = proc_open([PHP_BINARY, '-r', $code, dirname(__DIR__) . '/vendor/autoload.php', $file], [1 => ['pipe', 'w']], $pipes);
+	assert(is_resource($process));
+	$output = (string) stream_get_contents($pipes[1]);
+	fclose($pipes[1]);
+	Assert::same(0, proc_close($process));
+
+	return $output;
+}
+
+
+test('test containers recompile edited templates', function (): void {
+	$dir = sys_get_temp_dir() . '/latte-refresh-' . bin2hex(random_bytes(4));
+	FileSystem::createDir($dir);
+	$file = $dir . '/page.latte';
+	file_put_contents($file, 'first');
+
+	Assert::same('first', renderInChildProcess($file));
+	file_put_contents($file, 'second');
+	Assert::same('second', renderInChildProcess($file));
+
+	FileSystem::delete($dir);
 });

@@ -4,3 +4,7 @@ services:
 	# Strict even though debugMode is off: a typo'd key must fail CI.
 	translator:
 		arguments: [strict: true]
+	# Debug mode is off, so Latte would never notice an edited template between direct test runs.
+	latte.latteFactory:
+		setup:
+			- setAutoRefresh(true)
