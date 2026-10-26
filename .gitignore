@@ -1,2 +1,13 @@
 /_local/
 /.superpowers/
+/.env
+/vendor/
+/temp/*
+/log/*
+!/temp/.gitkeep
+!/log/.gitkeep
+/config/local.neon
+/e2e/node_modules/
+/e2e/test-results/
+/e2e/playwright-report/
+/coverage.*
