@@ -50,9 +50,9 @@
 		}
 	},
 	"scripts": {
-		"lint": "parallel-lint app tests bin/console bin/coverage-badge.php",
+		"lint": "parallel-lint app tests bin/console bin/coverage-badge.php bin/latte-lint",
 		"lint:neon": ["neon-lint config", "neon-lint lang"],
-		"lint:latte": "latte-lint app",
+		"lint:latte": "bin/latte-lint app",
 		"cs": "ecs check --no-progress-bar",
 		"cs:fix": "ecs check --fix --no-progress-bar",
 		"phpstan": "phpstan analyse --no-progress --memory-limit=1G",

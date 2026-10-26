@@ -1,0 +1,77 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// Latte linter with the application's own Latte extensions (e.g. the markdown filter) added to the stock linter engine.
+
+use App\Bootstrap;
+use Latte\Tools\Linter;
+use Nette\Bridges\ApplicationLatte\LatteFactory;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$path = $argv[1] ?? null;
+if (!is_string($path)) {
+	fwrite(STDERR, "Usage: bin/latte-lint <path>\n");
+	exit(1);
+}
+
+// The test configuration needs no environment; building the engine does not connect to the database.
+$configured = Bootstrap::bootForTests()->createContainer()->getByType(LatteFactory::class)->create();
+$linter = new Linter();
+$engine = $linter->getEngine();
+$present = array_map(get_class(...), $engine->getExtensions());
+foreach ($configured->getExtensions() as $extension) {
+	if (!in_array($extension::class, $present, true)) {
+		$engine->addExtension($extension);
+	}
+}
+
+// The stock linter only prints warnings (unknown filter, deprecations) and still reports success, yet an
+// unknown filter fails at runtime. This loop compiles the same way but counts every warning as a failure.
+if (!is_file($path) && !is_dir($path)) {
+	fwrite(STDERR, "Not found: $path\n");
+	exit(1);
+}
+
+$files = [];
+if (is_file($path)) {
+	$files[] = $path;
+} else {
+	/** @var SplFileInfo $file */
+	foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS)) as $file) {
+		if ($file->isFile() && str_ends_with($file->getFilename(), '.latte')) {
+			$files[] = $file->getPathname();
+		}
+	}
+}
+sort($files);
+
+$engine->setLoader(new Latte\Loaders\StringLoader());
+$failed = 0;
+foreach ($files as $file) {
+	$problems = [];
+	set_error_handler(static function (int $severity, string $message) use (&$problems): bool {
+		if (!in_array($severity, [E_USER_DEPRECATED, E_USER_WARNING, E_USER_NOTICE], true)) {
+			return false;
+		}
+		$problems[] = $message;
+
+		return true;
+	});
+	try {
+		$engine->compile((string) file_get_contents($file));
+	} catch (Latte\CompileException $e) {
+		$problems[] = $e->getMessage();
+	} finally {
+		restore_error_handler();
+	}
+	foreach ($problems as $problem) {
+		fwrite(STDERR, "$file    $problem\n");
+	}
+	$failed += $problems === [] ? 0 : 1;
+}
+
+echo 'Checked ' . count($files) . " files, problems in $failed\n";
+exit($failed === 0 ? 0 : 1);
