@@ -48,6 +48,16 @@ test('an empty string value is stored, not treated as unset', function () use ($
 	Assert::same('', $repo->get('k'));
 });
 
+test('the value column rejects null', function () use ($container, $reset): void {
+	$reset();
+	$connection = $container->getByType(Explorer::class)->getConnection();
+	Assert::same('NO', $connection->fetchField(
+		'SELECT IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+		'setting',
+		'value',
+	));
+});
+
 test('the container autowires the database adapter for SettingRepository', function () use ($container): void {
 	Assert::type(DatabaseSettingRepository::class, $container->getByType(SettingRepository::class));
 });

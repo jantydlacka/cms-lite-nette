@@ -26,6 +26,8 @@ Migration files are ordered by file name across all groups (`structures`, `basic
 
 Released migrations are never edited; a fix is always a new migration.
 
+After upgrading from a build in which a released migration was edited locally, run `migrations:reset` on the development database (it drops all data); `migrations:continue` refuses a changed migration. Enabling the demo data on a database migrated without it also needs `migrations:reset`, because the demo files sort before newer structure migrations.
+
 Then open <http://localhost:8080>.
 
 On Linux the `.env` line matters: the container runs as `CMS_UID:CMS_GID` (default `1000:1000`), and files it creates in the bind-mounted project belong to that user. `.env` must contain the actual numbers (Compose does not evaluate `$(id -u)` inside `.env`); the command above writes them (it replaces any earlier `CMS_UID`/`CMS_GID` lines, so running it twice adds no duplicates).

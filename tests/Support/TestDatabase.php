@@ -130,11 +130,17 @@ final class TestDatabase
 	}
 
 
-	/** Runs the dummy-data group on top of what prepare() left. */
+	/**
+	 * Rebuilds the database with all groups including dummy data.
+	 *
+	 * Not run on top of prepare(): nextras orders files globally, so a structures migration newer than
+	 * the dummy-data files makes them "older than the latest executed" and the runner refuses them.
+	 */
 	public static function loadDummyData(Container $container): void
 	{
 		$connection = $container->getByType(Connection::class);
 		self::assertTestDatabase($connection->fetchField('SELECT DATABASE()'));
+		self::recreate($container);
 		self::migrate($connection, [
 			self::group('structures', self::MIGRATIONS_DIR . '/structures', []),
 			self::group('basic-data', self::MIGRATIONS_DIR . '/basic-data', ['structures']),
