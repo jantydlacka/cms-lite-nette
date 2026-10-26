@@ -19,6 +19,10 @@ latte:
 	extensions:
 		- Latte\Essential\TranslatorExtension
 
+assets:
+	mapping:
+		default: assets
+
 session:
 	autoStart: false
 

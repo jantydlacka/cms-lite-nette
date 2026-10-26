@@ -3,9 +3,33 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>{block title}CMS{/block}</title>
+	<title>{block title}{$siteName}{/block}</title>
+	<script>
+		(function () {
+			var theme = null;
+			try {
+				theme = localStorage.getItem('cms-theme');
+			} catch (e) {}
+			if (theme !== 'light' && theme !== 'dark') {
+				theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			}
+			document.documentElement.setAttribute('data-theme', theme);
+		})();
+	</script>
+	{asset 'vendor/pico.min.css'}
+	{asset 'front.css'}
 </head>
 <body>
-	{include content}
+	<header class="site-header container">
+		<a href="{plink :Front:Home:default}" class="site-name" data-testid="site-name">{$siteName}</a>
+		<button type="button" class="theme-toggle secondary outline" data-testid="theme-toggle" aria-label="{_front.theme.toggle}" title="{_front.theme.toggle}">{_front.theme.label}</button>
+	</header>
+	<main class="container">
+		{include content}
+	</main>
+	<footer class="site-footer container">
+		<small>{$siteName}</small>
+	</footer>
+	{asset 'front.js'}
 </body>
 </html>

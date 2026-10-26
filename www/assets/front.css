@@ -1,0 +1,28 @@
+:root {
+	--cms-gap: 1rem;
+}
+
+.site-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--cms-gap);
+	padding-block: var(--cms-gap);
+}
+
+.site-name {
+	font-weight: 700;
+	font-size: 1.25rem;
+	text-decoration: none;
+}
+
+.theme-toggle {
+	width: auto;
+	margin: 0;
+	padding: 0.25rem 0.75rem;
+}
+
+.site-footer {
+	padding-block: 2rem;
+	color: var(--pico-muted-color);
+}

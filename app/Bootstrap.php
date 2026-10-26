@@ -77,6 +77,7 @@ final class Bootstrap
 		$configurator = new Configurator();
 		$configurator->setDebugMode($debugMode);
 		$configurator->addStaticParameters([
+			'wwwDir' => self::ROOT . '/www',
 			'demoData' => self::isDemoData(getenv('CMS_DEMO_DATA'), $debugMode),
 		]);
 		// Dynamic, so credentials stay out of the compiled container cache.
