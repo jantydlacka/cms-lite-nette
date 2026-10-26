@@ -84,12 +84,22 @@ test('a Model database adapter may use Nette\Database', function () use ($errors
 });
 
 
+test('a Model database adapter using Nette\Forms is rejected', function () use ($errors): void {
+	Assert::same(
+		['phpat.databaseAdapterUsesOnlyAllowedVendorNamespaces'],
+		$errors['DatabaseAdapterWithForms.php'] ?? [],
+	);
+});
+
+
 test('Model class using Nette\Utils and Psr\Clock is accepted', function () use ($errors): void {
 	Assert::true(is_file(FIXTURES . 'ModelWithAllowedVendors.php'));
 	Assert::false(isset($errors['ModelWithAllowedVendors.php']));
 });
 
 
-test('only the three violating fixtures produce errors', function () use ($errors): void {
-	Assert::same(['ModelWithCore.php', 'ModelWithExplorer.php', 'ModelWithPresenter.php'], array_keys($errors));
+test('only the four violating fixtures produce errors', function () use ($errors): void {
+	$files = array_keys($errors);
+	sort($files);
+	Assert::same(['DatabaseAdapterWithForms.php', 'ModelWithCore.php', 'ModelWithExplorer.php', 'ModelWithPresenter.php'], $files);
 });

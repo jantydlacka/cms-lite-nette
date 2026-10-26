@@ -57,6 +57,23 @@ final class ArchitectureTest
 	}
 
 
+	/** Adapters are exempt from the two rules above only to reach Nette\Database. */
+	#[TestRule]
+	public function databaseAdapterUsesOnlyAllowedVendorNamespaces(): Rule
+	{
+		return PHPat::rule()
+			->classes(Selector::classname(self::DatabaseAdapter, true))
+			->canOnly()->dependOn()
+			->classes(
+				Selector::inNamespace('App\Model'),
+				Selector::inNamespace('Nette\Utils'),
+				Selector::inNamespace('Psr\Clock'),
+				Selector::inNamespace('Nette\Database'),
+			)
+			->because('A model database adapter may add only Nette\Database to the model vendor allowlist.');
+	}
+
+
 	#[TestRule]
 	public function modelDoesNotDependOnApplicationLayers(): Rule
 	{
