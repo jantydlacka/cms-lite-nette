@@ -17,6 +17,17 @@ test('debug mode is enabled only by the exact value 1', function (): void {
 });
 
 
+test('booting forces the default timezone to UTC', function (): void {
+	date_default_timezone_set('Europe/Prague');
+	try {
+		Bootstrap::bootForTests();
+		Assert::same('UTC', date_default_timezone_get());
+	} finally {
+		date_default_timezone_set('UTC');
+	}
+});
+
+
 test('demo data follows debug mode unless CMS_DEMO_DATA is set', function (): void {
 	Assert::true(Bootstrap::isDemoData(false, true));
 	Assert::false(Bootstrap::isDemoData(false, false));

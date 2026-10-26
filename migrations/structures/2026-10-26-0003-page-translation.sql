@@ -1,9 +1,9 @@
 CREATE TABLE `page_translation` (
 	`page_id` INT UNSIGNED NOT NULL,
-	`locale` VARCHAR(10) NOT NULL,
+	`locale` VARCHAR(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
 	`title` VARCHAR(200) NOT NULL,
-	`slug` VARCHAR(100) NOT NULL,
-	`path` VARCHAR(500) NOT NULL,
+	`slug` VARCHAR(100) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`path` VARCHAR(500) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
 	`content` MEDIUMTEXT NOT NULL,
 	`meta_description` VARCHAR(300) NOT NULL DEFAULT '',
 	`status` ENUM('draft', 'published') NOT NULL DEFAULT 'draft',

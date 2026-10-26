@@ -143,6 +143,8 @@ final class Bootstrap
 
 	private static function createConfigurator(string $tempDir, bool $debugMode, bool $withLocalConfig, bool $allowDatabaseDefaults): Configurator
 	{
+		// Timestamps are stored in UTC; code must not depend on the host's zone.
+		date_default_timezone_set('UTC');
 		$configurator = new Configurator();
 		$configurator->setDebugMode($debugMode);
 		$demoData = self::isDemoData(getenv('CMS_DEMO_DATA'), $debugMode);
