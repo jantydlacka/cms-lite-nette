@@ -5,7 +5,7 @@
 
 A small, well-structured CMS built on [Nette](https://nette.org): pages, news, images and a contact form. It is the first of a planned family, `cms-lite-<framework>`: every implementation follows the same specification in [`spec/`](spec/) and is checked by the same browser-level end-to-end suite in `e2e/`.
 
-Status: phase 1 (skeleton) is done - application bootstrap, Docker setup, migrations, translator, clock, a homepage layout with light/dark theme, quality gate and CI configuration. Pages, news, images and the contact form come in later phases. The CI workflow is configured but has not run yet, so there are no published runs, and the coverage badge shows as broken until the first CI run on `main` publishes it.
+Status: phases 1 (skeleton) and 2 (pages) are done - application bootstrap, Docker setup, migrations, translator, clock, light/dark theme, quality gate and CI configuration; public pages from the database with translations, flat URLs, menu, breadcrumbs, 301 redirects from old paths and safely rendered Markdown. There is no administration yet: pages are written by the demo data and the tests. Administration, news, images and the contact form come in later phases. The CI workflow is configured but has not run yet, so there are no published runs, and the coverage badge shows as broken until the first CI run on `main` publishes it.
 
 ## Quick start
 
