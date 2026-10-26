@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App;
 
-use App\Core\DI\AutoRefreshConfigurator;
 use InvalidArgumentException;
 use Nette\Bootstrap\Configurator;
 use Nette\DI\Container;
+use Nette\Utils\Finder;
 
 final class Bootstrap
 {
@@ -64,8 +64,10 @@ final class Bootstrap
 		// NETTE_TESTER_THREAD is set by Nette Tester for parallel workers.
 		$thread = getenv('NETTE_TESTER_THREAD');
 		$database = self::testDatabaseName($thread);
-		$configurator = self::createConfigurator(self::ROOT . '/temp/tests/' . ($thread === false ? 'main' : $thread), false, false, true);
+		$configurator = self::createConfigurator(self::ROOT . '/temp/tests/' . ($thread === false ? 'main' : $thread), false, false);
 		$configurator->addConfig(self::ROOT . '/config/test.neon');
+		// Tests run with debug off, so the container is never auto-refreshed; static parameters are part of its cache key.
+		$configurator->addStaticParameters(['testContainerFingerprint' => self::testContainerFingerprint(self::ROOT)]);
 		// Forced, never read from CMS_DB_NAME: tests must not be able to reach the dev database.
 		$configurator->addDynamicParameters(['dbName' => $database]);
 
@@ -73,9 +75,46 @@ final class Bootstrap
 	}
 
 
-	private static function createConfigurator(string $tempDir, bool $debugMode, bool $withLocalConfig, bool $autoRefresh = false): Configurator
+	/**
+	 * Hash of config/lang contents and of path + mtime + size of every app/ PHP file.
+	 * Code is keyed by mtime and size, so an edit that keeps both unchanged within the same second is not detected.
+	 */
+	public static function testContainerFingerprint(string $rootDir): string
 	{
-		$configurator = $autoRefresh ? new AutoRefreshConfigurator() : new Configurator();
+		$parts = [];
+		foreach (['config', 'lang'] as $dir) {
+			foreach (self::sortedFiles($rootDir . '/' . $dir, '*.neon') as $path) {
+				$parts[] = substr($path, strlen($rootDir)) . ':' . hash_file('xxh128', $path);
+			}
+		}
+		foreach (self::sortedFiles($rootDir . '/app', '*.php', true) as $path) {
+			$parts[] = substr($path, strlen($rootDir)) . ':' . filemtime($path) . ':' . filesize($path);
+		}
+
+		return hash('xxh128', implode("\n", $parts));
+	}
+
+
+	/** @return list<string> */
+	private static function sortedFiles(string $dir, string $mask, bool $recursive = false): array
+	{
+		if (!is_dir($dir)) {
+			return [];
+		}
+		$finder = Finder::findFiles($mask);
+		$files = array_map(
+			static fn ($file): string => $file->getPathname(),
+			iterator_to_array($recursive ? $finder->from($dir) : $finder->in($dir), false),
+		);
+		sort($files);
+
+		return $files;
+	}
+
+
+	private static function createConfigurator(string $tempDir, bool $debugMode, bool $withLocalConfig): Configurator
+	{
+		$configurator = new Configurator();
 		$configurator->setDebugMode($debugMode);
 		$configurator->addStaticParameters([
 			'wwwDir' => self::ROOT . '/www',

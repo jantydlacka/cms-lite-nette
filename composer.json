@@ -56,8 +56,14 @@
 		"cs:fix": "ecs check --fix --no-progress-bar",
 		"phpstan": "phpstan analyse --no-progress --memory-limit=1G",
 		"psalm:taint": "psalm --taint-analysis --no-cache --no-progress",
-		"test": "tester tests -C -j 4",
-		"test:coverage": "tester tests -C -j 4 --coverage coverage.xml --coverage-src app",
+		"test": [
+			"@php -r \"require 'vendor/autoload.php'; Nette\\\\Utils\\\\FileSystem::delete('temp/tests');\"",
+			"tester tests -C -j 4"
+		],
+		"test:coverage": [
+			"@php -r \"require 'vendor/autoload.php'; Nette\\\\Utils\\\\FileSystem::delete('temp/tests');\"",
+			"tester tests -C -j 4 --coverage coverage.xml --coverage-src app"
+		],
 		"qa": [
 			"@composer validate --strict",
 			"@lint",
