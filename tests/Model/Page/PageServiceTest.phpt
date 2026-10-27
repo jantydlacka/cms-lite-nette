@@ -441,6 +441,15 @@ test('createPage creates the page and its first translation, placed after the la
 	Assert::same($first->pageId, $pages->findPublishedByPath('cs', 'tym')?->pageId);
 });
 
+test('createPage in an empty tree puts the top-level page at position 0', function () use ($reset, $service, $create, $pages, $explorer): void {
+	$reset();
+	$explorer->query('DELETE FROM setting WHERE `key` = ?', 'homepage');
+	$explorer->query('DELETE FROM page');
+	$created = $service()->createPage($create(null, 'prvni'));
+
+	Assert::same([null, 0], [$pages->getPage($created->pageId)?->parentId, $pages->getPage($created->pageId)?->position]);
+});
+
 test('createPage writes no page when the slug is taken or reserved', function () use ($reset, $service, $create, $pageCount, $counts): void {
 	$reset();
 	$service()->createPage($create(null, 'zabrano'));
@@ -1208,6 +1217,21 @@ test('setHomepage, deletePage and the homepage check in saveTranslation take the
 	Assert::contains('setting.get', $calls, 'saveTranslation');
 });
 
+
+test('a malformed homepage setting stops deletePage and a default-language draft, other saves pass', function () use ($reset, $service, $pages, $settings, $withStatus, $fullSnapshot): void {
+	$reset();
+	$id = $pages->createPage(null, 0, true);
+	$service()->saveTranslation($withStatus($id, 'cs', 'uvod', PublicationStatus::Published, null));
+	$settings->set('homepage', 'abc');
+	$before = $fullSnapshot();
+
+	Assert::exception(fn () => $service()->deletePage($id), UnexpectedValueException::class, '%a%must be a positive integer page id%a%');
+	Assert::exception(fn () => $service()->saveTranslation($withStatus($id, 'cs', 'uvod', PublicationStatus::Draft, 1)), UnexpectedValueException::class);
+	Assert::same($before, $fullSnapshot());
+
+	Assert::same(2, $service()->saveTranslation($withStatus($id, 'cs', 'uvod', PublicationStatus::Published, 1))->version);
+	Assert::same(PublicationStatus::Draft, $service()->saveTranslation($withStatus($id, 'en', 'home', PublicationStatus::Draft, null))->status);
+});
 
 test('every write refuses to run inside an already open transaction and writes nothing', function () use ($reset, $service, $cmd, $create, $pages, $transaction, $withStatus, $fullSnapshot): void {
 	$reset();

@@ -14,7 +14,7 @@
 	<p n:if="$demoData" class="demo-banner" role="note" data-testid="demo-banner">{_admin.demo.banner}</p>
 	<header class="admin-header container">
 		<strong class="admin-site-name">{$siteName}</strong>
-		<nav n:ifset="$adminUser" class="admin-nav">
+		<nav n:ifset="$adminUser" class="admin-nav" aria-label="{_admin.dashboard.title}">
 			<a n:href=":Admin:Dashboard:default" n:attr="aria-current: $presenter->isLinkCurrent(':Admin:Dashboard:*') ? page">{_admin.nav.dashboard}</a>
 			<a n:href=":Admin:Pages:default" n:attr="aria-current: $presenter->isLinkCurrent(':Admin:Pages:*') ? page" data-testid="admin-nav-pages">{_admin.nav.pages}</a>
 		</nav>

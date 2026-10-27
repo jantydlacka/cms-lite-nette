@@ -129,8 +129,11 @@ test('GET never deletes', function () use ($app): void {
 	resetDemo($app);
 	$contact = pageId($app, 'Kontakt');
 	$count = pageCount($app);
-	$app->get("/admin/pages/$contact/delete");
-	$app->get("/admin/pages/$contact/delete?do=delete-submit&delete-delete=1");
+	// The body a click on the real button sends, as a query string.
+	[$action, $body] = deleteForm($app->get("/admin/pages/$contact/delete"));
+	$result = $app->get($action . (str_contains($action, '?') ? '&' : '?') . http_build_query($body));
+	Assert::same(200, $result->code);
+	Assert::null($result->text('flash'));
 	Assert::same($count, pageCount($app));
 });
 

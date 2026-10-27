@@ -233,6 +233,11 @@ test('the detail shows the properties and the default-language translation', fun
 	Assert::same("/admin/pages/$about/en", (string) $tabs[1]['href']);
 	Assert::false(isset($tabs[1]['aria-current']));
 
+	$cs = $app->get("/admin/pages/$about/cs");
+	Assert::same(200, $cs->code);
+	Assert::same('O nás', fieldValue($cs, 'page-title-input'));
+	Assert::same('page', (string) nodes($cs->dom(), '//*[@data-testid="page-tab"]')[0]['aria-current']);
+
 	$en = $app->get("/admin/pages/$about/en");
 	Assert::same(200, $en->code);
 	Assert::same('About us', fieldValue($en, 'page-title-input'));
@@ -914,6 +919,7 @@ test('a form submitted to another screen is 404', function () use ($app): void {
 	resetDemo($app);
 	signedIn($app);
 	$about = pageId($app, 'O nás');
+	$order = $app->container->getByType(Explorer::class)->query('SELECT id FROM page ORDER BY position, id')->fetchPairs(null, 'id');
 	$posts = [
 		'/admin/pages?do=homepage-submit' => ['set' => ''],
 		'/admin/pages?do=properties-submit' => ['save' => '', 'version' => '1'],
@@ -922,11 +928,15 @@ test('a form submitted to another screen is 404', function () use ($app): void {
 		'/admin/pages/new?do=homepage-submit' => ['set' => ''],
 		"/admin/pages/$about?do=newPage-submit" => ['save' => '', 'title' => 'X', 'parent' => '0'],
 		'/admin/pages?do=newPage-submit' => ['save' => '', 'title' => 'X', 'parent' => '0'],
+		"/admin/pages/$about?do=move-$about-submit" => ['down' => ''],
+		"/admin/pages/new?do=move-$about-submit" => ['down' => ''],
+		"/admin/pages/$about/delete?do=move-$about-submit" => ['down' => ''],
 	];
 	foreach ($posts as $path => $body) {
 		Assert::same(404, $app->post($path, $body)->code, $path);
 	}
 	Assert::same(1, translation($app, $about)?->version);
+	Assert::same($order, $app->container->getByType(Explorer::class)->query('SELECT id FROM page ORDER BY position, id')->fetchPairs(null, 'id'));
 });
 
 

@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Model\Page\CreatePage;
 use App\Model\Page\PageRepository;
+use App\Model\Page\PageService;
+use App\Model\PublicationStatus;
 use App\Model\User\Role;
 use Tester\Assert;
 use Tests\Presentation\Admin\AdminBrowser;
@@ -132,6 +135,7 @@ test('the admin navigation is shown to a signed-in user only', function () use (
 	Assert::count(1, $nav);
 	Assert::same('/admin/pages', (string) $nav[0]['href']);
 	Assert::same('page', (string) $nav[0]['aria-current']);
+	Assert::count(1, nodes($result->dom(), '//nav[@aria-label="Administrace"]//a[@data-testid="admin-nav-pages"]'));
 	Assert::count(1, nodes($result->dom(), '//nav//a[@href="/admin"]'));
 	Assert::count(0, nodes($result->dom(), '//nav//a[@href="/admin"][@aria-current]'));
 	Assert::contains('Nástěnka', $result->body);
@@ -191,6 +195,35 @@ test('↓ moves a page below its next sibling', function () use ($app): void {
 
 	Assert::same(303, $app->post($action, $body)->code);
 	Assert::same(['Úvod', 'O nás', 'Tým', 'Rozpracováno', 'Kontakt'], treeTitles($app->get('/admin/pages')));
+});
+
+
+test('↑ among the children of a page reorders only those children', function () use ($app): void {
+	resetDemo($app);
+	$pages = $app->container->getByType(PageRepository::class);
+	$about = $pages->findPublishedByPath('cs', 'o-nas')?->pageId;
+	assert(is_int($about));
+	$app->container->getByType(PageService::class)->createPage(new CreatePage($about, true, 'cs', 'Kariéra', '', 'text', '', PublicationStatus::Published));
+	$before = pagesAs($app, EDITOR);
+	Assert::same(['Úvod', 'O nás', 'Tým', 'Kariéra', 'Kontakt', 'Rozpracováno'], treeTitles($before));
+	[$action, $body] = moveButton($before, 'Kariéra', 'pages-up');
+
+	Assert::same(303, $app->post($action, $body)->code);
+	Assert::same(['Úvod', 'O nás', 'Kariéra', 'Tým', 'Kontakt', 'Rozpracováno'], treeTitles($app->get('/admin/pages')));
+});
+
+
+test('a move submitted without a button changes nothing and returns to the tree', function () use ($app): void {
+	resetDemo($app);
+	[$action, $body] = moveButton(pagesAs($app, EDITOR), 'O nás', 'pages-up');
+	unset($body['up']);
+
+	$result = $app->post($action, $body);
+	Assert::same(303, $result->code);
+	Assert::match('/admin/pages%a?%', (string) $result->location);
+	$tree = $app->get((string) $result->location);
+	Assert::null($tree->text('flash'));
+	Assert::same(DEMO_ORDER, treeTitles($tree));
 });
 
 

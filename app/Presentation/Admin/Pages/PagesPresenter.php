@@ -160,6 +160,7 @@ final class PagesPresenter extends AdminPresenter
 	 */
 	protected function createComponentMove(): Multiplier
 	{
+		$this->requireAction('default');
 		return new Multiplier(function (string $id): Form {
 			if (preg_match('~^[1-9][0-9]*$~D', $id) !== 1) {
 				$this->error();
@@ -591,6 +592,7 @@ final class PagesPresenter extends AdminPresenter
 
 	/**
 	 * Which rows have a previous and a next sibling; ↑/↓ without one would change nothing.
+	 * Variadic so that PageTreeItem is used in code: UnusedUsesSniff (ECS) ignores a use referenced only from docblocks.
 	 *
 	 * @return array<int, array{up: bool, down: bool}> by page id
 	 */
