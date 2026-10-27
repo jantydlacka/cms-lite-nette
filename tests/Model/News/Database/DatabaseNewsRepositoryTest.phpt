@@ -107,19 +107,6 @@ test('lockNews holds the row: a second connection cannot update it until the tra
 	Assert::same(1, $repo->getNews($id)?->version);
 });
 
-test('lockTranslation holds the row: a second connection cannot update it until the transaction ends', function () use ($repo, $reset, $container, $otherConnection): void {
-	$reset();
-	$id = $repo->createNews(null, null);
-	$repo->saveTranslation(new NewsTranslation($id, 'cs', 'T', 't', 'P', '', '', PublicationStatus::Draft, new DateTimeImmutable(), 1));
-	$other = $otherConnection();
-
-	$container->getByType(Transaction::class)->run(function () use ($repo, $other, $id): void {
-		Assert::same(1, $repo->lockTranslation($id, 'cs')?->version);
-		Assert::exception(fn () => $other->query('UPDATE news_translation SET title = ? WHERE news_id = ? AND locale = ?', 'X', $id, 'cs'), DriverException::class, '~[Ll]ock wait timeout~');
-	});
-	Assert::same('T', $repo->findTranslation($id, 'cs')?->title);
-});
-
 test('times are stored as UTC text', function () use ($repo, $reset, $explorer): void {
 	$reset();
 	$id = $repo->createNews(new DateTimeImmutable('2026-01-01 00:30:00', new DateTimeZone('Europe/Prague')), null);

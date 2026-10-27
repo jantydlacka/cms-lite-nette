@@ -34,10 +34,6 @@ interface NewsRepository
 	public function findTranslation(int $newsId, string $locale): ?NewsTranslation;
 
 
-	/** Must run inside a transaction: takes a row lock (SELECT ... FOR UPDATE) on (newsId, locale). Any publication status. */
-	public function lockTranslation(int $newsId, string $locale): ?NewsTranslation;
-
-
 	/** @return array<string, NewsTranslation> by locale */
 	public function findTranslations(int $newsId): array;
 
@@ -55,6 +51,7 @@ interface NewsRepository
 
 	/**
 	 * Inserts or updates by (newsId, locale) and stores updatedAt of the argument; the version argument is ignored (the store counts).
+	 * Its insert-or-update check is a non-locking snapshot read: the caller must take lockNews() as the first read of its transaction.
 	 *
 	 * @throws InvalidSlugException taken, when the (locale, slug) pair belongs to another news item
 	 */

@@ -31,6 +31,7 @@ services:
 	- App\Model\Page\ReservedSegments
 	- App\Model\Page\PageService
 	- App\Model\Page\Homepage
+	- App\Model\News\NewsService
 	markdownRenderer:
 		create: App\Core\Markdown\CommonMarkRenderer
 		type: App\Model\Content\MarkdownRenderer

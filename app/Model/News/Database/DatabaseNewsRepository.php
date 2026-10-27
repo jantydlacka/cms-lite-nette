@@ -106,14 +106,6 @@ final class DatabaseNewsRepository implements NewsRepository
 	}
 
 
-	public function lockTranslation(int $newsId, string $locale): ?NewsTranslation
-	{
-		$row = $this->explorer->query('SELECT ' . self::TRANSLATION_COLUMNS . ' FROM news_translation t WHERE t.news_id = ? AND t.locale = ? FOR UPDATE', $newsId, $locale)->fetch();
-
-		return $row === null ? null : $this->hydrateTranslation($row);
-	}
-
-
 	/** @return array<string, NewsTranslation> */
 	public function findTranslations(int $newsId): array
 	{

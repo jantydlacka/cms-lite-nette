@@ -153,7 +153,7 @@ final class NewsRepositoryContract
 			$repo->saveTranslation(self::translation($id, 'cs', 'a', PublicationStatus::Draft));
 			Assert::same(1, $repo->findTranslation($id, 'cs')?->version);
 			$repo->saveTranslation(self::translation($id, 'cs', 'a', PublicationStatus::Draft, 'A2'));
-			Assert::same(2, $repo->lockTranslation($id, 'cs')?->version);
+			Assert::same(2, $repo->findTranslation($id, 'cs')?->version);
 			Assert::same('A2', $repo->findTranslation($id, 'cs')?->title);
 			$repo->saveTranslation(self::translation($id, 'en', 'a', PublicationStatus::Draft));
 
@@ -161,7 +161,7 @@ final class NewsRepositoryContract
 			Assert::same(['cs', 'en'], array_keys($all));
 			Assert::same(1, $all['en']->version);
 			Assert::same([], $repo->findTranslations($id + 1000));
-			Assert::null($repo->lockTranslation($id, 'de'));
+			Assert::null($repo->findTranslation($id, 'de'));
 			Assert::same(1, $repo->getNews($id)?->version);
 		});
 
