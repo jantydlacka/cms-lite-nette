@@ -17,7 +17,7 @@ final class ArchitectureTest
 	private const string DatabaseAdapter = '/^App\\\\Model\\\\[^\\\\]+\\\\Database\\\\/';
 
 	/** Domains under App\Model; keep in sync with app/Model/*. */
-	private const array Domains = ['Content', 'Login', 'Page', 'Redirect', 'Setting', 'User'];
+	private const array Domains = ['Content', 'Login', 'News', 'Page', 'Redirect', 'Setting', 'User'];
 
 
 	#[TestRule]

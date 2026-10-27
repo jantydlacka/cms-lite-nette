@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Model\Page\Database;
 
-use App\Model\Page\InvalidSlugException;
+use App\Model\InvalidSlugException;
 use App\Model\Page\MenuItem;
 use App\Model\Page\Page;
 use App\Model\Page\PageRepository;

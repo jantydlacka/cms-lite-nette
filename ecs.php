@@ -28,10 +28,10 @@ return ECSConfig::configure()
 		ParameterTypeHintSniff::class,
 		PropertyTypeHintSniff::class,
 		ReturnTypeHintSniff::class,
-		UnusedUsesSniff::class,
 		UnusedVariableSniff::class,
 		UselessVariableSniff::class,
 	])
+	->withConfiguredRule(UnusedUsesSniff::class, ['searchAnnotations' => true])
 	->withConfiguredRule(ReferenceUsedNamesOnlySniff::class, [
 		'allowFallbackGlobalFunctions' => true,
 		'allowFallbackGlobalConstants' => true,

@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Model\InvalidSlugException;
 use App\Model\Page\Database\DatabasePageRepository;
-use App\Model\Page\InvalidSlugException;
 use App\Model\Page\PageRepository;
 use App\Model\Page\PageTranslation;
 use App\Model\PublicationStatus;

@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Presentation\Admin\Pages;
 
 use App\Core\Security\Resource;
+use App\Model\InvalidSlugException;
 use App\Model\Page\CreatePage;
 use App\Model\Page\Homepage;
 use App\Model\Page\HomepageProtectedException;
 use App\Model\Page\InvalidParentException;
-use App\Model\Page\InvalidSlugException;
 use App\Model\Page\Page;
 use App\Model\Page\PageHasChildrenException;
 use App\Model\Page\PageRepository;

@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Model\Page;
 
 use App\Model\CmsConfig;
+use App\Model\InvalidSlugException;
 use App\Model\PublicationStatus;
 use App\Model\Redirect\PathRedirectRepository;
 use App\Model\Redirect\RedirectTarget;
 use App\Model\Setting\SettingRepository;
+use App\Model\Slug;
 use App\Model\Transaction;
 use InvalidArgumentException;
 use LogicException;
@@ -18,8 +20,6 @@ use UnexpectedValueException;
 
 final class PageService
 {
-	private const SLUG_PATTERN = '~^[a-z0-9]+(?:-[a-z0-9]+)*$~D';
-	private const SLUG_MAX_LENGTH = 100;
 	private const TITLE_MAX_LENGTH = 200;
 	private const META_DESCRIPTION_MAX_LENGTH = 300;
 
@@ -393,33 +393,15 @@ final class PageService
 		}
 
 		if ($slug === '') {
-			$slug = self::slugFromTitle($title);
+			$slug = Slug::fromTitle($title);
 		}
 		// Reserved is judged on the raw slug first so that "Novinky" is reported as reserved, not as malformed.
 		if ($this->reserved->isReserved($slug)) {
 			throw new InvalidSlugException(InvalidSlugException::RESERVED);
 		}
-		if (strlen($slug) > self::SLUG_MAX_LENGTH) {
-			throw new InvalidSlugException(InvalidSlugException::LONG);
-		}
-		if (preg_match(self::SLUG_PATTERN, $slug) !== 1) {
-			throw new InvalidSlugException(InvalidSlugException::FORMAT);
-		}
+		Slug::assertValid($slug);
 
 		return [$title, $slug];
-	}
-
-
-	/** Cut at the last hyphen within the limit; a single word longer than the limit is cut hard. */
-	private static function slugFromTitle(string $title): string
-	{
-		$slug = Strings::webalize($title);
-		if (strlen($slug) > self::SLUG_MAX_LENGTH) {
-			$hyphen = strrpos(substr($slug, 0, self::SLUG_MAX_LENGTH + 1), '-');
-			$slug = substr($slug, 0, $hyphen === false ? self::SLUG_MAX_LENGTH : $hyphen);
-		}
-
-		return rtrim($slug, '-');
 	}
 
 

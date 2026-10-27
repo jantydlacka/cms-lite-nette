@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Model\Page;
 
+use App\Model\InvalidSlugException;
+
 interface PageRepository
 {
 	public function findPublishedByPath(string $locale, string $path): ?PageTranslation;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Model\Page;
+namespace App\Model;
 
 use DomainException;
 use Throwable;
