@@ -1,0 +1,16 @@
+{import '@page-fields.latte'}
+
+{block title}{_admin.pages.new}{/block}
+
+{block content}
+<div class="pages-heading">
+	<h1 data-testid="admin-title">{_admin.pages.new}</h1>
+	<a n:href="default">{_admin.pages.title}</a>
+</div>
+
+<form n:name="newPage" data-testid="page-new-form">
+	{include formErrors, form: $form}
+	{include parentFields, form: $form}
+	{include translationFields, form: $form}
+	<button n:name="save" data-testid="page-save">{_admin.pages.save}</button>
+</form>

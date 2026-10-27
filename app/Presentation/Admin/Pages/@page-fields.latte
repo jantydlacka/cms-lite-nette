@@ -1,0 +1,38 @@
+{* Fields shared by the page detail and the new page; used inside an open form. *}
+
+{* A field error gets the id `<field html id>-error`, which the field points to with aria-describedby. *}
+{define formErrors, Nette\Forms\Form $form}
+	<ul n:if="$form->hasErrors()" class="form-errors" role="alert" data-testid="form-error">
+		<li n:foreach="array_unique($form->getOwnErrors()) as $error">{$error}</li>
+		{foreach $form->getControls() as $control}
+			<li n:foreach="array_unique($control->getErrors()) as $error" id={$iterator->first ? $control->getHtmlId() . '-error'}>{$error}</li>
+		{/foreach}
+	</ul>
+{/define}
+
+{define parentFields, Nette\Forms\Form $form}
+	<label n:name="parent" />
+	{var $parent = $form['parent']}
+	<select n:name="parent" required={$parent->getOption('requiredInBrowser') === true} n:attr="aria-invalid: $parent->hasErrors() ? 'true', aria-describedby: $parent->hasErrors() ? $parent->getHtmlId() . '-error'" data-testid="page-parent"></select>
+	<label>
+		<input n:name="inMenu:" data-testid="page-in-menu">
+		{_admin.pages.inMenu}
+	</label>
+{/define}
+
+{define translationFields, Nette\Forms\Form $form}
+	{var $title = $form['title']}
+	{var $slug = $form['slug']}
+	{var $meta = $form['metaDescription']}
+	<label n:name="title" />
+	<input n:name="title" n:attr="aria-invalid: $title->hasErrors() ? 'true', aria-describedby: $title->hasErrors() ? $title->getHtmlId() . '-error'" data-testid="page-title-input">
+	<label n:name="slug" />
+	<input n:name="slug" aria-describedby="page-slug-hint{if $slug->hasErrors()} {$slug->getHtmlId()}-error{/if}" n:attr="aria-invalid: $slug->hasErrors() ? 'true'" data-testid="page-slug-input">
+	<small id="page-slug-hint">{_admin.pages.field.slugHint}</small>
+	<label n:name="content" />
+	<textarea n:name="content" rows="14" data-testid="page-content-input"></textarea>
+	<label n:name="metaDescription" />
+	<textarea n:name="metaDescription" rows="3" n:attr="aria-invalid: $meta->hasErrors() ? 'true', aria-describedby: $meta->hasErrors() ? $meta->getHtmlId() . '-error'" data-testid="page-meta-input"></textarea>
+	<label n:name="status" />
+	<select n:name="status" data-testid="page-status-input"></select>
+{/define}

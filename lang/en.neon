@@ -31,3 +31,38 @@ admin.pages.missing: Missing translation
 admin.pages.up: Move up
 admin.pages.down: Move down
 admin.pages.moved: The order has been changed.
+admin.pages.properties: Page properties
+admin.pages.parent: Parent page
+admin.pages.root: '(none – top level)'
+admin.pages.inMenu: Show in menu
+admin.pages.field.title: Title
+admin.pages.field.slug: Address
+admin.pages.field.slugHint: Leave empty to derive it from the title.
+admin.pages.field.content: 'Content (Markdown)'
+admin.pages.field.meta: Search description
+admin.pages.field.status: Status
+admin.pages.field.titleRequired: Fill in the title.
+admin.pages.field.tooLong: The text is too long.
+admin.pages.status.draft: Draft
+admin.pages.status.published: Published
+admin.pages.save: Save
+admin.pages.saveProperties: Save properties
+admin.pages.saveTranslation: Save text
+admin.pages.preview: Preview
+admin.pages.previewTitle: 'Preview (not saved)'
+admin.pages.addTranslation: Add translation
+admin.pages.saved: The page has been saved.
+admin.pages.created: The page has been created.
+admin.pages.stale: 'Someone else has changed this page in the meantime. Your changes are still in the form – copy them, reload the current version and save again.'
+admin.pages.setHomepage: Set as homepage
+admin.pages.homepageSet: The homepage has been set.
+admin.pages.homepageNeedsPublished: The homepage needs a published translation in the default language.
+admin.pages.homepageProtected: The homepage cannot be deleted or hidden until another one is chosen.
+admin.pages.homepageMissing: 'The homepage has no published translation in: %locales%'
+admin.pages.invalidParent: A page cannot be moved under itself or its subpage.
+admin.pages.parentGone: 'The selected parent page no longer exists, choose another one.'
+admin.form.invalidChoice: Choose a valid value.
+admin.pages.slug.format: 'The address may contain only lowercase letters, digits and hyphens.'
+admin.pages.slug.reserved: This address is reserved by the system.
+admin.pages.slug.taken: Another page already uses this address.
+admin.pages.slug.long: The address may have at most 100 characters.

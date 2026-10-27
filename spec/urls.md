@@ -58,10 +58,14 @@ The administration has no language prefix and runs in the default language; its 
 | Request | Response |
 |---------|----------|
 | `/admin/pages` | The page tree: every page in tree order (parent before its children, siblings by position), indented by depth, titled in the default language or `admin.pages.missing`, with the badges `admin.pages.homepage` and `admin.pages.draft`. |
-| `/admin/pages/new` | A new page. |
-| `/admin/pages/<id>` | Detail of the page in the default language; `<id>` is digits. |
+| `/admin/pages/new` | A new page: parent, menu flag and the translation in the default language. Saving creates the page as the last of its siblings, 303 to its detail with `admin.pages.created`. |
+| `/admin/pages/<id>` | Detail of the page in the default language; `<id>` is digits, a page that does not exist is 404. |
 | `/admin/pages/<id>/<locale>` | Detail of the page with the tab of an enabled language; any other language is 404. |
 | `/admin/pages/<id>/delete` | Confirmation of the deletion of the page. |
+| Page properties (POST) | **Uložit vlastnosti**: parent and menu flag with the version the form was rendered from: 303 back with `admin.pages.saved`; a changed version gives `admin.pages.stale`, a parent that is the page itself or its descendant `admin.pages.invalidParent`, a parent that does not exist (forged or deleted meanwhile) `admin.pages.parentGone`, a value outside a dropdown `admin.form.invalidChoice`; nothing is saved then and the form keeps the sent values. |
+| Translation (POST) | **Uložit text** saves the translation of the tab with its version (empty for a missing one): 303 back with `admin.pages.saved`; a refused address is an error at the address field (`admin.pages.slug.*`), a changed version `admin.pages.stale`, the homepage's default translation as a draft `admin.pages.homepageProtected`. **Náhled** renders the content below the form and saves nothing. |
+| A page form posted to another screen | 404, e.g. `POST /admin/pages?do=homepage-submit`. |
+| Set as homepage (POST) | 303 back with `admin.pages.homepageSet`; a page without a published default-language translation gives `admin.pages.homepageNeedsPublished`. |
 | ↑ / ↓ in the tree | A POST form of the row, only from the same origin: swaps the page with its previous / next sibling, 303 to `/admin/pages` with `admin.pages.moved`. The first sibling has no ↑, the last no ↓. A GET of the form signal changes nothing; a cross-site POST only redirects (303); a page that does not exist is 404. |
 
 ### Stored requests
@@ -71,6 +75,7 @@ Every implementation stores and restores requests by the same rules:
 - Only a GET without a signal (`?do=…`), or a POST from the same origin, is stored for after sign-in. Any other request redirects to `/admin/sign-in` without a backlink.
 - A cross-site POST therefore gets no backlink. (A cross-site GET without a signal is stored: restoring it only shows a page.)
 - A restored request never executes an action: a restored POST shows its page without running its signal or form handler, and a restored GET is a plain redirect to the stored address.
+- A page save whose sign-in expired therefore comes back after sign-in as the form filled with the sent values, unsaved; saving it again stores it.
 
 A deactivated account is signed out at its next request. The session cookie has no expiry (it ends with the browser), is `HttpOnly` and `SameSite=Lax`. Public pages never start a session.
 

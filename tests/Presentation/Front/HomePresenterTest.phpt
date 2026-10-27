@@ -19,7 +19,7 @@ require __DIR__ . '/../../bootstrap.php';
 test('home page has site name, theme toggle and assets, with the mode script before the stylesheet', function (): void {
 	$app = HttpApplication::boot();
 	$id = $app->container->getByType(PageRepository::class)->createPage(null, 0, true);
-	$app->container->getByType(PageService::class)->saveTranslation(new SavePageTranslation($id, 'cs', 'Úvod', 'uvod', 'Text', '', PublicationStatus::Published));
+	$app->container->getByType(PageService::class)->saveTranslation(new SavePageTranslation($id, 'cs', 'Úvod', 'uvod', 'Text', '', PublicationStatus::Published, null));
 	$app->container->getByType(SettingRepository::class)->set('homepage', (string) $id);
 
 	$result = $app->get('/');

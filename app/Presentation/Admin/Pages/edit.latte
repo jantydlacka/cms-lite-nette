@@ -1,0 +1,50 @@
+{import '@page-fields.latte'}
+
+{block title}{if $title !== null}{$title}{else}{_admin.pages.missing}{/if}{/block}
+
+{block content}
+<div class="pages-heading">
+	<h1 data-testid="admin-title">{include title}</h1>
+	<a n:href="default">{_admin.pages.title}</a>
+</div>
+
+<section class="page-section" aria-labelledby="page-properties-heading">
+	<h2 id="page-properties-heading">{_admin.pages.properties}</h2>
+	<form n:name="properties" data-testid="page-properties-form">
+		{include formErrors, form: $form}
+		{include parentFields, form: $form}
+		<input n:name="version">
+		<button n:name="save" data-testid="page-properties-save">{_admin.pages.saveProperties}</button>
+	</form>
+
+	{if $isHomepage}
+		<p class="pages-badge-line"><span class="pages-badge">{_admin.pages.homepage}</span></p>
+		<p n:if="$missingLocales" class="page-homepage-missing" role="status" data-testid="page-homepage-missing">{_admin.pages.homepageMissing, [locales: implode(', ', $missingLocales)]}</p>
+	{else}
+		<form n:name="homepage" class="page-homepage" data-testid="page-homepage-form">
+			{include formErrors, form: $form}
+			<button n:name="set" class="secondary" data-testid="page-set-homepage">{_admin.pages.setHomepage}</button>
+		</form>
+	{/if}
+</section>
+
+<section class="page-section" aria-labelledby="page-translation-heading">
+	<nav n:if="$tabs" class="page-tabs" aria-labelledby="page-translation-heading">
+		<a n:foreach="$tabs as $tab" n:href="edit id: $page->id, lang: $tab === $defaultLocale ? null : $tab" n:attr="aria-current: $tab === $lang ? page" lang="{$tab}" data-testid="page-tab">{$tab|upper}</a>
+	</nav>
+	<h2 id="page-translation-heading" data-testid="page-translation-heading">{if $translation === null}{_admin.pages.addTranslation}{else}{$translation->title}{/if}</h2>
+	<form n:name="translation" data-testid="page-translation-form">
+		{include formErrors, form: $form}
+		{include translationFields, form: $form}
+		<input n:name="version">
+		<div class="page-actions">
+			<button n:name="save" data-testid="page-save">{_admin.pages.saveTranslation}</button>
+			<button n:name="preview" class="secondary" data-testid="page-preview">{_admin.pages.preview}</button>
+		</div>
+	</form>
+
+	<section n:if="$preview !== null" class="page-preview" aria-labelledby="page-preview-heading">
+		<h3 id="page-preview-heading">{_admin.pages.previewTitle}</h3>
+		<div data-testid="page-preview-output">{$preview|markdown}</div>
+	</section>
+</section>

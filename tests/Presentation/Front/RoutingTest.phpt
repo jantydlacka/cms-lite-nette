@@ -30,7 +30,7 @@ function seed(Container $container): void
 	$pages = $container->getByType(PageRepository::class);
 	$service = $container->getByType(PageService::class);
 	$save = static function (int $pageId, string $locale, string $title, string $slug, PublicationStatus $status = PublicationStatus::Published, ?string $description = null) use ($service): void {
-		$service->saveTranslation(new SavePageTranslation($pageId, $locale, $title, $slug, "Text of **$title**.", $description ?? "About $title", $status));
+		$service->saveTranslation(new SavePageTranslation($pageId, $locale, $title, $slug, "Text of **$title**.", $description ?? "About $title", $status, null));
 	};
 
 	$home = $pages->createPage(null, 0, true);
@@ -230,7 +230,7 @@ test('/en/ without an English homepage is not found', function () use ($app): vo
 
 test('/en/ renders the English homepage once its translation is published', function () use ($app): void {
 	$home = (int) $app->container->getByType(SettingRepository::class)->get('homepage');
-	$app->container->getByType(PageService::class)->saveTranslation(new SavePageTranslation($home, 'en', 'Home', 'home', 'Text of **Home**.', 'About Home', PublicationStatus::Published));
+	$app->container->getByType(PageService::class)->saveTranslation(new SavePageTranslation($home, 'en', 'Home', 'home', 'Text of **Home**.', 'About Home', PublicationStatus::Published, null));
 
 	$result = $app->get('/en/');
 
@@ -267,7 +267,7 @@ test('a locale in the query string does not switch the language', function () us
 test('a redirect to anything but a page is not followed', function (): void {
 	$app = HttpApplication::boot([ROUTING_CONFIG, ['services' => ['pathRedirectRepository' => ['create' => FixedRedirectRepository::class]]]]);
 	$page = $app->container->getByType(PageRepository::class)->createPage(null, 0, true);
-	$app->container->getByType(PageService::class)->saveTranslation(new SavePageTranslation($page, 'cs', 'O nás', 'o-nas', 'Text', '', PublicationStatus::Published));
+	$app->container->getByType(PageService::class)->saveTranslation(new SavePageTranslation($page, 'cs', 'O nás', 'o-nas', 'Text', '', PublicationStatus::Published, null));
 
 	FixedRedirectRepository::$target = new RedirectTarget('page', $page);
 	Assert::same('/o-nas', $app->get('/stara-cesta')->location);

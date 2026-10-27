@@ -161,6 +161,16 @@ test('the first sibling has no ↑ and the last has no ↓; the only child has n
 });
 
 
+test('the ↑/↓ buttons name the page they move', function () use ($app): void {
+	$result = pagesAs($app, EDITOR);
+	$up = nodes(treeRow($result, 'O nás'), './/*[@data-testid="pages-up"]');
+	$down = nodes(treeRow($result, 'O nás'), './/*[@data-testid="pages-down"]');
+	Assert::same('Posunout výš: O nás', (string) $up[0]['aria-label']);
+	Assert::same('Posunout níž: O nás', (string) $down[0]['aria-label']);
+	Assert::same('Posunout výš', (string) $up[0]['title']);
+});
+
+
 test('↑ on the second page swaps it with the first and says so', function () use ($app): void {
 	resetDemo($app);
 	[$action, $body] = moveButton(pagesAs($app, EDITOR), 'O nás', 'pages-up');

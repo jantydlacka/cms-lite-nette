@@ -8,12 +8,13 @@
 
 <ul n:if="$tree" class="pages-tree" data-testid="pages-tree">
 	<li n:foreach="$tree as $item" class="pages-item" style="--depth: {$item->depth}" data-depth="{$item->depth}" data-testid="pages-item">
-		<a n:href="edit id: $item->pageId" n:class="pages-item-title, $item->title === null ? pages-item-missing" data-testid="pages-item-title">{if $item->title !== null}{$item->title}{else}{_admin.pages.missing}{/if}</a>
+		{var $rowTitle = $item->title ?? ('admin.pages.missing'|translate)}
+		<a n:href="edit id: $item->pageId" n:class="pages-item-title, $item->title === null ? pages-item-missing" data-testid="pages-item-title">{$rowTitle}</a>
 		<span n:if="$item->pageId === $homepageId" class="pages-badge" data-testid="pages-homepage-badge">{_admin.pages.homepage}</span>
 		<span n:if="$item->status === App\Model\PublicationStatus::Draft" class="pages-badge pages-badge-draft" data-testid="pages-draft-badge">{_admin.pages.draft}</span>
 		<form n:if="$movable[$item->pageId]['up'] || $movable[$item->pageId]['down']" n:name="$presenter['move-' . $item->pageId]" class="pages-move">
-			<button n:if="$movable[$item->pageId]['up']" n:name="up" class="secondary" title="{_admin.pages.up}" aria-label="{_admin.pages.up}" data-testid="pages-up">↑</button>
-			<button n:if="$movable[$item->pageId]['down']" n:name="down" class="secondary" title="{_admin.pages.down}" aria-label="{_admin.pages.down}" data-testid="pages-down">↓</button>
+			<button n:if="$movable[$item->pageId]['up']" n:name="up" class="secondary" title="{_admin.pages.up}" aria-label="{_admin.pages.up}: {$rowTitle}" data-testid="pages-up">↑</button>
+			<button n:if="$movable[$item->pageId]['down']" n:name="down" class="secondary" title="{_admin.pages.down}" aria-label="{_admin.pages.down}: {$rowTitle}" data-testid="pages-down">↓</button>
 		</form>
 	</li>
 </ul>

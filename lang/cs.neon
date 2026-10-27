@@ -31,3 +31,38 @@ admin.pages.missing: Chybí překlad
 admin.pages.up: Posunout výš
 admin.pages.down: Posunout níž
 admin.pages.moved: Pořadí bylo změněno.
+admin.pages.properties: Vlastnosti stránky
+admin.pages.parent: Nadřazená stránka
+admin.pages.root: '(žádná – nejvyšší úroveň)'
+admin.pages.inMenu: Zobrazit v menu
+admin.pages.field.title: Název
+admin.pages.field.slug: Adresa
+admin.pages.field.slugHint: 'Prázdné = vytvoří se z názvu.'
+admin.pages.field.content: 'Obsah (Markdown)'
+admin.pages.field.meta: Popis pro vyhledávače
+admin.pages.field.status: Stav
+admin.pages.field.titleRequired: Vyplňte název.
+admin.pages.field.tooLong: Text je příliš dlouhý.
+admin.pages.status.draft: Koncept
+admin.pages.status.published: Publikováno
+admin.pages.save: Uložit
+admin.pages.saveProperties: Uložit vlastnosti
+admin.pages.saveTranslation: Uložit text
+admin.pages.preview: Náhled
+admin.pages.previewTitle: 'Náhled (neuloženo)'
+admin.pages.addTranslation: Přidat překlad
+admin.pages.saved: Stránka byla uložena.
+admin.pages.created: Stránka byla vytvořena.
+admin.pages.stale: 'Stránku mezitím upravil někdo jiný. Tvoje úpravy zůstaly ve formuláři – zkopíruj si je, načti aktuální verzi a ulož znovu.'
+admin.pages.setHomepage: Nastavit jako úvodní
+admin.pages.homepageSet: Úvodní stránka byla nastavena.
+admin.pages.homepageNeedsPublished: Úvodní stránka musí mít publikovaný překlad ve výchozím jazyce.
+admin.pages.homepageProtected: 'Úvodní stránku nejde smazat ani skrýt, dokud nevyberete jinou.'
+admin.pages.homepageMissing: 'Úvodní stránka nemá publikovaný překlad v jazyce: %locales%'
+admin.pages.invalidParent: Stránku nejde přesunout pod sebe ani pod svou podstránku.
+admin.pages.parentGone: 'Vybraná nadřazená stránka už neexistuje, vyberte jinou.'
+admin.form.invalidChoice: Vyberte platnou hodnotu.
+admin.pages.slug.format: 'Adresa smí obsahovat jen malá písmena bez diakritiky, číslice a pomlčky.'
+admin.pages.slug.reserved: Tento slug je vyhrazený systémem.
+admin.pages.slug.taken: Tuto adresu už používá jiná stránka.
+admin.pages.slug.long: Adresa může mít nejvýš 100 znaků.

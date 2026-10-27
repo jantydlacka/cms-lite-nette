@@ -248,9 +248,9 @@ test('the public web neither starts a session nor sets a cookie', function () us
 	$pages = $app->container->getByType(PageRepository::class);
 	$service = $app->container->getByType(PageService::class);
 	$home = $pages->createPage(null, 0, true);
-	$service->saveTranslation(new SavePageTranslation($home, 'cs', 'Úvod', 'uvod', 'Text', '', PublicationStatus::Published));
+	$service->saveTranslation(new SavePageTranslation($home, 'cs', 'Úvod', 'uvod', 'Text', '', PublicationStatus::Published, null));
 	$about = $pages->createPage(null, 1, true);
-	$service->saveTranslation(new SavePageTranslation($about, 'cs', 'O nás', 'o-nas', 'Text', '', PublicationStatus::Published));
+	$service->saveTranslation(new SavePageTranslation($about, 'cs', 'O nás', 'o-nas', 'Text', '', PublicationStatus::Published, null));
 	$app->container->getByType(SettingRepository::class)->set('homepage', (string) $home);
 
 	$app->newBrowser();
