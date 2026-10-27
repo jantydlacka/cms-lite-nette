@@ -43,6 +43,7 @@ function formError(HttpResult $result): ?string
 $app = HttpApplication::boot();
 AdminBrowser::seed($app->container, EDITOR, 'Eva Editorová', Role::Editor);
 AdminBrowser::seed($app->container, THROTTLED, 'Tomáš Blokovaný', Role::Editor);
+AdminBrowser::seed($app->container, 'jan@žluť.cz', 'Jan Žluťoučký', Role::Editor);
 
 
 test('/admin redirects to sign-in with a backlink and signing in returns there', function () use ($app): void {
@@ -95,6 +96,14 @@ test('an editor signs in and sees the dashboard with their name', function () us
 	Assert::count(1, $result->dom()->find('[data-testid="sign-out"]'));
 });
 
+
+test('an account with a non-ASCII domain signs in with the domain typed either way', function () use ($app): void {
+	foreach (['jan@xn--lu-yta1h.cz', 'jan@žluť.cz'] as $email) {
+		$app->newBrowser();
+		Assert::same('/admin', AdminBrowser::signIn($app, $email)->location, $email);
+		assertSignedIn($app);
+	}
+});
 
 test('a wrong password shows the form error and signs nobody in', function () use ($app): void {
 	$app->newBrowser();

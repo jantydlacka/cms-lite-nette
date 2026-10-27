@@ -104,6 +104,20 @@ test('the e-mail is trimmed and lower-cased', function () use ($auth, $reset): v
 	Assert::same($id, $auth->authenticate(' ADMIN@example.com ', 'correct horse battery')->getId());
 });
 
+test('a non-ASCII domain signs in to the account stored as punycode', function () use ($auth, $reset, $users, $hasher): void {
+	$reset();
+	$id = $users->insert('jan@xn--lu-yta1h.cz', $hasher->hash('correct horse battery'), 'Jan', Role::Editor);
+	Assert::same($id, $auth->authenticate('Jan@Žluť.cz', 'correct horse battery')->getId());
+	Assert::same($id, $auth->authenticate('jan@xn--lu-yta1h.cz', 'correct horse battery')->getId());
+});
+
+test('an unconvertible domain is an unknown account', function () use ($auth, $reset, $code, $attempts): void {
+	$reset();
+	Assert::same(CmsAuthenticator::InvalidCredential, $code($auth, 'a@ž' . str_repeat('a', 63) . '.cz', 'correct horse battery'));
+	Assert::same(CmsAuthenticator::InvalidCredential, $code($auth, 'a@' . str_repeat('a', 64) . '.cz', 'correct horse battery'));
+	Assert::same(2, $attempts());
+});
+
 test('wrong password, unknown e-mail and inactive account fail alike and are recorded', function () use ($auth, $reset, $code, $attempts, $explorer): void {
 	$reset();
 	Assert::same(CmsAuthenticator::InvalidCredential, $code($auth, 'admin@example.com', 'wrong password!!'));

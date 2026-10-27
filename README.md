@@ -119,7 +119,7 @@ For scripts, pass the password on standard input (first line; only the line endi
 printf '%s\n' "$PASSWORD" | docker compose exec -T app bin/console user:create admin@example.com "Jane Admin" --password-stdin
 ```
 
-`--role=editor` creates an editor; the default is `admin`. Passwords have at least 12 characters and at most 72 bytes, and no leading or trailing whitespace. The e-mail is trimmed and lower-cased.
+`--role=editor` creates an editor; the default is `admin`. Passwords have at least 12 characters and at most 72 bytes, no leading or trailing whitespace and no control characters (a tab is allowed). The e-mail is trimmed and lower-cased, and a non-ASCII domain is stored as punycode (`jan@žluť.cz` → `jan@xn--lu-yta1h.cz`), the form the browser sends; a non-ASCII local part is refused.
 
 Failed sign-ins are rate limited per e-mail and IP address and per IP address alone (limits in `cms: login:`); a blocked client cannot sign in even with the right password. Sessions end when the browser closes or after 3 hours of inactivity.
 

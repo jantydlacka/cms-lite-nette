@@ -29,6 +29,7 @@ final class CreateUserCommand extends Command
 		InvalidUserException::PASSWORD_SHORT => 'Password must be at least 12 characters.',
 		InvalidUserException::PASSWORD_LONG => 'Password must be at most 72 bytes.',
 		InvalidUserException::PASSWORD_WHITESPACE => 'Password must not start or end with whitespace.',
+		InvalidUserException::PASSWORD_CHARS => 'Password contains characters that are not allowed.',
 	];
 
 

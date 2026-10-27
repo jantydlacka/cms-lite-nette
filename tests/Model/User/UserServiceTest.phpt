@@ -96,6 +96,20 @@ test('non-ASCII whitespace at the edges is rejected, inside it is fine', functio
 	$service->create($valid(password: "aaaaaa\u{A0}aaaaaa"));
 });
 
+$controls = ['NUL' => "\0", 'SOH' => "\x01", 'LF' => "\n", 'DEL' => "\x7F", 'NEL (C1)' => "\u{85}", 'APC (C1)' => "\u{9F}", 'invalid UTF-8' => "\xFF"];
+foreach ($controls as $title => $char) {
+	test("password with a control character or invalid UTF-8 is user.password.chars: $title", function () use ($reason, $reset, $valid, $char): void {
+		$reset();
+		Assert::same('user.password.chars', $reason($valid(password: 'aaaaaa' . $char . 'aaaaaa')));
+		Assert::same('user.password.chars', $reason($valid(password: str_repeat('a', 12) . $char)));
+	});
+}
+
+test('a tab inside the password is fine', function () use ($service, $reset, $valid): void {
+	$reset();
+	$service->create($valid(password: "aaaaaa\taaaaaa"));
+});
+
 test('a race on the unique key becomes user.email.taken', function () use ($hasher): void {
 	$racing = new class() implements UserRepository {
 		public function findById(int $id): ?User
@@ -131,12 +145,20 @@ test('a race on the unique key becomes user.email.taken', function () use ($hash
 	Assert::same('user.email.taken', $e->reason);
 });
 
-test('non-ASCII e-mail is accepted and the name is trimmed', function () use ($service, $reset, $valid): void {
+test('a non-ASCII domain is stored as punycode and the name is trimmed', function () use ($service, $repo, $reset, $valid): void {
 	$reset();
 	$user = $service->create($valid(email: 'jan@žluť.cz', name: ' Ann '));
 
-	Assert::same('jan@žluť.cz', $user->email);
+	Assert::same('jan@xn--lu-yta1h.cz', $user->email);
+	Assert::same($user->id, $repo->findByEmail('jan@xn--lu-yta1h.cz')?->id);
 	Assert::same('Ann', $user->name);
+});
+
+test('a non-ASCII local part and an unconvertible domain are user.email.format', function () use ($reason, $reset, $valid): void {
+	$reset();
+	Assert::same('user.email.format', $reason($valid(email: 'žan@example.com')));
+	Assert::same('user.email.format', $reason($valid(email: 'a@ž' . str_repeat('a', 63) . '.cz')));
+	Assert::same('user.email.format', $reason($valid(email: 'a@' . str_repeat('a', 64) . '.cz')));
 });
 
 test('e-mail length boundary is 254 bytes', function () use ($reason, $service, $reset, $valid): void {

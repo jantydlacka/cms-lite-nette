@@ -58,6 +58,15 @@ test('e-mail is normalized before counting', function () use ($throttle, $reset)
 	Assert::false($throttle->attempt('A@X.cz', '1.1.1.1'));
 });
 
+test('a non-ASCII domain and its punycode are one pair', function () use ($throttle, $reset): void {
+	$reset();
+	for ($i = 0; $i < 3; $i++) {
+		$throttle->attempt('a@žluť.cz', '1.1.1.1');
+		$throttle->attempt('a@xn--lu-yta1h.cz', '1.1.1.1');
+	}
+	Assert::false($throttle->attempt('A@ŽLUŤ.cz', '1.1.1.1'));
+});
+
 test('attempt records the failure before it counts', function () use ($clock): void {
 	$calls = [];
 	$spy = new class($calls) implements LoginAttemptRepository {

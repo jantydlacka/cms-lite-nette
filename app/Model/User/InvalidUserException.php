@@ -15,6 +15,7 @@ final class InvalidUserException extends DomainException
 	public const PASSWORD_SHORT = 'user.password.short';
 	public const PASSWORD_LONG = 'user.password.long';
 	public const PASSWORD_WHITESPACE = 'user.password.whitespace';
+	public const PASSWORD_CHARS = 'user.password.chars';
 
 
 	/** @param self::* $reason */

@@ -79,6 +79,15 @@ foreach (['trailing space' => "correct horse battery \n", 'leading space' => " c
 	});
 }
 
+test('--password-stdin with a NUL byte fails with a message, not an uncaught error', function () use ($run, $count, $reset): void {
+	$reset();
+	$t = $run(['email' => 'a@example.com', 'name' => 'A', '--password-stdin' => true], ["correct\0horse battery\n"], false);
+
+	Assert::same(1, $t->getStatusCode());
+	Assert::contains('Password contains characters that are not allowed.', $t->getDisplay());
+	Assert::same(0, $count());
+});
+
 test('--password-stdin with empty input fails', function () use ($run, $count, $reset): void {
 	$reset();
 	$t = $run(['email' => 'a@example.com', 'name' => 'A', '--password-stdin' => true], [], false);

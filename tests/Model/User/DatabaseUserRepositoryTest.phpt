@@ -26,14 +26,15 @@ test('the container autowires the database adapter for UserRepository', function
 	Assert::type(DatabaseUserRepository::class, $container->getByType(UserRepository::class));
 });
 
-test('e-mails differing only in diacritics are two accounts', function () use ($repo, $reset): void {
+test('e-mails whose punycode domains differ only in diacritics are two accounts', function () use ($repo, $reset): void {
 	$reset();
-	$plain = $repo->insert('a@zlut.cz', 'h1', 'Plain', Role::Editor);
-	$accented = $repo->insert('a@žluť.cz', 'h2', 'Accented', Role::Editor);
+	// žluť.cz and žlut.cz, as Email::normalize stores them.
+	$plain = $repo->insert('a@xn--lut-b3a.cz', 'h1', 'Plain', Role::Editor);
+	$accented = $repo->insert('a@xn--lu-yta1h.cz', 'h2', 'Accented', Role::Editor);
 
 	Assert::notSame($plain, $accented);
-	Assert::same($plain, $repo->findByEmail('a@zlut.cz')?->id);
-	Assert::same($accented, $repo->findByEmail('a@žluť.cz')?->id);
+	Assert::same($plain, $repo->findByEmail('a@xn--lut-b3a.cz')?->id);
+	Assert::same($accented, $repo->findByEmail('a@xn--lu-yta1h.cz')?->id);
 });
 
 test('created_at is stored in UTC', function () use ($repo, $reset, $container): void {

@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace App\Model\User;
 
 use Nette\Utils\Strings;
-use Nette\Utils\Validators;
 
 final class UserService
 {
 	public const PASSWORD_MIN_LENGTH = 12;
 	public const PASSWORD_MAX_BYTES = 72;
 	private const NAME_MAX_LENGTH = 100;
-	private const EMAIL_MAX_LENGTH = 254;
 
 
 	public function __construct(
@@ -26,7 +24,7 @@ final class UserService
 	public function create(CreateUser $command): User
 	{
 		$email = Email::normalize($command->email);
-		if ($email === '' || strlen($email) > self::EMAIL_MAX_LENGTH || !Validators::isEmail($email)) {
+		if (!Email::isValid($email)) {
 			throw new InvalidUserException(InvalidUserException::EMAIL_FORMAT);
 		}
 
@@ -39,6 +37,10 @@ final class UserService
 		}
 
 		$password = $command->password;
+		// A form never delivers these (the request factory strips them) and bcrypt fails on NUL. Checked first: trim needs valid UTF-8.
+		if (preg_match('~^[^\x00-\x08\x0A-\x1F\x7F\x{80}-\x{9F}]*$~uD', $password) !== 1) {
+			throw new InvalidUserException(InvalidUserException::PASSWORD_CHARS);
+		}
 		if (Strings::trim($password) !== $password) {
 			throw new InvalidUserException(InvalidUserException::PASSWORD_WHITESPACE);
 		}
