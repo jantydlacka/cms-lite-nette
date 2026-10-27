@@ -105,12 +105,14 @@ test('moving a page up and down changes the order of the public menu', async ({ 
 
 	let [a, b] = order(await menuTitles());
 	expect(a).toBeGreaterThanOrEqual(0);
+	expect(b).toBeGreaterThanOrEqual(0);
 	expect(a).toBeLessThan(b);
 
 	await page.goto('/admin/pages');
 	await treeRow(page, second.title).getByTestId('pages-up').click();
 	await expect(page.getByTestId('flash')).toHaveText('Pořadí bylo změněno.');
 	[a, b] = order(await menuTitles());
+	expect(a).toBeGreaterThanOrEqual(0);
 	expect(b).toBeGreaterThanOrEqual(0);
 	expect(b).toBeLessThan(a);
 
@@ -118,6 +120,8 @@ test('moving a page up and down changes the order of the public menu', async ({ 
 	await treeRow(page, second.title).getByTestId('pages-down').click();
 	await expect(page.getByTestId('flash')).toHaveText('Pořadí bylo změněno.');
 	[a, b] = order(await menuTitles());
+	expect(a).toBeGreaterThanOrEqual(0);
+	expect(b).toBeGreaterThanOrEqual(0);
 	expect(a).toBeLessThan(b);
 });
 
@@ -141,6 +145,65 @@ test('deleting a page needs a confirmation and makes its path 404', async ({ pag
 	await expect(page.getByTestId('flash')).toHaveText('Stránka byla smazána.');
 	await expect(page.getByTestId('pages-item-title').filter({ hasText: title })).toHaveCount(0);
 	expect((await page.goto(`/${slug}`))?.status()).toBe(404);
+});
+
+test('after a slug change and a delete the old path is 404 too, not a redirect', async ({ page }) => {
+	const { title, slug } = unique('Prejmenovat');
+	await createPage(page, title);
+	const newSlug = `${slug}-nova`;
+	await page.getByTestId('page-slug-input').fill(newSlug);
+	await page.getByTestId('page-save').click();
+	await expect(page.getByTestId('flash')).toHaveText('Stránka byla uložena.');
+	expect((await page.request.get(`/${slug}`, { maxRedirects: 0 })).status()).toBe(301);
+
+	await page.getByTestId('page-delete').click();
+	await page.getByTestId('page-delete-confirm').click();
+	await expect(page.getByTestId('flash')).toHaveText('Stránka byla smazána.');
+
+	expect((await page.request.get(`/${slug}`, { maxRedirects: 0 })).status()).toBe(404);
+	expect((await page.request.get(`/${newSlug}`, { maxRedirects: 0 })).status()).toBe(404);
+});
+
+test('a page in the menu under a parent outside the menu gets a note at the checkbox', async ({ page }) => {
+	const parent = unique('Skryty');
+	const child = unique('Podstranka');
+	const parentDetail = await createPage(page, parent.title);
+	await page.getByTestId('page-in-menu').uncheck();
+	await page.getByTestId('page-properties-save').click();
+	await expect(page.getByTestId('flash')).toHaveText('Stránka byla uložena.');
+	await expect(page.getByTestId('page-menu-hidden-note')).toHaveCount(0);
+
+	await page.goto('/admin/pages/new');
+	await page.getByTestId('page-parent').selectOption({ label: parent.title });
+	await page.getByTestId('page-title-input').fill(child.title);
+	await page.getByTestId('page-status-input').selectOption('published');
+	await page.getByTestId('page-save').click();
+	await expect(page.getByTestId('flash')).toHaveText('Stránka byla vytvořena.');
+
+	const note = page.getByTestId('page-menu-hidden-note');
+	await expect(note).toHaveText('V menu se nezobrazí, protože nadřazená stránka v menu není.');
+	await expect(page.getByTestId('page-in-menu')).toHaveAccessibleDescription('V menu se nezobrazí, protože nadřazená stránka v menu není.');
+	await page.goto(parentDetail);
+	await expect(page.getByTestId('page-menu-hidden-note')).toHaveCount(0);
+});
+
+test('saving a page deleted in another tab keeps the typed text with a message', async ({ page, context }) => {
+	const { title, slug } = unique('Mazana');
+	// The URL after creating carries the flash parameter.
+	const detail = new URL(await createPage(page, title)).pathname;
+	await page.getByTestId('page-content-input').fill('Rozepsaný text, který nesmí zmizet');
+
+	const other = await context.newPage();
+	await other.goto(`${detail}/delete`);
+	await other.getByTestId('page-delete-confirm').click();
+	await expect(other.getByTestId('flash')).toHaveText('Stránka byla smazána.');
+	await other.close();
+
+	await page.getByTestId('page-save').click();
+	await expect(page.getByTestId('form-error')).toHaveText('Stránka mezitím byla smazána. Text zůstal ve formuláři – zkopírujte si ho.');
+	await expect(page.getByTestId('page-content-input')).toHaveValue('Rozepsaný text, který nesmí zmizet');
+	expect((await page.request.get(detail)).status()).toBe(404);
+	expect((await page.request.get(`/${slug}`)).status()).toBe(404);
 });
 
 test('the homepage cannot be deleted and the reason is shown', async ({ page }) => {
