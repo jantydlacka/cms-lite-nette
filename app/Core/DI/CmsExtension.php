@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\DI;
 
 use App\Model\CmsConfig;
+use App\Model\Login\LoginLimits;
 use Nette\DI\CompilerExtension;
 use Nette\Schema\Expect;
 use Nette\Schema\Schema;
@@ -26,6 +27,11 @@ final class CmsExtension extends CompilerExtension
 				->mergeDefaults(false)
 				->assert(static fn (mixed $locales): bool => is_array($locales) && count($locales) === count(array_unique($locales, SORT_REGULAR)), 'locales must not contain duplicates'),
 			'newsPerPage' => Expect::int(10)->min(1),
+			'login' => Expect::structure([
+				'maxPairFailures' => Expect::int(5)->min(1),
+				'maxIpFailures' => Expect::int(20)->min(1),
+				'windowMinutes' => Expect::int(15)->min(1),
+			]),
 		])->assert(
 			static fn (mixed $config): bool => $config instanceof stdClass
 				&& is_array($config->locales)
@@ -38,12 +44,20 @@ final class CmsExtension extends CompilerExtension
 	public function loadConfiguration(): void
 	{
 		$config = $this->config;
+		/** @var stdClass $login */
+		$login = $config->login;
 		$this->getContainerBuilder()->addDefinition($this->prefix('config'))
 			->setFactory(CmsConfig::class, [
 				$config->siteName,
 				$config->defaultLocale,
 				$config->locales,
 				$config->newsPerPage,
+			]);
+		$this->getContainerBuilder()->addDefinition($this->prefix('loginLimits'))
+			->setFactory(LoginLimits::class, [
+				$login->maxPairFailures,
+				$login->maxIpFailures,
+				$login->windowMinutes,
 			]);
 	}
 }

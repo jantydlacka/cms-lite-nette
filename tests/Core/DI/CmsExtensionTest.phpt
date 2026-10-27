@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Bootstrap;
 use App\Core\DI\CmsExtension;
 use App\Model\CmsConfig;
+use App\Model\Login\LoginLimits;
 use Nette\Bootstrap\Configurator;
 use Nette\DI\Container;
 use Nette\DI\InvalidConfigurationException;
@@ -44,6 +45,20 @@ test('defaults are applied', function (): void {
 });
 
 
+test('login limits default to 5 / 20 / 15', function (): void {
+	$limits = compile("\tsiteName: Demo")->getByType(LoginLimits::class);
+	Assert::same(5, $limits->maxPairFailures);
+	Assert::same(20, $limits->maxIpFailures);
+	Assert::same(15, $limits->windowMinutes);
+});
+
+
+test('login limits may be overridden', function (): void {
+	$limits = compile("\tsiteName: Demo\n\tlogin:\n\t\tmaxPairFailures: 3\n\t\tmaxIpFailures: 7\n\t\twindowMinutes: 1")->getByType(LoginLimits::class);
+	Assert::same([3, 7, 1], [$limits->maxPairFailures, $limits->maxIpFailures, $limits->windowMinutes]);
+});
+
+
 test('default locale may differ from the default when listed', function (): void {
 	$config = compile("\tsiteName: Demo\n\tdefaultLocale: en\n\tlocales: [en]")->getByType(CmsConfig::class);
 	Assert::same('en', $config->defaultLocale);
@@ -70,6 +85,10 @@ $invalid = [
 	'uppercase locale code' => ["\tsiteName: Demo\n\tlocales: [CZ]", '%a%locales%a%'],
 	'newsPerPage below 1' => ["\tsiteName: Demo\n\tnewsPerPage: 0", '%a%newsPerPage%a%'],
 	'unknown key' => ["\tsiteName: Demo\n\tfoo: 1", '%a%foo%a%'],
+	'maxPairFailures below 1' => ["\tsiteName: Demo\n\tlogin:\n\t\tmaxPairFailures: 0", '%a%maxPairFailures%a%'],
+	'maxIpFailures below 1' => ["\tsiteName: Demo\n\tlogin:\n\t\tmaxIpFailures: 0", '%a%maxIpFailures%a%'],
+	'windowMinutes below 1' => ["\tsiteName: Demo\n\tlogin:\n\t\twindowMinutes: 0", '%a%windowMinutes%a%'],
+	'unknown login key' => ["\tsiteName: Demo\n\tlogin:\n\t\tfoo: 1", '%a%foo%a%'],
 	// Demo data come only from the static %demoData% parameter (env CMS_DEMO_DATA or debug mode).
 	'demoData key' => ["\tsiteName: Demo\n\tdemoData: no", '%a%demoData%a%'],
 ];
