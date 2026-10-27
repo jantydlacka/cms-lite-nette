@@ -454,6 +454,7 @@ final class PageService
 	/** Live content wins: a redirect from the new path is dropped; the old path of this page starts redirecting. */
 	private function moveRedirects(int $pageId, string $locale, ?string $oldPath, string $newPath): void
 	{
+		// record() before deleteByPath(): after the gap lock of the DELETE, no insert into path_redirect may follow in this transaction, or concurrent writers deadlock.
 		if ($oldPath !== null && $oldPath !== $newPath) {
 			$this->redirects->record($locale, $oldPath, new RedirectTarget('page', $pageId));
 		}

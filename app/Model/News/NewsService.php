@@ -224,6 +224,7 @@ final class NewsService
 	private function moveRedirects(int $newsId, string $locale, ?string $oldSlug, string $newSlug): void
 	{
 		$segment = NewsSegments::forLocale($locale)['segment'];
+		// record() before deleteByPath(): after the gap lock of the DELETE, no insert into path_redirect may follow in this transaction, or concurrent writers deadlock.
 		if ($oldSlug !== null && $oldSlug !== $newSlug) {
 			$this->redirects->record($locale, $segment . '/' . $oldSlug, new RedirectTarget('news', $newsId));
 		}

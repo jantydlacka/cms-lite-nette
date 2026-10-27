@@ -331,6 +331,7 @@ test('two items created at the same time do not block each other', function () u
 	// A second service on its own connection creates item B; while it holds B's row lock and has read B's missing
 	// translation, the hook creates item A on the main connection. Both missing translations fall into the same index
 	// gap, so a gap lock taken by B's read would block A's insert (and in production deadlock the pair).
+	// The hook sits in deleteByPath(), so it relies on moveRedirects() running between the translation read and the insert.
 	$params = $container->getParameters();
 	assert(is_string($params['dbName']) && is_string($params['dbHost']) && is_string($params['dbPort']) && is_string($params['dbUser']) && is_string($params['dbPassword']));
 	$otherExplorer = new Explorer(
@@ -393,6 +394,80 @@ test('two items created at the same time do not block each other', function () u
 	Assert::null($failure);
 	Assert::notNull($news->findVisibleBySlug('cs', 'a'));
 	Assert::notNull($news->findVisibleBySlug('cs', 'b'));
+});
+
+test('two items changing their slug at the same time do not block each other', function () use ($reset, $service, $cmd, $create, $news, $redirects, $container, $explorer, $clock, $config): void {
+	$author = $reset();
+	$a = $service->createNews($create($author, 'a-old'))->newsId;
+	$b = $service->createNews($create($author, 'b-old'))->newsId;
+
+	// A second service on its own connection renames item A; right after A has recorded its old path, the hook renames
+	// item B on the main connection. All four redirect keys share one index gap: had A deleted the redirect from its new
+	// path first, the gap lock of that DELETE would block B's insert (and in production deadlock the pair).
+	$params = $container->getParameters();
+	assert(is_string($params['dbName']) && is_string($params['dbHost']) && is_string($params['dbPort']) && is_string($params['dbUser']) && is_string($params['dbPassword']));
+	$otherExplorer = new Explorer(
+		new Connection('mysql:host=' . $params['dbHost'] . ';port=' . $params['dbPort'] . ';dbname=' . $params['dbName'], $params['dbUser'], $params['dbPassword']),
+		$explorer->getStructure(),
+		$explorer->getConventions(),
+	);
+	$failure = null;
+	$hook = static function () use ($service, $cmd, $b, &$failure): void {
+		try {
+			$service->saveTranslation($cmd($b, 'b-new', version: 1));
+		} catch (Throwable $e) {
+			$failure = $e;
+		}
+	};
+	$hookedRedirects = new class(new DatabasePathRedirectRepository($otherExplorer, $clock), $hook) implements PathRedirectRepository {
+		/** @param Closure(): void $hook */
+		public function __construct(private PathRedirectRepository $inner, private ?Closure $hook)
+		{
+		}
+
+
+		public function findTarget(string $locale, string $path): ?RedirectTarget
+		{
+			return $this->inner->findTarget($locale, $path);
+		}
+
+
+		public function record(string $locale, string $oldPath, RedirectTarget $target): void
+		{
+			$this->inner->record($locale, $oldPath, $target);
+			$hook = $this->hook;
+			$this->hook = null;
+			if ($hook !== null) {
+				$hook();
+			}
+		}
+
+
+		public function deleteByPath(string $locale, string $path): void
+		{
+			$this->inner->deleteByPath($locale, $path);
+		}
+
+
+		public function deleteForTarget(RedirectTarget $target): void
+		{
+			$this->inner->deleteForTarget($target);
+		}
+	};
+	$other = new NewsService(new DatabaseNewsRepository($otherExplorer, $clock), $hookedRedirects, new ExplorerTransaction($otherExplorer), $config, $clock);
+
+	$explorer->query('SET SESSION innodb_lock_wait_timeout = 1');
+	try {
+		$other->saveTranslation($cmd($a, 'a-new', version: 1));
+	} finally {
+		$explorer->query('SET SESSION innodb_lock_wait_timeout = DEFAULT');
+	}
+
+	Assert::null($failure);
+	Assert::same('a-new', $news->findTranslation($a, 'cs')?->slug);
+	Assert::same('b-new', $news->findTranslation($b, 'cs')?->slug);
+	Assert::same($a, $redirects->findTarget('cs', 'novinky/a-old')?->id);
+	Assert::same($b, $redirects->findTarget('cs', 'novinky/b-old')?->id);
 });
 
 test('the container autowires NewsService', function () use ($container): void {
