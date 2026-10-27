@@ -98,8 +98,61 @@ test('Model class using Nette\Utils and Psr\Clock is accepted', function () use 
 });
 
 
-test('only the four violating fixtures produce errors', function () use ($errors): void {
+test('Presentation and Core using a model database adapter are rejected', function () use ($errors): void {
+	Assert::same(['phpat.layersDoNotDependOnDatabaseAdapters'], $errors['PresentationWithAdapter.php'] ?? []);
+	Assert::same(['phpat.layersDoNotDependOnDatabaseAdapters'], $errors['CoreWithAdapter.php'] ?? []);
+});
+
+
+test('Presentation and Core using a model class that is not an adapter are accepted', function () use ($errors): void {
+	Assert::true(is_file(FIXTURES . 'Presentation/PresentationWithModelClass.php'));
+	Assert::true(is_file(FIXTURES . 'Core/CoreWithModelClass.php'));
+	Assert::false(isset($errors['PresentationWithModelClass.php']));
+	Assert::false(isset($errors['CoreWithModelClass.php']));
+});
+
+
+test('Model class using another domain\'s database adapter is rejected', function () use ($errors): void {
+	Assert::same(['phpat.modelDoesNotDependOnOtherDomainAdaptersLogin'], $errors['LoginWithUserAdapter.php'] ?? []);
+});
+
+
+test('Model class using another domain\'s record or its own adapter is accepted', function () use ($errors): void {
+	Assert::true(is_file(FIXTURES . 'Login/LoginWithUserRecord.php'));
+	Assert::true(is_file(FIXTURES . 'Login/LoginWithOwnAdapter.php'));
+	Assert::false(isset($errors['LoginWithUserRecord.php']));
+	Assert::false(isset($errors['LoginWithOwnAdapter.php']));
+});
+
+
+test('Root-level Model class using a database adapter is rejected', function () use ($errors): void {
+	Assert::same(['phpat.rootModelDoesNotDependOnDatabaseAdapters'], $errors['RootModelWithAdapter.php'] ?? []);
+});
+
+
+test('Root-level Model class using a domain record is accepted', function () use ($errors): void {
+	Assert::true(is_file(FIXTURES . 'Root/RootModelWithRecord.php'));
+	Assert::false(isset($errors['RootModelWithRecord.php']));
+});
+
+
+test('Core using Presentation is rejected', function () use ($errors): void {
+	Assert::same(['phpat.coreDoesNotDependOnPresentation'], $errors['CoreWithPresentation.php'] ?? []);
+});
+
+
+test('only the violating fixtures produce errors', function () use ($errors): void {
 	$files = array_keys($errors);
 	sort($files);
-	Assert::same(['DatabaseAdapterWithForms.php', 'ModelWithCore.php', 'ModelWithExplorer.php', 'ModelWithPresenter.php'], $files);
+	Assert::same([
+		'CoreWithAdapter.php',
+		'CoreWithPresentation.php',
+		'DatabaseAdapterWithForms.php',
+		'LoginWithUserAdapter.php',
+		'ModelWithCore.php',
+		'ModelWithExplorer.php',
+		'ModelWithPresenter.php',
+		'PresentationWithAdapter.php',
+		'RootModelWithAdapter.php',
+	], $files);
 });
