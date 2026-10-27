@@ -221,6 +221,47 @@ function newsCount(HttpApplication $app): int
 }
 
 
+/** Moves the inactivity deadline of the signed-in session into the past, as AccessTest does. */
+function expireSignIn(HttpApplication $app): void
+{
+	$id = $app->cookies()[(string) session_name()] ?? throw new LogicException('No session cookie in the jar.');
+	session_id($id);
+	session_start();
+	try {
+		$nf = $_SESSION['__NF'] ?? null;
+		assert(is_array($nf) && is_array($nf['DATA'] ?? null));
+		$section = $nf['DATA']['Nette.Http.UserStorage/'] ?? null;
+		assert(is_array($section));
+		Assert::true($section['authenticated'] ?? null);
+		$nf['DATA']['Nette.Http.UserStorage/'] = ['expireTime' => time() - 1] + $section;
+		$_SESSION['__NF'] = $nf;
+	} finally {
+		session_write_close();
+		session_id('');
+		$_SESSION = [];
+	}
+}
+
+
+/**
+ * Posts the form after the sign-in expired and signs in again; returns the restored screen.
+ *
+ * @param array<string, string> $body
+ */
+function restoredAfterSignIn(HttpApplication $app, string $action, array $body): HttpResult
+{
+	expireSignIn($app);
+	$stored = $app->post($action, $body);
+	Assert::same(303, $stored->code);
+	Assert::match('/admin/sign-in?backlink=%a%', (string) $stored->location);
+	$restored = AdminBrowser::signIn($app, EDITOR, page: (string) $stored->location);
+	Assert::same(200, $restored->code);
+	Assert::null($restored->text('flash'));
+
+	return $restored;
+}
+
+
 // Two languages, as with the demo configuration; the tests default to one.
 $app = HttpApplication::boot([['cms' => ['locales' => ['cs', 'en']]]]);
 
@@ -618,6 +659,36 @@ test('a form posted to another screen is 404 and a cross-site save changes nothi
 	[$action, $body] = formSubmit($app->get("/admin/news/$id"), TRANSLATION_FORM, 'news-save', ['content' => 'Cizí']);
 	Assert::same(303, $app->post($action, $body, ['Sec-Fetch-Site' => 'cross-site'])->code);
 	Assert::same(1, newsTranslation($app, $id)?->version);
+});
+
+
+test('a save replayed after the sign-in expired shows the typed values and saves nothing', function () use ($app): void {
+	[$editor] = resetNews($app);
+	$id = createNews($app, $editor, 'Obnovená novinka');
+	signedIn($app);
+
+	[$action, $body] = formSubmit($app->get("/admin/news/$id"), TRANSLATION_FORM, 'news-save', ['content' => 'Rozepsaný text']);
+	$restored = restoredAfterSignIn($app, $action, $body);
+	Assert::same('Rozepsaný text', fieldValue($restored, 'news-content-input'));
+	Assert::same(1, newsTranslation($app, $id)?->version);
+
+	[$action, $body] = formSubmit($app->get("/admin/news/$id"), PROPERTIES_FORM, 'news-properties-save', ['publishedAt' => '2001-05-05T12:00']);
+	$restored = restoredAfterSignIn($app, $action, $body);
+	Assert::same('2001-05-05T12:00', fieldValue($restored, 'news-published-at'));
+	Assert::same(1, newsVersion($app, $id));
+	Assert::same('2000-01-01 10:00', storedAt($app, $id));
+
+	$count = newsCount($app);
+	[$action, $body] = formSubmit($app->get('/admin/news/new'), NEW_FORM, 'news-save', ['title' => 'Rozepsaná', 'perex' => 'Rozepsaný perex', 'content' => 'Rozepsaný text']);
+	$restored = restoredAfterSignIn($app, $action, $body);
+	Assert::same('Rozepsaná', fieldValue($restored, 'news-title-input'));
+	Assert::same('Rozepsaný text', fieldValue($restored, 'news-content-input'));
+	Assert::same($count, newsCount($app));
+
+	// Saving the restored form works.
+	[$action, $body] = formSubmit($restored, NEW_FORM, 'news-save');
+	Assert::same(303, $app->post($action, $body)->code);
+	Assert::same($count + 1, newsCount($app));
 });
 
 
