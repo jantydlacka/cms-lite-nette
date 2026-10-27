@@ -9,7 +9,7 @@ Elements the end-to-end tests locate by `data-testid`.
 | `menu` | Main menu (`<nav>`) of the public pages; absent on error pages. |
 | `menu-item` | Link of one menu item; the item of the shown page has `aria-current="page"`. |
 | `breadcrumbs` | Breadcrumb navigation from the top-level page down to the shown page; only for nested pages. |
-| `error-title` | Heading of an error page (404, 500). |
+| `error-title` | Heading of an error page (403, 404, 500); the 403 and 404 pages under `/admin` use the administration layout. |
 | `page-title` | Main heading of a page, the homepage included. |
 | `page-content` | Rendered content of a page. |
 | `sign-in-form` | Sign-in form of the administration (`/admin/sign-in`). |

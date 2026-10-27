@@ -5,6 +5,8 @@ application:
 
 services:
 	- Tests\Presentation\Admin\fixtures\ProbePresenter
+	- Tests\Presentation\Admin\fixtures\UsersProbePresenter
 	router:
 		setup:
 			- prepend(Nette\Application\Routers\Route('admin/probe', [presenter: 'AdminTest:Probe', action: default, locale: cs]))
+			- prepend(Nette\Application\Routers\Route('admin/users-probe', [presenter: 'AdminTest:UsersProbe', action: default, locale: cs]))

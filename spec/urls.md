@@ -25,7 +25,7 @@ The default language has no prefix; every other language has the prefix `<locale
 
 ## Not found
 
-An unknown path, a path with an invalid shape (`/O-NAS`, `/o--nas`, `/o-nas%20`), a draft page and a reserved segment answer HTTP 404 with the error page (`error.404.title`), never 500.
+An unknown path, a path with an invalid shape (`/O-NAS`, `/o--nas`, `/o-nas%20`), a draft page and a reserved segment answer HTTP 404 with the error page (`error.404.title`), never 500. The error page is in the language of the URL: `/en/O-NAS` gives the English page, `/O-NAS` the Czech one.
 
 There is no language fallback: a page that exists only in another language is 404, e.g. `/en/o-nas` when the page has no English translation; likewise `/en/` without an English homepage.
 
@@ -41,14 +41,14 @@ The administration has no language prefix and runs in the default language; its 
 |---------|----------|
 | `/admin` signed in, allowed | 200, the dashboard. |
 | `/admin` not signed in | 302 to `/admin/sign-in?backlink=<key>` with the message `admin.sign.required`, or `admin.sign.expired` after 3 hours of inactivity. The backlink is a random key of the stored request, never a URL. |
-| `/admin` signed in without permission | 403. |
+| `/admin` signed in without permission | 403 with the title `error.403.title`, in the administration layout. |
 | `/admin/sign-in` signed in | 302 to `/admin`. |
 | Successful sign-in | 303 back to the stored request of the backlink; an unknown or expired backlink leads to `/admin`. |
 | Wrong e-mail or password | 200, the form with `admin.sign.invalid`. |
 | After 5 failures of one e-mail from one IP within 15 minutes (or 20 from one IP) | 200, the form with `admin.sign.throttled`, even with the right password. |
 | Sign-out | The signal `signOut!` (`/admin?do=signOut`), only by a POST from the same origin: signs out, 303 to `/admin/sign-in` with `admin.sign.outDone`. A GET is refused (405); a cross-site POST only redirects (303) and signs nobody out. |
 | A sign-in POST from another site | Not processed: 303 back to the form. |
-| `/admin/<anything else>` | 404. |
+| `/admin/<anything else>` | 404 in the administration layout (default language). `/administrace` is a public 404. |
 
 A deactivated account is signed out at its next request. The session cookie has no expiry (it ends with the browser), is `HttpOnly` and `SameSite=Lax`. Public pages never start a session.
 

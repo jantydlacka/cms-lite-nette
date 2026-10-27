@@ -14,7 +14,7 @@ services:
 	- App\Model\Page\Homepage
 	- App\Core\Markdown\CommonMarkRenderer
 	- App\Core\Security\NettePasswordHasher
-	- App\Model\User\Database\DatabaseUserRepository
+	userRepository: App\Model\User\Database\DatabaseUserRepository # named so a test can replace it
 	- App\Model\User\UserService
 	- App\Model\Login\Database\DatabaseLoginAttemptRepository
 	- App\Model\Login\LoginThrottle

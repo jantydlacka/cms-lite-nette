@@ -25,4 +25,17 @@ final class PrefixLocaleStrategy implements LocaleStrategy
 
 		return $prefixes;
 	}
+
+
+	public function localeOfPath(string $path): ?string
+	{
+		$first = explode('/', ltrim($path, '/'), 2)[0];
+		foreach ($this->prefixes() as $locale => $prefix) {
+			if ($prefix !== '' && $first === $locale) {
+				return $locale;
+			}
+		}
+
+		return null;
+	}
 }

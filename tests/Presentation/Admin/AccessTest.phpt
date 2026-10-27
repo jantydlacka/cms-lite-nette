@@ -17,6 +17,7 @@ use Tests\Support\HttpApplication;
 require __DIR__ . '/../../bootstrap.php';
 
 const EDITOR = 'editor@example.com';
+const ADMIN = 'admin@example.com';
 
 
 /** Follows the redirect to sign-in and returns its flash message. */
@@ -56,6 +57,7 @@ function expireSignIn(HttpApplication $app): void
 
 $app = HttpApplication::boot([__DIR__ . '/admin-probe.neon']);
 $editorId = AdminBrowser::seed($app->container, EDITOR, 'Eva Editorová', Role::Editor);
+AdminBrowser::seed($app->container, ADMIN, 'Adam Admin', Role::Admin);
 
 
 test('an anonymous visitor is sent to sign-in with a request to sign in', function () use ($app): void {
@@ -220,4 +222,43 @@ test('the public web neither starts a session nor sets a cookie', function () us
 		Assert::false($result->sessionStarted(), $path);
 		Assert::same([], $app->cookies(), $path);
 	}
+});
+
+
+test('a signed-in editor gets a 403 in the administration layout, an administrator the page', function () use ($app): void {
+	$app->newBrowser();
+	AdminBrowser::signIn($app, EDITOR);
+	$result = $app->get('/admin/users-probe');
+	Assert::same(403, $result->code);
+	Assert::same('Na tuto stránku nemáte oprávnění.', $result->text('error-title'));
+	Assert::contains('admin.css', $result->body);
+	Assert::notContains('front.css', $result->body);
+	Assert::null($result->text('admin-user'));
+	Assert::null($result->text('sign-out'));
+
+	$app->newBrowser();
+	AdminBrowser::signIn($app, ADMIN);
+	$result = $app->get('/admin/users-probe');
+	Assert::same(200, $result->code);
+	Assert::same('users probe', $result->body);
+});
+
+
+test('an unknown address under /admin is a 404 in the administration layout, /administrace is a public 404', function () use ($app): void {
+	$app->newBrowser();
+	foreach (['/admin/neexistuje', '/admin/a/b'] as $path) {
+		$result = $app->get($path);
+		Assert::same(404, $result->code, $path);
+		Assert::same('Stránka nenalezena', $result->text('error-title'), $path);
+		Assert::contains('admin.css', $result->body, $path);
+		Assert::notContains('front.css', $result->body, $path);
+		Assert::null($result->text('admin-user'), $path);
+		Assert::false($result->sessionStarted(), $path);
+		Assert::same([], $app->cookies(), $path);
+	}
+
+	$result = $app->get('/administrace');
+	Assert::same(404, $result->code);
+	Assert::contains('front.css', $result->body);
+	Assert::notContains('admin.css', $result->body);
 });

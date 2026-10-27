@@ -29,8 +29,18 @@ test('404 error page sets the status code and renders the message', function ():
 test('other 4xx codes use the generic title', function (): void {
 	$presenter = container()->getByType(IPresenterFactory::class)->createPresenter('Error:Error4xx');
 
-	$response = $presenter->run(new Request('Error:Error4xx', Request::FORWARD, ['exception' => new BadRequestException('', 403)]));
+	$response = $presenter->run(new Request('Error:Error4xx', Request::FORWARD, ['exception' => new BadRequestException('', 410)]));
 
 	assert($response instanceof TextResponse);
 	Assert::contains('Požadavek nelze vyřídit', html($response));
+});
+
+
+test('403 has its own title', function (): void {
+	$presenter = container()->getByType(IPresenterFactory::class)->createPresenter('Error:Error4xx');
+
+	$response = $presenter->run(new Request('Error:Error4xx', Request::FORWARD, ['exception' => new BadRequestException('', 403)]));
+
+	assert($response instanceof TextResponse);
+	Assert::contains('Na tuto stránku nemáte oprávnění.', html($response));
 });

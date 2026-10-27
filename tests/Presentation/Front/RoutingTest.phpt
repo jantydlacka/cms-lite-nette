@@ -14,6 +14,7 @@ use Tester\Assert;
 use Tests\FakeLogger;
 use Tests\Presentation\Front\FixedRedirectRepository;
 use Tests\Presentation\Front\ThrowingPageRepository;
+use Tests\Presentation\Front\ThrowingUserRepository;
 use Tests\Support\HttpApplication;
 use Tests\Support\HttpResult;
 use Tracy\ILogger;
@@ -285,7 +286,7 @@ test('error presenters requested directly are not found', function (): void {
 
 
 test('the 500 page renders without the page repository', function (): void {
-	$app = HttpApplication::boot([ROUTING_CONFIG, ['services' => ['pageRepository' => ['create' => ThrowingPageRepository::class]]]]);
+	$app = HttpApplication::boot([ROUTING_CONFIG, ['services' => ['pageRepository' => ['create' => ThrowingPageRepository::class], 'userRepository' => ['create' => ThrowingUserRepository::class]]]]);
 
 	$result = $app->get('/o-nas');
 
@@ -299,6 +300,18 @@ test('the 500 page renders without the page repository', function (): void {
 	// The router rejects a path longer than any stored one before a query is made.
 	assertNotFound($app->get('/' . str_repeat('a', 501)));
 	Assert::same(500, $app->get('/' . str_repeat('a', 500))->code);
+});
+
+
+test('error pages use the language of the URL and need neither database nor session', function (): void {
+	$app = HttpApplication::boot([ROUTING_CONFIG, ['services' => ['pageRepository' => ['create' => ThrowingPageRepository::class], 'userRepository' => ['create' => ThrowingUserRepository::class]]]]);
+
+	foreach (['/en/O-NAS' => ['en', 'Page not found'], '/en/o-nas/x/y/z' . str_repeat('a', 500) => ['en', 'Page not found'], '/O-NAS' => ['cs', 'Stránka nenalezena'], '/admin/neexistuje' => ['cs', 'Stránka nenalezena'], '/enx/O-NAS' => ['cs', 'Stránka nenalezena']] as $path => [$lang, $title]) {
+		$result = $app->get($path);
+		Assert::contains("<html lang=\"$lang\">", $result->body, $path);
+		Assert::same($title, $result->text('error-title'), $path);
+		Assert::false($result->sessionStarted(), $path);
+	}
 });
 
 
