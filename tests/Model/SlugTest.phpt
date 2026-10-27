@@ -29,16 +29,17 @@ test('assertValid accepts a well-formed slug', function (): void {
 });
 
 test('assertValid reports format and length', function (): void {
-	Assert::exception(fn () => Slug::assertValid('a--b'), InvalidSlugException::class, null, 0);
-	try {
-		Slug::assertValid('a--b');
-	} catch (InvalidSlugException $e) {
-		Assert::same(InvalidSlugException::FORMAT, $e->reason);
-	}
-	try {
-		Slug::assertValid(str_repeat('a', 101));
-		Assert::fail('expected exception');
-	} catch (InvalidSlugException $e) {
-		Assert::same(InvalidSlugException::LONG, $e->reason);
-	}
+	$format = Assert::exception(fn () => Slug::assertValid('a--b'), InvalidSlugException::class);
+	assert($format instanceof InvalidSlugException);
+	Assert::same(InvalidSlugException::FORMAT, $format->reason);
+
+	$long = Assert::exception(fn () => Slug::assertValid(str_repeat('a', 101)), InvalidSlugException::class);
+	assert($long instanceof InvalidSlugException);
+	Assert::same(InvalidSlugException::LONG, $long->reason);
+});
+
+test('a slug both too long and malformed is reported as too long', function (): void {
+	$e = Assert::exception(fn () => Slug::assertValid(str_repeat('A-', 60)), InvalidSlugException::class);
+	assert($e instanceof InvalidSlugException);
+	Assert::same(InvalidSlugException::LONG, $e->reason);
 });
