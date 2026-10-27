@@ -166,18 +166,21 @@ test('an unknown path renders the 404 page', function () use ($app): void {
 });
 
 
-foreach (['/admin', '/O-NAS', '/en/O-NAS', '/%C3%BA', '/o--nas', '/o-nas%20', '/-o-nas', 'a × 500' => '/' . str_repeat('a', 500), 'a × 501' => '/' . str_repeat('a', 501)] as $name => $path) {
+foreach (['/admin/neco', '/O-NAS', '/en/O-NAS', '/%C3%BA', '/o--nas', '/o-nas%20', '/-o-nas', 'a × 500' => '/' . str_repeat('a', 500), 'a × 501' => '/' . str_repeat('a', 501)] as $name => $path) {
 	test('a non-canonical or invalid path is not found: ' . (is_string($name) ? $name : $path), function () use ($app, $path): void {
 		assertNotFound($app->get($path));
 	});
 }
 
 
-test('/admin/ redirects like any trailing slash and /admin is not a page', function () use ($app): void {
+test('/admin/ redirects like any trailing slash and /admin is the administration, not a page', function () use ($app): void {
 	$result = $app->get('/admin/');
 	Assert::same(301, $result->code);
 	Assert::same('/admin', $result->location);
-	assertNotFound($app->get('/admin'));
+
+	$result = $app->get('/admin');
+	Assert::same(302, $result->code);
+	Assert::match('/admin/sign-in?backlink=%a%', (string) $result->location);
 });
 
 

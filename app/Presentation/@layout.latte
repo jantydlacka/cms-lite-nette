@@ -1,3 +1,4 @@
+{import '@theme.latte'}
 <!DOCTYPE html>
 <html lang="{$locale}">
 <head>
@@ -5,25 +6,14 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>{block title}{$siteName}{/block}</title>
 	{block head}{/block}
-	<script>
-		(function () {
-			var theme = null;
-			try {
-				theme = localStorage.getItem('cms-theme');
-			} catch (e) {}
-			if (theme !== 'light' && theme !== 'dark') {
-				theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-			}
-			document.documentElement.setAttribute('data-theme', theme);
-		})();
-	</script>
+	{include themeScript}
 	{asset 'vendor/pico.min.css'}
 	{asset 'front.css'}
 </head>
 <body>
 	<header class="site-header container">
 		<a href="{plink :Front:Home:default}" class="site-name" data-testid="site-name">{$siteName}</a>
-		<button type="button" class="theme-toggle secondary outline" data-testid="theme-toggle" aria-label="{_front.theme.dark}" title="{_front.theme.dark}">{_front.theme.label}</button>
+		{include themeToggle}
 	</header>
 	{* Only front presenters set $menu: error pages must render without the database. *}
 	<nav n:ifset="$menu" class="site-menu container" aria-label="{_front.menu.label}" data-testid="menu">

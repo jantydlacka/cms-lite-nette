@@ -1,0 +1,33 @@
+{import '../@theme.latte'}
+<!DOCTYPE html>
+<html lang="{$locale}">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="robots" content="noindex">
+	<title>{block title}{_admin.dashboard.title}{/block} | {$siteName}</title>
+	{include themeScript}
+	{asset 'vendor/pico.min.css'}
+	{asset 'admin.css'}
+</head>
+<body>
+	<p n:if="$demoData" class="demo-banner" role="note" data-testid="demo-banner">{_admin.demo.banner}</p>
+	<header class="admin-header container">
+		<strong class="admin-site-name">{$siteName}</strong>
+		<div class="admin-header-tools">
+			{ifset $adminUser}
+				<span class="admin-user"><span data-testid="admin-user">{$adminUser}</span> <small data-testid="admin-role">{_$adminRoleKey}</small></span>
+				<form method="post" action="{link signOut!}" class="admin-sign-out">
+					<button type="submit" class="secondary" data-testid="sign-out">{_admin.sign.out}</button>
+				</form>
+			{/ifset}
+			{include themeToggle}
+		</div>
+	</header>
+	<main class="container">
+		<p n:foreach="$flashes as $flash" class="admin-flash" role="status" data-testid="flash">{_$flash->message}</p>
+		{include content}
+	</main>
+	{asset 'front.js'}
+</body>
+</html>

@@ -1,0 +1,19 @@
+{* Shared by the public and the administration layout; the toggle needs front.js. *}
+{define themeScript}
+	<script>
+		(function () {
+			var theme = null;
+			try {
+				theme = localStorage.getItem('cms-theme');
+			} catch (e) {}
+			if (theme !== 'light' && theme !== 'dark') {
+				theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			}
+			document.documentElement.setAttribute('data-theme', theme);
+		})();
+	</script>
+{/define}
+
+{define themeToggle}
+	<button type="button" class="theme-toggle secondary outline" data-testid="theme-toggle" aria-label="{_front.theme.dark}" title="{_front.theme.dark}">{_front.theme.label}</button>
+{/define}

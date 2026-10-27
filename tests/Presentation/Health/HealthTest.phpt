@@ -41,8 +41,12 @@ test('/_health is 503 and names the asset when one the layout needs is missing',
 });
 
 
-test('the checked assets are exactly those the layout references', function (): void {
-	preg_match_all("~\\{asset '([^']+)'~", FileSystem::read(__DIR__ . '/../../../app/Presentation/@layout.latte'), $matches);
+test('the checked assets are exactly those the layouts reference', function (): void {
+	$assets = [];
+	foreach (['@layout.latte', 'Admin/@layout.latte'] as $layout) {
+		preg_match_all("~\\{asset '([^']+)'~", FileSystem::read(__DIR__ . '/../../../app/Presentation/' . $layout), $matches);
+		$assets = [...$assets, ...$matches[1]];
+	}
 
-	Assert::same($matches[1], HealthPresenter::LAYOUT_ASSETS);
+	Assert::same(array_values(array_unique($assets)), HealthPresenter::LAYOUT_ASSETS);
 });

@@ -17,8 +17,8 @@ use Nette\Http\IResponse;
  */
 final class HealthPresenter implements IPresenter
 {
-	/** Assets @layout.latte references through {asset}; HealthTest keeps the list in sync. */
-	public const LAYOUT_ASSETS = ['vendor/pico.min.css', 'front.css', 'front.js'];
+	/** Assets the public and the administration layout reference through {asset}; HealthTest keeps the list in sync. */
+	public const LAYOUT_ASSETS = ['vendor/pico.min.css', 'front.css', 'front.js', 'admin.css'];
 
 
 	public function __construct(

@@ -14,6 +14,8 @@ final readonly class CmsConfig
 		public string $defaultLocale,
 		public array $locales,
 		public int $newsPerPage,
+		/** The administration warns that accounts with a known password exist. */
+		public bool $demoData = false,
 	) {
 	}
 }

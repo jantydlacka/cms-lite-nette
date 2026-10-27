@@ -9,6 +9,8 @@ A site has one default language and optional further languages. A page path is a
 | `/<path>` | Published page in the default language, e.g. `/o-nas`: HTTP 200, `<html lang>` is the default language. |
 | `/<locale>/<path>` | Published page in a further language, e.g. `/en/about-us`: HTTP 200, `<html lang>` is that language. |
 | `/_health` | Health check, see below. |
+| `/admin` | Administration dashboard, see [Administration](#administration). |
+| `/admin/sign-in` | Sign-in form of the administration. |
 
 The default language has no prefix; every other language has the prefix `<locale>/`.
 
@@ -31,13 +33,32 @@ There is no language fallback: a page that exists only in another language is 40
 
 The first segment of a page path must not be a language code or one of `admin`, `novinky`, `news`, `sitemap.xml`. Such a slug is rejected when a page is saved.
 
+## Administration
+
+The administration has no language prefix and runs in the default language; its addresses are the same in every language version.
+
+| Request | Response |
+|---------|----------|
+| `/admin` signed in, allowed | 200, the dashboard. |
+| `/admin` not signed in | 302 to `/admin/sign-in?backlink=<key>` with the message `admin.sign.required`, or `admin.sign.expired` after 3 hours of inactivity. The backlink is a random key of the stored request, never a URL. |
+| `/admin` signed in without permission | 403. |
+| `/admin/sign-in` signed in | 302 to `/admin`. |
+| Successful sign-in | 303 back to the stored request of the backlink; an unknown or expired backlink leads to `/admin`. |
+| Wrong e-mail or password | 200, the form with `admin.sign.invalid`. |
+| After 5 failures of one e-mail from one IP within 15 minutes (or 20 from one IP) | 200, the form with `admin.sign.throttled`, even with the right password. |
+| Sign-out | The signal `signOut!` (`/admin?do=signOut`), only by a POST from the same origin: signs out, 303 to `/admin/sign-in` with `admin.sign.outDone`. A GET is refused (405); a cross-site POST only redirects (303) and signs nobody out. |
+| A sign-in POST from another site | Not processed: 303 back to the form. |
+| `/admin/<anything else>` | 404. |
+
+A deactivated account is signed out at its next request. The session cookie has no expiry (it ends with the browser), is `HttpOnly` and `SameSite=Lax`. Public pages never start a session.
+
 ## `/_health`
 
 Plain text, independent of the database and of the language settings.
 
 | Condition | Response |
 |-----------|----------|
-| Stylesheets and scripts the layout needs are present | 200, body `ok`. |
+| Stylesheets and scripts the layouts need are present | 200, body `ok`. |
 | One of them is missing | 503, body `missing asset: <names>`. |
 
 ## Content

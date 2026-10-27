@@ -1,0 +1,67 @@
+:root {
+	--cms-gap: 1rem;
+}
+
+.admin-header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--cms-gap);
+	padding-block: var(--cms-gap);
+}
+
+.admin-site-name {
+	font-size: 1.25rem;
+}
+
+.admin-header-tools {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--cms-gap);
+}
+
+.admin-header-tools form {
+	margin: 0;
+}
+
+.admin-header-tools button {
+	width: auto;
+	margin: 0;
+	padding: 0.25rem 0.75rem;
+}
+
+.admin-user small {
+	color: var(--pico-muted-color);
+}
+
+.demo-banner {
+	margin: 0;
+	padding: 0.5rem var(--cms-gap);
+	background: #b45309;
+	color: #fff;
+	font-weight: 700;
+	text-align: center;
+}
+
+.admin-flash {
+	padding: 0.75rem var(--cms-gap);
+	border-left: 4px solid var(--pico-primary);
+	background: var(--pico-card-background-color);
+}
+
+.sign-in {
+	max-width: 28rem;
+	margin-inline: auto;
+}
+
+.form-errors {
+	padding: 0.75rem var(--cms-gap);
+	border-left: 4px solid var(--pico-del-color);
+	list-style: none;
+}
+
+.form-errors li {
+	list-style: none;
+}

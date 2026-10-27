@@ -5,3 +5,18 @@ front.breadcrumbs.label: Drobečková navigace
 error.404.title: Stránka nenalezena
 error.4xx.title: Požadavek nelze vyřídit
 error.500.title: Něco se pokazilo
+admin.sign.title: Přihlášení
+admin.sign.email: E-mail
+admin.sign.password: Heslo
+admin.sign.submit: Přihlásit
+admin.sign.invalid: Nesprávný e-mail nebo heslo.
+admin.sign.throttled: 'Příliš mnoho pokusů, zkuste to později.'
+admin.sign.out: Odhlásit
+admin.sign.outDone: Byli jste odhlášeni.
+admin.sign.expired: Byli jste odhlášeni kvůli nečinnosti.
+admin.sign.required: Pro pokračování se přihlaste.
+admin.dashboard.title: Administrace
+admin.demo.banner: 'Běží demo data – účty se známým heslem, nepoužívat na ostrém webu.'
+admin.role.editor: Editor
+admin.role.admin: Administrátor
+error.403.title: Na tuto stránku nemáte oprávnění.

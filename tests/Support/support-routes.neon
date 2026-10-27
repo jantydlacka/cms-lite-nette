@@ -1,10 +1,12 @@
-# Test-only presenter for HttpApplicationTest.
+# Test-only presenters for HttpApplicationTest.
 application:
 	mapping:
 		SupportTest: Tests\Support\fixtures\*Presenter
 
 services:
 	- Tests\Support\fixtures\ProbePresenter
+	- Tests\Support\fixtures\LateSessionPresenter
 	router:
 		setup:
 			- prepend(Nette\Application\Routers\Route('support-probe', 'SupportTest:Probe:default'))
+			- prepend(Nette\Application\Routers\Route('support-late-session', 'SupportTest:LateSession:default'))

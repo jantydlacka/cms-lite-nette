@@ -46,6 +46,8 @@ final class CmsExtension extends CompilerExtension
 	public function loadConfiguration(): void
 	{
 		$config = $this->config;
+		// Only from the static %demoData% parameter (env CMS_DEMO_DATA or debug mode), never a cms: key.
+		$demoData = $this->getContainerBuilder()->parameters['demoData'] ?? false;
 		/** @var stdClass $login */
 		$login = $config->login;
 		$this->getContainerBuilder()->addDefinition($this->prefix('config'))
@@ -54,6 +56,7 @@ final class CmsExtension extends CompilerExtension
 				$config->defaultLocale,
 				$config->locales,
 				$config->newsPerPage,
+				$demoData === true,
 			]);
 		$this->getContainerBuilder()->addDefinition($this->prefix('loginLimits'))
 			->setFactory(LoginLimits::class, [

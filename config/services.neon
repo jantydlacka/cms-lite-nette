@@ -21,3 +21,4 @@ services:
 	- App\Core\Security\CmsAuthenticator
 	- App\Core\Security\AuthorizatorFactory
 	security.authorizator: @App\Core\Security\AuthorizatorFactory::create()
+	- App\Presentation\Forms\FormFactory

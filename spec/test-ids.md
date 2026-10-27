@@ -12,9 +12,21 @@ Elements the end-to-end tests locate by `data-testid`.
 | `error-title` | Heading of an error page (404, 500). |
 | `page-title` | Main heading of a page, the homepage included. |
 | `page-content` | Rendered content of a page. |
+| `sign-in-form` | Sign-in form of the administration (`/admin/sign-in`). |
+| `sign-in-email` | E-mail field of the sign-in form. |
+| `sign-in-password` | Password field of the sign-in form. |
+| `sign-in-submit` | Submit button of the sign-in form. |
+| `form-error` | List of the errors of a submitted form, e.g. `admin.sign.invalid`. |
+| `flash` | One flash message of the administration, e.g. `admin.sign.outDone`. |
+| `admin-title` | Main heading of the dashboard (`admin.dashboard.title`). |
+| `admin-user` | Name of the signed-in user in the administration header. |
+| `admin-role` | Role of the signed-in user next to the name (`admin.role.editor`, `admin.role.admin`). |
+| `sign-out` | Sign-out button in the administration header; it submits a POST form. |
+| `demo-banner` | Warning strip of the administration (`admin.demo.banner`), shown only while demo data are enabled. |
 
 ## Theme contract
 
+- The public and the administration layout share the mode script and the toggle.
 - `<html data-theme="light|dark">` reflects the active mode.
 - The mode is set by a blocking inline script in `<head>` before any stylesheet: the value of `localStorage['cms-theme']` when it is `light` or `dark`, otherwise `prefers-color-scheme`.
 - All `localStorage` access is wrapped in try/catch; the toggle still switches the mode when storage is unavailable.

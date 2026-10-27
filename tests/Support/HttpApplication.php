@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Support;
 
 use App\Bootstrap;
+use LogicException;
 use Nette\Application\Application;
 use Nette\DI\Container;
 use Nette\Http\IResponse;
@@ -111,6 +112,12 @@ final class HttpApplication
 		$this->closeNativeSession();
 
 		ob_start();
+		$level = ob_get_level();
+		// Under a real server the cookie and the session ini settings cannot be sent once output has begun.
+		$lateSession = false;
+		$container->getByType(Session::class)->onStart[] = static function () use ($level, &$lateSession): void {
+			$lateSession = $lateSession || ob_get_level() > $level || ob_get_length() > 0;
+		};
 		try {
 			$container->getByType(Application::class)->run();
 		} finally {
@@ -118,6 +125,10 @@ final class HttpApplication
 			$response = $container->getByType(IResponse::class);
 			assert($response instanceof RecordingHttpResponse);
 			$sessionId = $this->collect($container, $response);
+		}
+
+		if ($lateSession) {
+			throw new LogicException("$method $path: session started after output began.");
 		}
 
 		$location = $response->getHeader('Location');

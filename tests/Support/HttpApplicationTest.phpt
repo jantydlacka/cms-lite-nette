@@ -87,3 +87,7 @@ $cookie = $response->getCookies()[0];
 Assert::same(Helpers::StrictCookieName, $cookie['name']);
 Assert::same('Strict', $cookie['sameSite']);
 Assert::false($cookie['partitioned']);
+
+// A session started after output began cannot send its cookie in production: the client refuses such a request.
+$app->newBrowser();
+Assert::exception(fn () => $app->get('/support-late-session'), LogicException::class, '%a%session started after output began%a%');

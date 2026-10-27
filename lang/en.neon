@@ -5,3 +5,18 @@ front.breadcrumbs.label: Breadcrumbs
 error.404.title: Page not found
 error.4xx.title: The request cannot be processed
 error.500.title: Something went wrong
+admin.sign.title: Sign in
+admin.sign.email: E-mail
+admin.sign.password: Password
+admin.sign.submit: Sign in
+admin.sign.invalid: Incorrect e-mail or password.
+admin.sign.throttled: 'Too many attempts, please try again later.'
+admin.sign.out: Sign out
+admin.sign.outDone: You have been signed out.
+admin.sign.expired: You were signed out due to inactivity.
+admin.sign.required: Please sign in to continue.
+admin.dashboard.title: Administration
+admin.demo.banner: 'Demo data are enabled – accounts with a known password, never use on a live site.'
+admin.role.editor: Editor
+admin.role.admin: Administrator
+error.403.title: You do not have permission to view this page.

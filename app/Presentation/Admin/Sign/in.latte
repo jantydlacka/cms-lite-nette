@@ -1,0 +1,16 @@
+{block title}{_admin.sign.title}{/block}
+
+{block content}
+<article class="sign-in">
+	<h1>{_admin.sign.title}</h1>
+	<form n:name="signInForm" data-testid="sign-in-form">
+		<ul n:if="$form->hasErrors()" class="form-errors" role="alert" data-testid="form-error">
+			<li n:foreach="$form->getErrors() as $error">{$error}</li>
+		</ul>
+		<label n:name="email" />
+		<input n:name="email" autocomplete="username" data-testid="sign-in-email">
+		<label n:name="password" />
+		<input n:name="password" autocomplete="current-password" data-testid="sign-in-password">
+		<button n:name="send" data-testid="sign-in-submit">{_admin.sign.submit}</button>
+	</form>
+</article>

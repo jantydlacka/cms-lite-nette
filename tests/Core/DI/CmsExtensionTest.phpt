@@ -15,13 +15,13 @@ use Tester\Assert;
 require __DIR__ . '/../../bootstrap.php';
 
 /** Compiles a container from a cms: section only; no database is touched. */
-function compile(string $cms): Container
+function compile(string $cms, string $parameters = ''): Container
 {
 	$dir = sys_get_temp_dir();
 	$dir .= '/cms-extension-' . bin2hex(random_bytes(6));
 	FileSystem::createDir($dir);
 	$file = $dir . '/config.neon';
-	file_put_contents($file, "extensions:\n\tcms: " . CmsExtension::class . "\n\ncms:\n" . $cms);
+	file_put_contents($file, $parameters . "extensions:\n\tcms: " . CmsExtension::class . "\n\ncms:\n" . $cms);
 
 	try {
 		$configurator = new Configurator();
@@ -42,6 +42,13 @@ test('defaults are applied', function (): void {
 	Assert::same('cs', $config->defaultLocale);
 	Assert::same(['cs'], $config->locales);
 	Assert::same(10, $config->newsPerPage);
+});
+
+
+test('demo data follow the demoData parameter and are off without it', function (): void {
+	Assert::false(compile("\tsiteName: Demo")->getByType(CmsConfig::class)->demoData);
+	Assert::false(compile("\tsiteName: Demo", "parameters:\n\tdemoData: false\n")->getByType(CmsConfig::class)->demoData);
+	Assert::true(compile("\tsiteName: Demo", "parameters:\n\tdemoData: true\n")->getByType(CmsConfig::class)->demoData);
 });
 
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core;
 
 use App\Core\Routing\LocaleStrategy;
+use App\Model\CmsConfig;
 use Nette\Application\Routers\Route;
 use Nette\Application\Routers\RouteList;
 
@@ -17,7 +18,7 @@ final class RouterFactory
 	private const PATH_MAX_LENGTH = 500;
 
 
-	public static function createRouter(LocaleStrategy $strategy): RouteList
+	public static function createRouter(LocaleStrategy $strategy, CmsConfig $config): RouteList
 	{
 		$prefixes = $strategy->prefixes();
 		// A prefixed locale must be tried first: the unprefixed `<path>` would also match `en` and `en/`.
@@ -26,6 +27,9 @@ final class RouterFactory
 		$router = new RouteList();
 		// An underscore never occurs in a path, so this cannot shadow a page.
 		$router->addRoute('_health', 'Health:default');
+		// Before the pages; `admin` is a reserved segment. The locale is fixed, so links carry no `?locale=`.
+		$router->addRoute('admin', ['presenter' => 'Admin:Dashboard', 'action' => 'default', 'locale' => $config->defaultLocale]);
+		$router->addRoute('admin/sign-in', ['presenter' => 'Admin:Sign', 'action' => 'in', 'locale' => $config->defaultLocale]);
 		foreach ($prefixes as $locale => $prefix) {
 			// Route masks match with an optional trailing slash; Presenter canonicalization turns that into a 301.
 			$router->addRoute($prefix, [
