@@ -37,5 +37,7 @@ abstract class FrontPresenter extends BasePresenter
 		$this->template->menu = $this->pages->findMenu($locale);
 		$this->template->homepageId = $this->homepage->pageId();
 		$this->template->currentPageId = $this->currentPageId;
+		$this->template->newsInMenu = $this->cmsConfig->newsInMenu;
+		$this->template->newsCurrent = $this->isLinkCurrent(':Front:News:*');
 	}
 }

@@ -2,6 +2,13 @@ front.theme.label: Theme
 front.theme.dark: Dark mode
 front.menu.label: Main menu
 front.breadcrumbs.label: Breadcrumbs
+front.news.menu: News
+front.news.title: News
+front.news.empty: 'There is no news yet.'
+front.news.older: Older news
+front.news.newer: Newer news
+front.news.pageOf: 'Page %page% of %count%'
+front.news.back: Back to news
 error.404.title: Page not found
 error.4xx.title: The request cannot be processed
 error.500.title: Something went wrong

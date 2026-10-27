@@ -8,6 +8,8 @@ A site has one default language and optional further languages. A page path is a
 | `/<locale>/` | Homepage in a further language, e.g. `/en/`: HTTP 200. |
 | `/<path>` | Published page in the default language, e.g. `/o-nas`: HTTP 200, `<html lang>` is the default language. |
 | `/<locale>/<path>` | Published page in a further language, e.g. `/en/about-us`: HTTP 200, `<html lang>` is that language. |
+| `/novinky` | News list in the default language (`/en/news` in English, `/<locale>/news` for any other further language), see [News](#news). |
+| `/novinky/<slug>` | Visible news item in the default language (`/en/news/<slug>`): HTTP 200. |
 | `/_health` | Health check, see below. |
 | `/admin` | Administration dashboard, see [Administration](#administration). |
 | `/admin/sign-in` | Sign-in form of the administration. |
@@ -20,9 +22,24 @@ The default language has no prefix; every other language has the prefix `<locale
 | Request | Response |
 |---------|----------|
 | The path of the page configured as the homepage, e.g. `/uvod` | 301 to `/` (`/en/` for a further language). |
+| An old slug of a news item | See [News](#news). |
 | An old path of a renamed page (`/o-firme`) | 301 to the current path of the page; a redirect whose target is not published answers 404 until it is published again. |
 | `/en` (prefix without the slash) | 301 to `/en/`. |
 | Any other path with a trailing slash, e.g. `/o-nas/` | 301 to the same path without it. |
+
+## News
+
+The segment and the page parameter depend on the language: Czech `novinky` and `strana`, any other language `news` and `page`. A segment of another language is 404 (`/news`, `/en/novinky`). A news item is visible when its translation is published and its publication date has passed; other items are neither listed nor shown.
+
+| Request | Response |
+|---------|----------|
+| `/novinky` | 200, the visible items of the language, newest first, `cms: newsPerPage` (10) per page: title (link to the detail), date in the site time zone (`format.date`), perex. With more than one page also `front.news.newer` / `front.news.older` and `front.news.pageOf`. No news: 200 with `front.news.empty`. |
+| `/novinky?strana=N` | 200, page N. |
+| `/novinky?strana=1` | 301 to `/novinky`. |
+| `/novinky?strana=N` with N not matching `^[1-9][0-9]*$` (`0`, `01`, `abc`, empty) or above the last page | 404. |
+| The page parameter of another language (`/novinky?page=2`, `/en/news?strana=2`) | 301 to the URL without it (`/novinky`, `/en/news`). |
+| `/novinky/<slug>` | 200: title, date, content (Markdown), `front.news.back`; `<meta name="description">` is the item's description, or its perex when that is empty. A draft or scheduled item is 404. |
+| `/novinky/<old slug>` | 301 to the current slug when the item is visible, otherwise 404 (`/en/news/<old slug>` likewise). A visible item with that slug wins over the redirect. |
 
 ## Not found
 

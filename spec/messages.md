@@ -8,6 +8,13 @@ Translation keys of the public UI and the administration with their Czech (`lang
 | `front.theme.dark` | Tmavý režim | Dark mode |
 | `front.menu.label` | Hlavní menu | Main menu |
 | `front.breadcrumbs.label` | Drobečková navigace | Breadcrumbs |
+| `front.news.menu` | Novinky | News |
+| `front.news.title` | Novinky | News |
+| `front.news.empty` | Zatím tu nejsou žádné novinky. | There is no news yet. |
+| `front.news.older` | Starší novinky | Older news |
+| `front.news.newer` | Novější novinky | Newer news |
+| `front.news.pageOf` | Strana %page% z %count% | Page %page% of %count% |
+| `front.news.back` | Zpět na novinky | Back to news |
 | `error.404.title` | Stránka nenalezena | Page not found |
 | `error.4xx.title` | Požadavek nelze vyřídit | The request cannot be processed |
 | `error.500.title` | Něco se pokazilo | Something went wrong |

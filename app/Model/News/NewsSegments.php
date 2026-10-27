@@ -22,4 +22,11 @@ final class NewsSegments
 	{
 		return [self::CS['segment'], self::DEFAULT['segment']];
 	}
+
+
+	/** @return list<string> */
+	public static function allPageParameters(): array
+	{
+		return [self::CS['pageParameter'], self::DEFAULT['pageParameter']];
+	}
 }

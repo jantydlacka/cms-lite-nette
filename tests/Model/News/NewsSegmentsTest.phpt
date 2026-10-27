@@ -20,3 +20,7 @@ test('other locales get the English ones', function (): void {
 test('allSegments lists every segment', function (): void {
 	Assert::same(['novinky', 'news'], NewsSegments::allSegments());
 });
+
+test('allPageParameters lists every page parameter', function (): void {
+	Assert::same(['strana', 'page'], NewsSegments::allPageParameters());
+});

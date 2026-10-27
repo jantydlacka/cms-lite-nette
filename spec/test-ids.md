@@ -9,9 +9,22 @@ Elements the end-to-end tests locate by `data-testid`.
 | `menu` | Main menu (`<nav>`) of the public pages; absent on error pages. |
 | `menu-item` | Link of one menu item; the item of the shown page has `aria-current="page"`. |
 | `breadcrumbs` | Breadcrumb navigation from the top-level page down to the shown page; only for nested pages. |
+| `menu-news` | News link (`front.news.menu`), the last item of the top menu level; present when `cms: newsInMenu` is on; `aria-current="page"` on the news list and on a news detail. |
+| `news-list` | List of the news items of one page of `/novinky` (`/en/news`); absent when there is no news. |
+| `news-item` | One item of `news-list`. |
+| `news-item-title` | Link to the news detail with its title. |
+| `news-item-date` | Publication date of the item in the site time zone (`format.date`), a `<time>` element. |
+| `news-item-perex` | Perex of the item, plain text. |
+| `news-empty` | Message `front.news.empty` on the news list when there is no news. |
+| `news-pagination` | Pagination of the news list with `front.news.pageOf`; only when there is more than one page. |
+| `news-older` | Link `front.news.older` to the next page; absent on the last page. |
+| `news-newer` | Link `front.news.newer` to the previous page; absent on the first page. |
+| `news-detail` | The article of a news detail. |
+| `news-detail-date` | Publication date of the detail in the site time zone (`format.date`), a `<time>` element. |
+| `news-back` | Link `front.news.back` from the detail to the first page of the news list. |
 | `error-title` | Heading of an error page (403, 404, 500); the 403 and 404 pages under `/admin` use the administration layout. |
-| `page-title` | Main heading of a page, the homepage included. |
-| `page-content` | Rendered content of a page. |
+| `page-title` | Main heading of a page, the homepage included; also of the news list (`front.news.title`) and of a news detail (its title). |
+| `page-content` | Rendered content of a page or of a news detail. |
 | `sign-in-form` | Sign-in form of the administration (`/admin/sign-in`). |
 | `sign-in-email` | E-mail field of the sign-in form. |
 | `sign-in-password` | Password field of the sign-in form. |

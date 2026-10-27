@@ -57,6 +57,13 @@ $app = HttpApplication::boot([ROUTING_CONFIG]);
 seed($app->container);
 
 
+function assertMovedTo301(string $location, HttpResult $result): void
+{
+	Assert::same(301, $result->code);
+	Assert::same($location, $result->location);
+}
+
+
 function assertNotFound(HttpResult $result): void
 {
 	Assert::same(404, $result->code);
@@ -260,6 +267,22 @@ test('a locale in the query string does not switch the language', function () us
 	Assert::true(in_array($result->code, [200, 301], true));
 	Assert::notContains('<html lang="en">', $result->body);
 	Assert::notSame('/en/about-us', $result->location);
+});
+
+
+test('the news segments route to the news, not to a page, and only in their own language', function () use ($app): void {
+	$result = $app->get('/novinky');
+	Assert::same(200, $result->code);
+	Assert::same('Novinky', $result->text('page-title'));
+	Assert::same(200, $app->get('/en/news')->code);
+
+	assertNotFound($app->get('/news'));
+	assertNotFound($app->get('/en/novinky'));
+	assertNotFound($app->get('/novinky/neexistuje'));
+	assertNotFound($app->get('/novinky/Neexistuje'));
+	assertNotFound($app->get('/novinky/a/b'));
+	assertNotFound($app->get('/novinky/' . str_repeat('a', 101)));
+	assertMovedTo301('/novinky', $app->get('/novinky/'));
 });
 
 

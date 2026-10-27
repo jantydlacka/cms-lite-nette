@@ -17,7 +17,7 @@
 	</header>
 	{* Only front presenters set $menu: error pages must render without the database. *}
 	<nav n:ifset="$menu" class="site-menu container" aria-label="{_front.menu.label}" data-testid="menu">
-		{include menuItems, items: $menu, currentPageId: $currentPageId, homepageId: $homepageId}
+		{include menuItems, items: $menu, currentPageId: $currentPageId, homepageId: $homepageId, news: $newsInMenu, newsCurrent: $newsCurrent}
 	</nav>
 	<main class="container">
 		{include content}
@@ -29,11 +29,15 @@
 </body>
 </html>
 
-{define menuItems, array $items, ?int $currentPageId, ?int $homepageId}
-	<ul n:if="$items">
+{* The news item closes the top level only. *}
+{define menuItems, array $items, ?int $currentPageId, ?int $homepageId, bool $news = false, bool $newsCurrent = false}
+	<ul n:if="$items || $news">
 		<li n:foreach="$items as $item">
 			<a href="{if $item->pageId === $homepageId}{plink :Front:Home:default}{else}{plink :Front:Page:default, path: $item->path}{/if}" aria-current="{$item->pageId === $currentPageId ? 'page'}" data-testid="menu-item">{$item->title}</a>
 			{include menuItems, items: $item->children, currentPageId: $currentPageId, homepageId: $homepageId}
+		</li>
+		<li n:if="$news">
+			<a href="{plink :Front:News:default}" aria-current="{$newsCurrent ? 'page'}" data-testid="menu-news">{_front.news.menu}</a>
 		</li>
 	</ul>
 {/define}

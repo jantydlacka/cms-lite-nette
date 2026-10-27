@@ -6,6 +6,7 @@ namespace App\Core;
 
 use App\Core\Routing\LocaleStrategy;
 use App\Model\CmsConfig;
+use App\Model\News\NewsSegments;
 use App\Model\Page\ReservedSegments;
 use Nette\Application\Routers\Route;
 use Nette\Application\Routers\RouteList;
@@ -14,6 +15,9 @@ final class RouterFactory
 {
 	/** Same as the slug rule; the flat path strategy makes a path one slug. */
 	private const PATH_PATTERN = '[a-z0-9]+(?:-[a-z0-9]+)*';
+
+	/** Length of news_translation.slug. */
+	private const SLUG_MAX_LENGTH = 100;
 
 	/** Length of page_translation.path; a longer path cannot exist. */
 	private const PATH_MAX_LENGTH = 500;
@@ -42,6 +46,23 @@ final class RouterFactory
 				'presenter' => 'Front:Home',
 				'action' => 'default',
 				'locale' => $locale,
+			]);
+			// Before `<path>`, which would take the segment for a page path.
+			['segment' => $segment, 'pageParameter' => $pageParameter] = NewsSegments::forLocale($locale);
+			$router->addRoute($prefix . $segment . ' ? ' . $pageParameter . '=<page \d+>', [
+				'presenter' => 'Front:News',
+				'action' => 'default',
+				'locale' => $locale,
+				'page' => 1,
+			]);
+			$router->addRoute($prefix . $segment . '/<slug>', [
+				'presenter' => 'Front:News',
+				'action' => 'detail',
+				'locale' => $locale,
+				'slug' => [
+					Route::Pattern => self::PATH_PATTERN,
+					Route::FilterIn => static fn (string $slug): ?string => strlen($slug) <= self::SLUG_MAX_LENGTH ? $slug : null,
+				],
 			]);
 			$router->addRoute($prefix . '<path>', [
 				'presenter' => 'Front:Page',

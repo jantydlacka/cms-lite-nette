@@ -1,0 +1,22 @@
+{layout '../../@layout.latte'}
+
+{block title}{_front.news.title} | {$siteName}{/block}
+
+{block content}
+<h1 data-testid="page-title">{_front.news.title}</h1>
+<p n:if="!$items" data-testid="news-empty">{_front.news.empty}</p>
+<ul n:if="$items" class="news-list" data-testid="news-list">
+	<li n:foreach="$items as $item" data-testid="news-item">
+		<article>
+			<h2><a n:href="detail, slug: $item->translation->slug" data-testid="news-item-title">{$item->translation->title}</a></h2>
+			<p><small><time datetime="{$item->news->publishedAt->format('c')}" data-testid="news-item-date">{$item->news->publishedAt|siteDate}</time></small></p>
+			<p data-testid="news-item-perex">{$item->translation->perex}</p>
+		</article>
+	</li>
+</ul>
+<nav n:if="$paginator->getPageCount() > 1" class="news-pagination" data-testid="news-pagination">
+	<a n:if="!$paginator->isFirst()" n:href="default, page: $paginator->getPage() - 1" rel="prev" data-testid="news-newer">{_front.news.newer}</a>
+	<span>{_front.news.pageOf, [page: $paginator->getPage(), count: $paginator->getPageCount()]}</span>
+	<a n:if="!$paginator->isLast()" n:href="default, page: $paginator->getPage() + 1" rel="next" data-testid="news-older">{_front.news.older}</a>
+</nav>
+{/block}
