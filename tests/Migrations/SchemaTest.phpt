@@ -12,6 +12,11 @@ use Tests\Support\TestDatabase;
 
 require __DIR__ . '/../bootstrap.php';
 
+// NULL-able columns that are intended, `table.column` => reason.
+const NULLABLE_ALLOWLIST = [
+	'page.parent_id' => 'NULL = stránka nejvyšší úrovně (strom bez umělého kořene)',
+];
+
 $container = Bootstrap::bootForTests()->createContainer();
 $schema = TestDatabase::migratedSchema($container, '_schema');
 
@@ -231,4 +236,11 @@ test('a stale or unexplained allowlist entry is reported', function (): void {
 		],
 		SchemaRules::nullableOnlyAllowlisted($schema, ['item.parent_id' => ' ', 'item.removed' => 'gone', 'item.title' => 'was NULL once']),
 	);
+});
+
+
+test('the migrated schema follows every schema rule', function () use ($schema): void {
+	$violations = SchemaRules::all($schema, NULLABLE_ALLOWLIST);
+
+	Assert::same([], $violations, "Schema rule violations:\n" . implode("\n", $violations) . "\n");
 });
