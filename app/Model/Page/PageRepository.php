@@ -83,4 +83,8 @@ interface PageRepository
 	 * @return list<PageTreeItem>
 	 */
 	public function findTree(string $locale): array;
+
+
+	/** Translations go with the page (ON DELETE CASCADE); a page with children is refused by the database (ON DELETE RESTRICT). */
+	public function deletePage(int $pageId): void;
 }

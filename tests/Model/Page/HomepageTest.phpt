@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Model\CmsConfig;
 use App\Model\Page\Homepage;
 use App\Model\Page\PageRepository;
 use App\Model\Page\PageTranslation;
@@ -16,7 +17,7 @@ require __DIR__ . '/../../bootstrap.php';
 $container = container();
 $settings = $container->getByType(SettingRepository::class);
 $pages = $container->getByType(PageRepository::class);
-$homepage = new Homepage($settings, $pages);
+$homepage = new Homepage($settings, $pages, new CmsConfig('Site', 'cs', ['cs', 'en'], 10));
 $reset = static fn () => TestDatabase::prepare($container);
 
 $translate = static function (int $id, string $locale, PublicationStatus $status) use ($pages): void {
@@ -79,3 +80,32 @@ foreach (['', 'abc', '0', '-1', '1.5', ' 1', '1 ', '01', '99999999999999999999']
 		Assert::exception(fn () => $homepage->isHomepage(1), UnexpectedValueException::class);
 	});
 }
+
+test('missingLocales is empty without a homepage or when it points to a missing page', function () use ($homepage, $settings, $reset): void {
+	$reset();
+	Assert::same([], $homepage->missingLocales());
+	$settings->set('homepage', '999');
+	Assert::same([], $homepage->missingLocales());
+});
+
+test('missingLocales lists configured locales without a published homepage translation, in configuration order', function () use ($homepage, $settings, $pages, $translate, $reset): void {
+	$reset();
+	$id = $pages->createPage(null, 0, true);
+	$settings->set('homepage', (string) $id);
+	Assert::same(['cs', 'en'], $homepage->missingLocales());
+
+	$translate($id, 'cs', PublicationStatus::Published);
+	Assert::same(['en'], $homepage->missingLocales());
+
+	$translate($id, 'en', PublicationStatus::Draft);
+	Assert::same(['en'], $homepage->missingLocales());
+
+	$translate($id, 'en', PublicationStatus::Published);
+	Assert::same([], $homepage->missingLocales());
+
+	$translate($id, 'de', PublicationStatus::Draft);
+	$reordered = new Homepage($settings, $pages, new CmsConfig('Site', 'de', ['en', 'de', 'cs'], 10));
+	Assert::same(['de'], $reordered->missingLocales());
+	$translate($id, 'cs', PublicationStatus::Draft);
+	Assert::same(['de', 'cs'], $reordered->missingLocales());
+});

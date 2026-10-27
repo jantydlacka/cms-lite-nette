@@ -94,6 +94,12 @@ final class ThrowingPageRepository implements PageRepository
 	}
 
 
+	public function deletePage(int $pageId): void
+	{
+		throw self::down();
+	}
+
+
 	/** {@inheritDoc} */
 	public function findTree(string $locale): array
 	{

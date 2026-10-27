@@ -231,6 +231,12 @@ final class DatabasePageRepository implements PageRepository
 	}
 
 
+	public function deletePage(int $pageId): void
+	{
+		$this->explorer->table('page')->where('id', $pageId)->delete();
+	}
+
+
 	/** {@inheritDoc} */
 	public function findTree(string $locale): array
 	{

@@ -8,6 +8,7 @@ use App\Model\CmsConfig;
 use App\Model\PublicationStatus;
 use App\Model\Redirect\PathRedirectRepository;
 use App\Model\Redirect\RedirectTarget;
+use App\Model\Setting\SettingRepository;
 use App\Model\Transaction;
 use InvalidArgumentException;
 use Nette\Utils\Strings;
@@ -31,6 +32,8 @@ final class PageService
 		private readonly PageTreeLock $treeLock,
 		private readonly CmsConfig $config,
 		private readonly ClockInterface $clock,
+		private readonly Homepage $homepage,
+		private readonly SettingRepository $settings,
 	) {
 	}
 
@@ -74,6 +77,7 @@ final class PageService
 	 *
 	 * @throws InvalidSlugException nothing is written then
 	 * @throws StaleVersionException when the stored version differs from $command->expectedVersion; nothing is written then
+	 * @throws HomepageProtectedException PROTECTED when the homepage's default-locale translation would become a draft; nothing is written then
 	 * @throws InvalidArgumentException when the page does not exist, the locale is not configured, or the title or description is blank or too long
 	 */
 	public function saveTranslation(SavePageTranslation $command): PageTranslation
@@ -84,6 +88,13 @@ final class PageService
 			$this->treeLock->acquire();
 			$page = $this->pages->getPage($command->pageId)
 				?? throw new InvalidArgumentException('Page ' . $command->pageId . ' does not exist.');
+			if (
+				$command->status === PublicationStatus::Draft
+				&& $command->locale === $this->config->defaultLocale
+				&& $this->homepage->isHomepage($page->id)
+			) {
+				throw new HomepageProtectedException(HomepageProtectedException::PROTECTED);
+			}
 
 			return $this->writeTranslation(
 				$page,
@@ -168,6 +179,51 @@ final class PageService
 	public function moveDown(int $pageId): void
 	{
 		$this->move($pageId, 1);
+	}
+
+
+	/**
+	 * @throws HomepageProtectedException NEEDS_PUBLISHED when the page has no published translation in the default locale; nothing is written then
+	 * @throws InvalidArgumentException when the page does not exist
+	 */
+	public function setHomepage(int $pageId): void
+	{
+		$this->transaction->run(function () use ($pageId): void {
+			$this->treeLock->acquire();
+			if ($this->pages->getPage($pageId) === null) {
+				throw new InvalidArgumentException('Page ' . $pageId . ' does not exist.');
+			}
+			if ($this->pages->findTranslation($pageId, $this->config->defaultLocale)?->status !== PublicationStatus::Published) {
+				throw new HomepageProtectedException(HomepageProtectedException::NEEDS_PUBLISHED);
+			}
+			$this->settings->set(Homepage::KEY, (string) $pageId);
+		});
+	}
+
+
+	/**
+	 * Deletes the page with all its translations and the redirects to it.
+	 *
+	 * @throws HomepageProtectedException PROTECTED when the page is the homepage; nothing is written then
+	 * @throws PageHasChildrenException nothing is written then
+	 * @throws InvalidArgumentException when the page does not exist
+	 */
+	public function deletePage(int $pageId): void
+	{
+		$this->transaction->run(function () use ($pageId): void {
+			$this->treeLock->acquire();
+			if ($this->pages->getPage($pageId) === null) {
+				throw new InvalidArgumentException('Page ' . $pageId . ' does not exist.');
+			}
+			if ($this->homepage->isHomepage($pageId)) {
+				throw new HomepageProtectedException(HomepageProtectedException::PROTECTED);
+			}
+			if ($this->pages->findChildren($pageId) !== []) {
+				throw new PageHasChildrenException('Page ' . $pageId . ' has subpages.');
+			}
+			$this->redirects->deleteForTarget(new RedirectTarget('page', $pageId));
+			$this->pages->deletePage($pageId);
+		});
 	}
 
 

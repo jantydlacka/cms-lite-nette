@@ -288,6 +288,24 @@ final class PageRepositoryContract
 			Assert::same('Second', $repo->findTree('en')[5]->title);
 		});
 
+		test('deletePage removes the page and its translations and leaves other pages', function () use ($repo, $reset): void {
+			$reset();
+			$keep = $repo->createPage(null, 0, true);
+			$gone = $repo->createPage(null, 1, true);
+			$repo->saveTranslation(self::translation($keep, 'cs', 'zustava', 'Keep', PublicationStatus::Published));
+			$repo->saveTranslation(self::translation($gone, 'cs', 'pryc', 'Gone', PublicationStatus::Published));
+			$repo->saveTranslation(self::translation($gone, 'en', 'gone', 'Gone', PublicationStatus::Draft));
+
+			$repo->deletePage($gone);
+
+			Assert::null($repo->getPage($gone));
+			Assert::null($repo->findTranslation($gone, 'cs'));
+			Assert::null($repo->findTranslation($gone, 'en'));
+			Assert::false($repo->isPathTaken('cs', 'pryc', null));
+			Assert::notNull($repo->getPage($keep));
+			Assert::same('zustava', $repo->findTranslation($keep, 'cs')?->path);
+		});
+
 		test('findTree of an empty store is empty', function () use ($repo, $reset): void {
 			$reset();
 			Assert::same([], $repo->findTree('cs'));

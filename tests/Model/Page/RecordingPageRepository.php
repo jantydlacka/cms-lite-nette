@@ -123,6 +123,13 @@ final class RecordingPageRepository implements PageRepository
 	}
 
 
+	public function deletePage(int $pageId): void
+	{
+		$this->log[] = __FUNCTION__;
+		$this->inner->deletePage($pageId);
+	}
+
+
 	/** {@inheritDoc} */
 	public function findTree(string $locale): array
 	{

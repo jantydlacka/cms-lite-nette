@@ -168,6 +168,8 @@ final class TestDatabase
 			$runner->addGroup($group);
 		}
 		$runner->run(Runner::MODE_CONTINUE);
+		// The driver turns foreign key checks off on this shared connection; tests must see CASCADE and RESTRICT as production does.
+		$connection->query('SET FOREIGN_KEY_CHECKS = 1');
 	}
 
 

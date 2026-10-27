@@ -6,9 +6,12 @@ use App\Model\CmsConfig;
 use App\Model\Page\CreatePage;
 use App\Model\Page\Database\DatabasePageRepository;
 use App\Model\Page\FlatPagePathStrategy;
+use App\Model\Page\Homepage;
+use App\Model\Page\HomepageProtectedException;
 use App\Model\Page\InvalidParentException;
 use App\Model\Page\InvalidSlugException;
 use App\Model\Page\Page;
+use App\Model\Page\PageHasChildrenException;
 use App\Model\Page\PagePathStrategy;
 use App\Model\Page\PageRepository;
 use App\Model\Page\PageService;
@@ -22,6 +25,7 @@ use App\Model\PublicationStatus;
 use App\Model\Redirect\Database\DatabasePathRedirectRepository;
 use App\Model\Redirect\PathRedirectRepository;
 use App\Model\Redirect\RedirectTarget;
+use App\Model\Setting\SettingRepository;
 use App\Model\Transaction;
 use Nette\Database\Explorer;
 use Nette\Database\UniqueConstraintViolationException;
@@ -45,9 +49,10 @@ $pages = new DatabasePageRepository($explorer, $clock);
 $redirects = new DatabasePathRedirectRepository($explorer, $clock);
 $config = new CmsConfig('Site', 'cs', ['cs', 'en'], 10);
 $reserved = new ReservedSegments($config);
+$settings = $container->getByType(SettingRepository::class);
 $reset = static fn () => TestDatabase::prepare($container);
 
-$service = static fn (?PageRepository $repo = null, ?PagePathStrategy $strategy = null, ?PageTreeLock $lock = null): PageService => new PageService(
+$service = static fn (?PageRepository $repo = null, ?PagePathStrategy $strategy = null, ?PageTreeLock $lock = null, ?SettingRepository $settingRepo = null): PageService => new PageService(
 	$repo ?? $pages,
 	$redirects,
 	$strategy ?? new FlatPagePathStrategy(),
@@ -56,6 +61,8 @@ $service = static fn (?PageRepository $repo = null, ?PagePathStrategy $strategy 
 	$lock ?? $treeLock,
 	$config,
 	$clock,
+	new Homepage($settingRepo ?? $settings, $repo ?? $pages, $config),
+	$settingRepo ?? $settings,
 );
 $cmd = static fn (int $pageId, string $slug, string $locale = 'cs', string $title = 'Title', string $meta = 'description', ?int $version = null): SavePageTranslation => new SavePageTranslation(
 	$pageId,
@@ -337,11 +344,11 @@ test('a descendant path that collides rolls the whole save back', function () us
 	Assert::same('firma', $pages->findTranslation($parent, 'cs')?->path);
 });
 
-test('an unknown locale is rejected before anything is written', function () use ($reset, $cmd, $pages, $counts, $redirects, $transaction, $treeLock, $clock): void {
+test('an unknown locale is rejected before anything is written', function () use ($reset, $cmd, $pages, $counts, $redirects, $transaction, $treeLock, $clock, $settings): void {
 	$reset();
 	$id = $pages->createPage(null, 0, true);
 	$csOnly = new CmsConfig('Site', 'cs', ['cs'], 10);
-	$service = new PageService($pages, $redirects, new FlatPagePathStrategy(), new ReservedSegments($csOnly), $transaction, $treeLock, $csOnly, $clock);
+	$service = new PageService($pages, $redirects, new FlatPagePathStrategy(), new ReservedSegments($csOnly), $transaction, $treeLock, $csOnly, $clock, new Homepage($settings, $pages, $csOnly), $settings);
 
 	Assert::exception(fn () => $service->saveTranslation($cmd($id, 'o-nas', 'de')), InvalidArgumentException::class);
 	Assert::exception(fn () => $service->saveTranslation($cmd($id, 'o-nas', 'en')), InvalidArgumentException::class);
@@ -902,4 +909,209 @@ test('a page missing from its own sibling list is an UnexpectedValueException an
 	Assert::exception(fn () => $service($lying)->moveDown($child), UnexpectedValueException::class);
 	Assert::same($before, $snapshot());
 	Assert::same([$a, $b, $elsewhere], array_map(static fn (Page $p): int => $p->id, $pages->findChildren(null)));
+});
+
+$withStatus = static fn (int $pageId, string $locale, string $slug, PublicationStatus $status, ?int $version): SavePageTranslation => new SavePageTranslation(
+	$pageId,
+	$locale,
+	'Title',
+	$slug,
+	'content',
+	'description',
+	$status,
+	$version,
+);
+
+test('setHomepage on a page whose default translation is a draft or missing is needsPublished and keeps the setting', function () use ($reset, $service, $pages, $settings, $withStatus): void {
+	$reset();
+	$current = $pages->createPage(null, 0, true);
+	$service()->saveTranslation($withStatus($current, 'cs', 'domu', PublicationStatus::Published, null));
+	$service()->setHomepage($current);
+	$draft = $pages->createPage(null, 1, true);
+	$service()->saveTranslation($withStatus($draft, 'cs', 'koncept', PublicationStatus::Draft, null));
+	$englishOnly = $pages->createPage(null, 2, true);
+	$service()->saveTranslation($withStatus($englishOnly, 'en', 'english', PublicationStatus::Published, null));
+
+	foreach ([$draft, $englishOnly] as $id) {
+		$e = Assert::exception(fn () => $service()->setHomepage($id), HomepageProtectedException::class);
+		assert($e instanceof HomepageProtectedException);
+		Assert::same('needsPublished', $e->reason);
+		Assert::same((string) $current, $settings->get('homepage'));
+	}
+});
+
+test('setHomepage on a page with a published default translation stores its id', function () use ($reset, $service, $pages, $settings, $withStatus): void {
+	$reset();
+	$id = $pages->createPage(null, 0, true);
+	$service()->saveTranslation($withStatus($id, 'cs', 'domu', PublicationStatus::Published, null));
+
+	$service()->setHomepage($id);
+	Assert::same((string) $id, $settings->get('homepage'));
+});
+
+test('setHomepage on a missing page is an InvalidArgumentException and keeps the setting', function () use ($reset, $service, $settings): void {
+	$reset();
+	Assert::exception(fn () => $service()->setHomepage(999), InvalidArgumentException::class);
+	Assert::null($settings->get('homepage'));
+});
+
+test('the default translation of the homepage cannot become a draft, another locale can', function () use ($reset, $service, $pages, $withStatus, $fullSnapshot): void {
+	$reset();
+	$id = $pages->createPage(null, 0, true);
+	$service()->saveTranslation($withStatus($id, 'cs', 'domu', PublicationStatus::Published, null));
+	$service()->saveTranslation($withStatus($id, 'en', 'home', PublicationStatus::Published, null));
+	$service()->setHomepage($id);
+	$before = $fullSnapshot();
+
+	$e = Assert::exception(fn () => $service()->saveTranslation($withStatus($id, 'cs', 'jinam', PublicationStatus::Draft, 1)), HomepageProtectedException::class);
+	assert($e instanceof HomepageProtectedException);
+	Assert::same('protected', $e->reason);
+	Assert::same($before, $fullSnapshot());
+
+	$service()->saveTranslation($withStatus($id, 'cs', 'domu', PublicationStatus::Published, 1));
+	Assert::same(2, $pages->findTranslation($id, 'cs')?->version);
+
+	$en = $service()->saveTranslation($withStatus($id, 'en', 'home', PublicationStatus::Draft, 1));
+	Assert::same(PublicationStatus::Draft, $en->status);
+});
+
+test('the default translation of another page may become a draft', function () use ($reset, $service, $pages, $withStatus): void {
+	$reset();
+	$home = $pages->createPage(null, 0, true);
+	$service()->saveTranslation($withStatus($home, 'cs', 'domu', PublicationStatus::Published, null));
+	$service()->setHomepage($home);
+	$other = $pages->createPage(null, 1, true);
+	$service()->saveTranslation($withStatus($other, 'cs', 'o-nas', PublicationStatus::Published, null));
+
+	Assert::same(PublicationStatus::Draft, $service()->saveTranslation($withStatus($other, 'cs', 'o-nas', PublicationStatus::Draft, 1))->status);
+});
+
+test('deleting the homepage is protected and deleting a page with children is refused, nothing changes', function () use ($reset, $service, $pages, $withStatus, $fullSnapshot): void {
+	$reset();
+	$home = $pages->createPage(null, 0, true);
+	$service()->saveTranslation($withStatus($home, 'cs', 'domu', PublicationStatus::Published, null));
+	$homeChild = $pages->createPage($home, 0, true);
+	$service()->setHomepage($home);
+	$parent = $pages->createPage(null, 1, true);
+	$service()->saveTranslation($withStatus($parent, 'cs', 'firma', PublicationStatus::Published, null));
+	$pages->createPage($parent, 0, true);
+	$before = $fullSnapshot();
+
+	$e = Assert::exception(fn () => $service()->deletePage($home), HomepageProtectedException::class);
+	assert($e instanceof HomepageProtectedException);
+	Assert::same('protected', $e->reason);
+	Assert::exception(fn () => $service()->deletePage($parent), PageHasChildrenException::class);
+	Assert::same($before, $fullSnapshot());
+	Assert::notNull($pages->getPage($homeChild));
+});
+
+test('deleting a missing page is an InvalidArgumentException', function () use ($reset, $service): void {
+	$reset();
+	Assert::exception(fn () => $service()->deletePage(999), InvalidArgumentException::class);
+});
+
+test('deleting a leaf removes the page, its translations and the redirects to it; the old address finds nothing', function () use ($reset, $service, $pages, $redirects, $withStatus, $explorer): void {
+	$reset();
+	$keep = $pages->createPage(null, 0, true);
+	$service()->saveTranslation($withStatus($keep, 'cs', 'zustava', PublicationStatus::Published, null));
+	$service()->saveTranslation($withStatus($keep, 'cs', 'zustava-nove', PublicationStatus::Published, 1));
+	$leaf = $pages->createPage(null, 1, true);
+	$service()->saveTranslation($withStatus($leaf, 'cs', 'stara', PublicationStatus::Published, null));
+	$service()->saveTranslation($withStatus($leaf, 'cs', 'nova', PublicationStatus::Published, 1));
+	$service()->saveTranslation($withStatus($leaf, 'en', 'old', PublicationStatus::Draft, null));
+	$service()->saveTranslation($withStatus($leaf, 'en', 'new', PublicationStatus::Draft, 1));
+	Assert::same($leaf, $redirects->findTarget('cs', 'stara')?->id);
+
+	$service()->deletePage($leaf);
+
+	Assert::null($pages->getPage($leaf));
+	Assert::same(0, $explorer->table('page_translation')->where('page_id', $leaf)->count('*'));
+	Assert::null($redirects->findTarget('cs', 'stara'));
+	Assert::null($redirects->findTarget('en', 'old'));
+	Assert::null($pages->findPublishedByPath('cs', 'nova'));
+	Assert::same($keep, $redirects->findTarget('cs', 'zustava')?->id);
+	Assert::same('zustava-nove', $pages->findTranslation($keep, 'cs')?->path);
+});
+
+test('a failing page delete rolls back the redirect delete', function () use ($reset, $service, $pages, $withStatus, $fullSnapshot): void {
+	$reset();
+	$leaf = $pages->createPage(null, 0, true);
+	$service()->saveTranslation($withStatus($leaf, 'cs', 'stara', PublicationStatus::Published, null));
+	$service()->saveTranslation($withStatus($leaf, 'cs', 'nova', PublicationStatus::Published, 1));
+	$failing = new DelegatingPageRepository($pages, static function (): void {
+	}, null, static function (): void {
+		throw new RuntimeException('boom');
+	});
+	$before = $fullSnapshot();
+
+	Assert::exception(fn () => $service($failing)->deletePage($leaf), RuntimeException::class, 'boom');
+	Assert::same($before, $fullSnapshot());
+});
+
+test('setHomepage, deletePage and the homepage check in saveTranslation take the tree lock before reading', function () use ($reset, $service, $pages, $treeLock, $settings, $withStatus): void {
+	$reset();
+	$home = $pages->createPage(null, 0, true);
+	$service()->saveTranslation($withStatus($home, 'cs', 'domu', PublicationStatus::Published, null));
+	$leaf = $pages->createPage(null, 1, true);
+
+	/** @var ArrayObject<int, string> $log */
+	$log = new ArrayObject();
+	$lock = new class($treeLock, $log) implements PageTreeLock {
+		/** @param ArrayObject<int, string> $log */
+		public function __construct(private readonly PageTreeLock $inner, private readonly ArrayObject $log)
+		{
+		}
+
+
+		public function acquire(): void
+		{
+			$this->log[] = 'acquire';
+			$this->inner->acquire();
+		}
+	};
+	$settingLog = new class($settings, $log) implements SettingRepository {
+		/** @param ArrayObject<int, string> $log */
+		public function __construct(private readonly SettingRepository $inner, private readonly ArrayObject $log)
+		{
+		}
+
+
+		public function get(string $key, string $locale = ''): ?string
+		{
+			$this->log[] = 'setting.get';
+
+			return $this->inner->get($key, $locale);
+		}
+
+
+		public function set(string $key, string $value, string $locale = ''): void
+		{
+			$this->log[] = 'setting.set';
+			$this->inner->set($key, $value, $locale);
+		}
+	};
+	$recording = new RecordingPageRepository($pages, $log);
+	$cases = [
+		'setHomepage' => [fn () => $service($recording, null, $lock, $settingLog)->setHomepage($home), ['findTranslation', 'setting.set']],
+		'deletePage' => [fn () => $service($recording, null, $lock, $settingLog)->deletePage($leaf), ['setting.get', 'findChildren', 'deletePage']],
+	];
+	foreach ($cases as $label => [$run, $expected]) {
+		$log->exchangeArray([]);
+		$run();
+		$calls = $log->getArrayCopy();
+		Assert::same('acquire', $calls[0] ?? null, $label);
+		Assert::same(1, count(array_keys($calls, 'acquire', true)), $label);
+		foreach ($expected as $call) {
+			Assert::contains($call, $calls, $label);
+		}
+	}
+
+	$log->exchangeArray([]);
+	Assert::exception(
+		fn () => $service($recording, null, $lock, $settingLog)->saveTranslation($withStatus($home, 'cs', 'domu', PublicationStatus::Draft, 1)),
+		HomepageProtectedException::class,
+	);
+	$calls = $log->getArrayCopy();
+	Assert::same('acquire', $calls[0] ?? null, 'saveTranslation');
+	Assert::contains('setting.get', $calls, 'saveTranslation');
 });

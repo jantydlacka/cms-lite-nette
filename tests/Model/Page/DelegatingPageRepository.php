@@ -9,17 +9,19 @@ use App\Model\Page\PageRepository;
 use App\Model\Page\PageTranslation;
 use Closure;
 
-/** Forwards to a real repository; $beforeSave runs ahead of every saveTranslation (it may throw), $mapPage rewrites what getPage returns. */
+/** Forwards to a real repository; $beforeSave / $beforeDelete run ahead of every saveTranslation / deletePage (they may throw), $mapPage rewrites what getPage returns. */
 final class DelegatingPageRepository implements PageRepository
 {
 	/**
 	 * @param Closure(): void $beforeSave
 	 * @param (Closure(Page): Page)|null $mapPage
+	 * @param (Closure(): void)|null $beforeDelete
 	 */
 	public function __construct(
 		private readonly PageRepository $inner,
 		private readonly Closure $beforeSave,
 		private readonly ?Closure $mapPage = null,
+		private readonly ?Closure $beforeDelete = null,
 	) {
 	}
 
@@ -106,6 +108,15 @@ final class DelegatingPageRepository implements PageRepository
 	public function setPositions(array $positionsById): void
 	{
 		$this->inner->setPositions($positionsById);
+	}
+
+
+	public function deletePage(int $pageId): void
+	{
+		if ($this->beforeDelete !== null) {
+			($this->beforeDelete)();
+		}
+		$this->inner->deletePage($pageId);
 	}
 
 
