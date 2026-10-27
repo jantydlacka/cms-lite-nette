@@ -92,6 +92,22 @@ Set `E2E_BASE_URL` to your `CMS_HTTP_PORT`. Against a debug-mode stack (`NETTE_D
 
 The pre-push hook and CI also run `bin/check-migrations-immutable [base]`, which fails when a migration that exists in the base branch was modified, deleted or renamed. The hook compares against `origin/main`; without it, against the merge base with the local `main` branch. It prints a warning and skips the check when neither exists or when `main` itself is checked out.
 
+## First administrator
+
+Users are created from the command line (there is no administration UI for it yet). Interactively, the password is asked twice and not echoed:
+
+```bash
+docker compose exec app bin/console user:create admin@example.com "Jane Admin"
+```
+
+For scripts, pass the password on standard input (first line; only the line ending is stripped) so it does not appear in the process list:
+
+```bash
+printf '%s\n' "$PASSWORD" | docker compose exec -T app bin/console user:create admin@example.com "Jane Admin" --password-stdin
+```
+
+`--role=editor` creates an editor; the default is `admin`. Passwords have at least 12 characters and at most 72 bytes, and no leading or trailing whitespace.
+
 ## Deployment note
 
 Asset URLs and redirect `Location` headers are absolute URLs built from the request `Host`, so set `ServerName` (or trusted proxies) at deployment. Behind a TLS-terminating reverse proxy, configure trusted proxies and HTTPS detection in the application; otherwise the browser receives `http://` asset URLs on an HTTPS page (mixed content).

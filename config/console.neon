@@ -10,3 +10,6 @@ migrations:
 	driver: mysql
 	dbal: nette
 	withDummyData: %demoData%
+
+services:
+	- App\Core\Console\CreateUserCommand
