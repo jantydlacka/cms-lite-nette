@@ -30,7 +30,8 @@
 		</div>
 	</header>
 	<main class="container">
-		<p n:foreach="$flashes as $flash" class="admin-flash" role="status" data-testid="flash">{_$flash->message}</p>
+		{* A flash may carry named parameters of its message (NewsPresenter::reportShift()). *}
+		<p n:foreach="$flashes as $flash" class="admin-flash" role="status" data-testid="flash">{if isset($flash->parameters)}{_$flash->message, $flash->parameters}{else}{_$flash->message}{/if}</p>
 		{include content}
 	</main>
 	{asset 'front.js'}

@@ -1,0 +1,28 @@
+{* Fields shared by the news detail and the new news item; used inside an open form. Errors: formErrors of @page-fields.latte. *}
+
+{define publishedAtField, Nette\Forms\Form $form, string $timezone}
+	{var $at = $form['publishedAt']}
+	<label n:name="publishedAt" />
+	<input n:name="publishedAt" aria-describedby="news-published-at-hint{if $at->hasErrors()} {$at->getHtmlId()}-error{/if}" n:attr="aria-invalid: $at->hasErrors() ? 'true'" data-testid="news-published-at">
+	<small id="news-published-at-hint">{_admin.news.field.publishedAtHint, [timezone: $timezone]}</small>
+{/define}
+
+{define newsTranslationFields, Nette\Forms\Form $form}
+	{var $title = $form['title']}
+	{var $slug = $form['slug']}
+	{var $perex = $form['perex']}
+	{var $meta = $form['metaDescription']}
+	<label n:name="title" />
+	<input n:name="title" n:attr="aria-invalid: $title->hasErrors() ? 'true', aria-describedby: $title->hasErrors() ? $title->getHtmlId() . '-error'" data-testid="news-title-input">
+	<label n:name="slug" />
+	<input n:name="slug" aria-describedby="news-slug-hint{if $slug->hasErrors()} {$slug->getHtmlId()}-error{/if}" n:attr="aria-invalid: $slug->hasErrors() ? 'true'" data-testid="news-slug-input">
+	<small id="news-slug-hint">{_admin.pages.field.slugHint}</small>
+	<label n:name="perex" />
+	<textarea n:name="perex" rows="3" n:attr="aria-invalid: $perex->hasErrors() ? 'true', aria-describedby: $perex->hasErrors() ? $perex->getHtmlId() . '-error'" data-testid="news-perex-input"></textarea>
+	<label n:name="content" />
+	<textarea n:name="content" rows="14" data-testid="news-content-input"></textarea>
+	<label n:name="metaDescription" />
+	<textarea n:name="metaDescription" rows="3" n:attr="aria-invalid: $meta->hasErrors() ? 'true', aria-describedby: $meta->hasErrors() ? $meta->getHtmlId() . '-error'" data-testid="news-meta-input"></textarea>
+	<label n:name="status" />
+	<select n:name="status" data-testid="news-status-input"></select>
+{/define}

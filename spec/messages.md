@@ -98,3 +98,21 @@ Translation keys of the public UI and the administration with their Czech (`lang
 | `admin.news.state.scheduled` | Naplánováno na %date% | Scheduled for %date% |
 | `admin.news.state.published` | Zveřejněno %date% | Published %date% |
 | `admin.news.state.missing` | Chybí překlad | Missing translation |
+| `admin.news.scheduledNote` | Na webu se zobrazí od %date%. | It will appear on the website from %date%. |
+| `admin.news.properties` | Vlastnosti novinky | News properties |
+| `admin.news.field.publishedAt` | Datum zveřejnění | Publication date |
+| `admin.news.field.publishedAtHint` | Prázdné = v okamžiku zveřejnění. Čas je v pásmu %timezone%. | Leave empty to use the moment of publishing. The time is in %timezone%. |
+| `admin.news.field.perex` | Perex (krátký úvod) | Perex (short summary) |
+| `admin.news.field.perexRequired` | Vyplňte perex. | Fill in the perex. |
+| `admin.news.field.invalidDate` | Zadejte platné datum a čas. | Enter a valid date and time. |
+| `admin.news.timeShifted` | Čas %entered% v tento den neexistuje (přechod na letní čas), uloženo %saved%. | %entered% does not exist on that day (daylight saving time starts), saved as %saved%. |
+| `admin.news.saveProperties` | Uložit vlastnosti | Save properties |
+| `admin.news.saveTranslation` | Uložit text | Save text |
+| `admin.news.saved` | Novinka byla uložena. | The news item has been saved. |
+| `admin.news.created` | Novinka byla vytvořena. | The news item has been created. |
+| `admin.news.stale` | Novinku mezitím upravil někdo jiný. Tvoje úpravy zůstaly ve formuláři – zkopíruj si je, načti aktuální verzi a ulož znovu. | Someone else has changed this news item in the meantime. Your changes are still in the form – copy them, reload the current version and save again. |
+| `admin.news.deletedMeanwhile` | Novinka mezitím byla smazána. Text zůstal ve formuláři – zkopírujte si ho. | The news item was deleted in the meantime. Your text is still in the form – copy it. |
+| `admin.news.delete` | Smazat novinku | Delete news item |
+| `admin.news.deleteConfirm` | Opravdu smazat novinku „%title%“? Smažou se všechny jazyky a staré adresy přestanou přesměrovávat. | Really delete the news item “%title%”? All languages are deleted and old addresses stop redirecting. |
+| `admin.news.deleted` | Novinka byla smazána. | The news item has been deleted. |
+| `admin.news.slug.taken` | Tuto adresu už používá jiná novinka. | Another news item already uses this address. |

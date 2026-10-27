@@ -94,6 +94,16 @@ The administration has no language prefix and runs in the default language; its 
 |---------|----------|
 | `/admin/news` signed in (editor or administrator) | 200, the news list: 20 per page, items without a date first, then by publication date descending (newest first), then by id descending. A row shows the title in the default language (else the first existing translation), the author (`admin.news.authorDeleted` when the account is deleted) and a badge for every enabled language: `admin.news.state.draft`, `.scheduled` (date and time), `.published` (date) or `.missing`. Links to `/admin/news/new`. |
 | `/admin/news?page=<n>` | `<n>` is digits without a leading zero; `1` is 301 to `/admin/news`; a page beyond the last, `0`, a leading zero or anything else is 404. No news is page 1 with `admin.news.empty`. |
+| `/admin/news/new` | A new news item: publication date and the translation in the default language; the author is the signed-in user. Saving creates it, 303 to its detail with `admin.news.created`. |
+| `/admin/news/<id>` | Detail of the news item in the default language: properties (publication date, author) and the translation tab; `<id>` is digits, an item that does not exist is 404. A list title links here. |
+| `/admin/news/<id>/<locale>` | Detail with the tab of an enabled language; any other language is 404. |
+| `/admin/news/<id>/delete` | Confirmation of the deletion of the item. |
+| Publication date | Entered in the site time zone (`cms: timezone`), stored in UTC, shown again in the site time zone. Empty = no date; publishing a translation then dates the item now. A local time skipped by the change to summer time is saved shifted forward and reported with `admin.news.timeShifted`; the doubled hour of the change to winter time is its second occurrence. A value that is not a valid date and time is a field error `admin.news.field.invalidDate`; nothing is saved and the field shows the typed value only when it renders unchanged, otherwise it is empty. |
+| News properties (POST) | **Uložit vlastnosti**: the publication date with the version the form was rendered from: 303 back with `admin.news.saved`; a changed version gives `admin.news.stale` and nothing is saved, the form keeps the sent values. |
+| News translation (POST) | **Uložit text** saves the translation of the tab with its version (empty for a missing one): 303 back with `admin.news.saved`; an empty slug is derived from the title; a refused address is an error at the address field (`admin.news.slug.taken` for an address of another news item, otherwise `admin.pages.slug.*`), an empty perex `admin.news.field.perexRequired`, a changed version `admin.news.stale`. **Náhled** renders the content below the form and saves nothing. |
+| A save of an item deleted meanwhile (POST) | 200, only the submitted form, keeping the sent values, with `admin.news.deletedMeanwhile`; nothing is saved. A GET of the deleted item stays 404. |
+| Delete news item (POST) | **Smazat novinku** on the confirmation screen: deletes the item with all translations and its old addresses, 303 to `/admin/news` with `admin.news.deleted`. GET never deletes; a missing item is 404. |
+| A news form posted to another screen | 404, e.g. `POST /admin/news?do=properties-submit`. |
 
 ### Stored requests
 

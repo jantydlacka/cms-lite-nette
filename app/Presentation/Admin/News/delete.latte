@@ -1,0 +1,13 @@
+{block title}{_admin.news.delete}{/block}
+
+{block content}
+<div class="pages-heading">
+	<h1 data-testid="admin-title">{include title}</h1>
+	<a n:href="default">{_admin.news.title}</a>
+</div>
+
+<p>{_admin.news.deleteConfirm, [title: $title]}</p>
+<form n:name="delete">
+	<button n:name="delete" data-testid="news-delete-confirm">{_admin.news.delete}</button>
+</form>
+<p><a n:href="edit $item->id" data-testid="news-delete-back">{_admin.pages.deleteBack}</a></p>

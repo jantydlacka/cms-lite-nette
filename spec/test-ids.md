@@ -65,12 +65,30 @@ Elements the end-to-end tests locate by `data-testid`.
 | `admin-nav-news` | Link to the news list in the administration navigation, shown only to a signed-in user; `aria-current="page"` on the news screens. |
 | `admin-news-list` | List of the news items of one page of `/admin/news`; absent when there is no news. |
 | `admin-news-item` | One row of `admin-news-list`. |
-| `admin-news-item-title` | Title of the row in the default language, else the first existing translation. |
-| `admin-news-author` | Name of the author of the row, or `admin.news.authorDeleted`; its `title` is `admin.news.author`. |
+| `admin-news-item-title` | Link to the news detail with the title of the row in the default language, else the first existing translation. |
+| `admin-news-author` | Name of the author of the row, or `admin.news.authorDeleted`; its `title` is `admin.news.author`. Also the author in the news detail. |
 | `admin-news-state` | State badge of one enabled language in the row (`data-locale`): `admin.news.state.draft`, `.scheduled` (with date and time), `.published` (with date) or `.missing`. |
 | `admin-news-new` | Link `admin.news.new` above the list. |
 | `admin-news-empty` | Message `admin.news.empty` when there is no news. |
 | `admin-news-pagination` | Pagination of `/admin/news` with `front.news.pageOf`; only when there is more than one page; the links carry `rel="prev"` and `rel="next"`. |
+| `news-properties-form` | POST form of the news properties in the news detail (publication date, hidden version). |
+| `news-published-at` | Publication date field (`datetime-local`) in the site time zone, hint `admin.news.field.publishedAtHint`; also on a new item. Empty = no date yet. A value that is not a valid date and time is refused with `admin.news.field.invalidDate` (`aria-invalid`, `aria-describedby`). |
+| `news-properties-save` | Save button of `news-properties-form` (`admin.news.saveProperties`). |
+| `news-scheduled-note` | `admin.news.scheduledNote` with the date and time in the detail, when the translation of the tab is published and its date is in the future. |
+| `news-tab` | Link to the translation tab of one enabled language, `aria-current="page"` on the current one; only with more than one language. |
+| `news-translation-form` | POST form of one translation (hidden version; empty for a missing translation). |
+| `news-title-input` | Title field (detail and new item). |
+| `news-slug-input` | Address field; `aria-invalid="true"` when the address was refused, and `aria-describedby` names the hint and the error. |
+| `news-perex-input` | Perex field (plain text, required). |
+| `news-content-input` | Content field (Markdown). |
+| `news-meta-input` | Search description field. |
+| `news-status-input` | Status dropdown (draft / published). |
+| `news-save` | Save button of the translation form (`admin.news.saveTranslation`) and of the new item form (`admin.pages.save`). |
+| `news-preview` | Preview button of the translation form; saves nothing. |
+| `news-preview-output` | The previewed content rendered through the same Markdown filter as the public detail; only after a preview. |
+| `news-delete` | Link `admin.news.delete` in the detail. |
+| `news-delete-confirm` | Submit button of the POST form on the confirmation screen (`admin.news.delete`). |
+| `news-delete-back` | Link `admin.pages.deleteBack` from the confirmation to the detail. |
 | `page-title-input` | Title field. |
 | `page-slug-input` | Address field; `aria-invalid="true"` when the address was refused, and `aria-describedby` names the hint and the error. |
 | `page-content-input` | Content field (Markdown). |

@@ -1,0 +1,17 @@
+{import '../Pages/@page-fields.latte'}
+{import '@news-fields.latte'}
+
+{block title}{_admin.news.new}{/block}
+
+{block content}
+<div class="pages-heading">
+	<h1 data-testid="admin-title">{_admin.news.new}</h1>
+	<a n:href="default">{_admin.news.title}</a>
+</div>
+
+<form n:name="newNews">
+	{include formErrors, form: $form}
+	{include publishedAtField, form: $form, timezone: $timezone}
+	{include newsTranslationFields, form: $form}
+	<button n:name="save" data-testid="news-save">{_admin.pages.save}</button>
+</form>

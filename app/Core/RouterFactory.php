@@ -42,6 +42,8 @@ final class RouterFactory
 		$router->addRoute(ReservedSegments::ADMIN . '/pages/<id \d+>[/<lang>]', ['presenter' => 'Admin:Pages', 'action' => 'edit', 'locale' => $config->defaultLocale]);
 		$router->addRoute(ReservedSegments::ADMIN . '/news ? page=<page \d+>', ['presenter' => 'Admin:News', 'action' => 'default', 'locale' => $config->defaultLocale, 'page' => 1]);
 		$router->addRoute(ReservedSegments::ADMIN . '/news/new', ['presenter' => 'Admin:News', 'action' => 'new', 'locale' => $config->defaultLocale]);
+		$router->addRoute(ReservedSegments::ADMIN . '/news/<id \d+>/delete', ['presenter' => 'Admin:News', 'action' => 'delete', 'locale' => $config->defaultLocale]);
+		$router->addRoute(ReservedSegments::ADMIN . '/news/<id \d+>[/<lang>]', ['presenter' => 'Admin:News', 'action' => 'edit', 'locale' => $config->defaultLocale]);
 		foreach ($prefixes as $locale => $prefix) {
 			// Route masks match with an optional trailing slash; Presenter canonicalization turns that into a 301.
 			$router->addRoute($prefix, [

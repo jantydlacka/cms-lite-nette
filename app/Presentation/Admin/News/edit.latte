@@ -1,0 +1,46 @@
+{import '../Pages/@page-fields.latte'}
+{import '@news-fields.latte'}
+
+{block title}{if $title !== null}{$title}{else}{_admin.pages.missing}{/if}{/block}
+
+{block content}
+{* After the item was deleted meanwhile only the submitted form is shown, with its values and the error. *}
+{var $shows = fn (string $form): bool => $deletedForm === null || $deletedForm === $form}
+<div class="pages-heading">
+	<h1 data-testid="admin-title">{include title}</h1>
+	<a n:href="default">{_admin.news.title}</a>
+</div>
+
+<section n:if="$shows('properties')" class="page-section" aria-labelledby="news-properties-heading">
+	<h2 id="news-properties-heading">{_admin.news.properties}</h2>
+	<p n:if="$deletedForm === null">{_admin.news.author}: <span data-testid="admin-news-author">{$author ?? ('admin.news.authorDeleted'|translate)}</span></p>
+	<form n:name="properties" data-testid="news-properties-form">
+		{include formErrors, form: $form}
+		{include publishedAtField, form: $form, timezone: $timezone}
+		<input n:name="version">
+		<button n:name="save" data-testid="news-properties-save">{_admin.news.saveProperties}</button>
+	</form>
+</section>
+
+<section n:if="$shows('translation')" class="page-section" aria-labelledby="news-translation-heading">
+	<nav n:if="$tabs && $deletedForm === null" class="page-tabs" aria-labelledby="news-translation-heading">
+		<a n:foreach="$tabs as $tab" n:href="edit id: $item->id, lang: $tab === $defaultLocale ? null : $tab" n:attr="aria-current: $tab === $lang ? page" lang="{$tab}" data-testid="news-tab">{$tab|upper}</a>
+	</nav>
+	<h2 id="news-translation-heading">{if $translation === null}{_admin.pages.addTranslation}{else}{$translation->title}{/if}</h2>
+	<p n:if="$scheduledAt !== null" role="status" data-testid="news-scheduled-note">{_admin.news.scheduledNote, [date: ($scheduledAt|siteDateTime)]}</p>
+	<form n:name="translation" data-testid="news-translation-form">
+		{include formErrors, form: $form}
+		{include newsTranslationFields, form: $form}
+		<input n:name="version">
+		<div class="page-actions">
+			<button n:name="save" data-testid="news-save">{_admin.news.saveTranslation}</button>
+			<button n:name="preview" class="secondary" data-testid="news-preview">{_admin.pages.preview}</button>
+		</div>
+	</form>
+	<p n:if="$deletedForm === null" class="page-delete-link"><a n:href="delete $item->id" data-testid="news-delete">{_admin.news.delete}</a></p>
+
+	<section n:if="$preview !== null" class="page-preview" aria-labelledby="news-preview-heading">
+		<h3 id="news-preview-heading">{_admin.pages.previewTitle}</h3>
+		<div data-testid="news-preview-output">{$preview|markdown}</div>
+	</section>
+</section>
