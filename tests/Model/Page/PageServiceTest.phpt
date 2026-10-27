@@ -6,7 +6,9 @@ use App\Model\CmsConfig;
 use App\Model\Page\CreatePage;
 use App\Model\Page\Database\DatabasePageRepository;
 use App\Model\Page\FlatPagePathStrategy;
+use App\Model\Page\InvalidParentException;
 use App\Model\Page\InvalidSlugException;
+use App\Model\Page\Page;
 use App\Model\Page\PagePathStrategy;
 use App\Model\Page\PageRepository;
 use App\Model\Page\PageService;
@@ -15,6 +17,7 @@ use App\Model\Page\PageTreeLock;
 use App\Model\Page\ReservedSegments;
 use App\Model\Page\SavePageTranslation;
 use App\Model\Page\StaleVersionException;
+use App\Model\Page\UpdatePage;
 use App\Model\PublicationStatus;
 use App\Model\Redirect\Database\DatabasePathRedirectRepository;
 use App\Model\Redirect\PathRedirectRepository;
@@ -79,6 +82,37 @@ $counts = static fn (): array => [
 	$explorer->table('path_redirect')->count('*'),
 ];
 $pageCount = static fn (): int => $explorer->table('page')->count('*');
+/** @return array<int, int> position by id, in sibling order */
+$positions = static function (?int $parentId) use ($pages): array {
+	$byId = [];
+	foreach ($pages->findChildren($parentId) as $page) {
+		$byId[$page->id] = $page->position;
+	}
+
+	return $byId;
+};
+$snapshot = static fn (): array => array_map(
+	static fn ($row): array => $row->toArray(),
+	$explorer->table('page')->select('id, parent_id, position, in_menu, version')->order('id')->fetchAll(),
+);
+$fullSnapshot = static fn (): array => array_map(
+	static fn (string $sql): array => array_map(
+		static fn ($row): array => array_map(static fn ($v) => $v instanceof DateTimeInterface ? $v->format('Y-m-d H:i:s') : $v, (array) $row),
+		$explorer->query($sql)->fetchAll(),
+	),
+	[
+		'SELECT id, parent_id, position, in_menu, version, updated_at FROM page ORDER BY id',
+		'SELECT * FROM page_translation ORDER BY page_id, locale',
+		'SELECT * FROM path_redirect ORDER BY locale, old_path',
+	],
+);
+$tree = new class() implements PagePathStrategy {
+	/** @param list<string> $ancestorSlugs */
+	public function pathFor(string $slug, array $ancestorSlugs): string
+	{
+		return implode('/', [...$ancestorSlugs, $slug]);
+	}
+};
 $redirectId = static fn (string $locale, string $path): ?int => $redirects->findTarget($locale, $path)?->id;
 
 test('a valid slug is saved as translation with path equal to slug', function () use ($reset, $service, $cmd, $pages): void {
@@ -545,4 +579,327 @@ test('the container autowires the service', function () use ($container): void {
 	Assert::type(PageService::class, $container->getByType(PageService::class));
 	Assert::type(PathRedirectRepository::class, $container->getByType(PathRedirectRepository::class));
 	Assert::type(RedirectTarget::class, new RedirectTarget('page', 1));
+});
+
+
+test('updatePage changes the menu flag and raises the page version from 1 to 2, keeping parent and position', function () use ($reset, $service, $pages): void {
+	$reset();
+	$parent = $pages->createPage(null, 0, true);
+	$id = $pages->createPage($parent, 4, true);
+
+	$updated = $service()->updatePage(new UpdatePage($id, $parent, false, 1));
+
+	Assert::same([$id, $parent, 4, false, 2], [$updated->id, $updated->parentId, $updated->position, $updated->inMenu, $updated->version]);
+	$stored = $pages->getPage($id);
+	Assert::same([$parent, 4, false, 2], [$stored?->parentId, $stored?->position, $stored?->inMenu, $stored?->version]);
+	Assert::same(1, $pages->getPage($parent)?->version);
+});
+
+test('a parent that is the page itself, its child or its grandchild is an InvalidParentException and nothing changes', function () use ($reset, $service, $pages, $snapshot): void {
+	$reset();
+	$page = $pages->createPage(null, 0, true);
+	$child = $pages->createPage($page, 0, true);
+	$grandchild = $pages->createPage($child, 0, true);
+	$before = $snapshot();
+
+	foreach (['self' => $page, 'child' => $child, 'grandchild' => $grandchild] as $label => $parent) {
+		Assert::exception(fn () => $service()->updatePage(new UpdatePage($page, $parent, false, 1)), InvalidParentException::class);
+		Assert::same($before, $snapshot(), $label);
+	}
+});
+
+test('a missing page or parent in updatePage is an InvalidArgumentException and nothing changes', function () use ($reset, $service, $pages, $snapshot): void {
+	$reset();
+	$id = $pages->createPage(null, 0, true);
+	$before = $snapshot();
+
+	Assert::exception(fn () => $service()->updatePage(new UpdatePage($id + 1000, null, true, 1)), InvalidArgumentException::class);
+	Assert::exception(fn () => $service()->updatePage(new UpdatePage($id, $id + 1000, true, 1)), InvalidArgumentException::class);
+	Assert::same($before, $snapshot());
+});
+
+test('updatePage with a stale version is a StaleVersionException and nothing changes', function () use ($reset, $service, $pages, $snapshot): void {
+	$reset();
+	$parent = $pages->createPage(null, 0, true);
+	$id = $pages->createPage(null, 1, true);
+	$service()->updatePage(new UpdatePage($id, null, false, 1));
+	$before = $snapshot();
+
+	Assert::exception(fn () => $service()->updatePage(new UpdatePage($id, $parent, true, 1)), StaleVersionException::class);
+	Assert::same($before, $snapshot());
+});
+
+test('moving under another parent puts the page last among the new siblings and renumbers the old ones', function () use ($reset, $service, $pages, $positions): void {
+	$reset();
+	$oldParent = $pages->createPage(null, 0, true);
+	$newParent = $pages->createPage(null, 1, true);
+	$a = $pages->createPage($oldParent, 0, true);
+	$moved = $pages->createPage($oldParent, 1, true);
+	$b = $pages->createPage($oldParent, 5, true);
+	$c = $pages->createPage($oldParent, 7, true);
+	$x = $pages->createPage($newParent, 0, true);
+	$y = $pages->createPage($newParent, 3, true);
+
+	$updated = $service()->updatePage(new UpdatePage($moved, $newParent, true, 1));
+
+	Assert::same([$newParent, 4, 2], [$updated->parentId, $updated->position, $updated->version]);
+	Assert::same([$x => 0, $y => 3, $moved => 4], $positions($newParent));
+	Assert::same([$a => 0, $b => 1, $c => 2], $positions($oldParent));
+	foreach ([$a, $b, $c, $x, $y, $oldParent, $newParent] as $other) {
+		Assert::same(1, $pages->getPage($other)?->version);
+	}
+});
+
+test('moving to the top level and under an empty parent', function () use ($reset, $service, $pages, $positions): void {
+	$reset();
+	$root = $pages->createPage(null, 2, true);
+	$empty = $pages->createPage(null, 6, true);
+	$child = $pages->createPage($root, 0, true);
+
+	Assert::same(0, $service()->updatePage(new UpdatePage($child, $empty, true, 1))->position);
+	Assert::same(7, $service()->updatePage(new UpdatePage($child, null, true, 2))->position);
+	Assert::same([$root => 2, $empty => 6, $child => 7], $positions(null));
+	Assert::same([], $positions($empty));
+});
+
+test('moveUp and moveDown swap with the neighbour, renumber the siblings and keep every version', function () use ($reset, $service, $pages, $positions): void {
+	$reset();
+	$parent = $pages->createPage(null, 0, true);
+	$a = $pages->createPage($parent, 3, true);
+	$b = $pages->createPage($parent, 3, true);
+	$c = $pages->createPage($parent, 9, true);
+	$other = $pages->createPage(null, 1, true);
+
+	$service()->moveUp($c);
+	Assert::same([$a => 0, $c => 1, $b => 2], $positions($parent));
+	$service()->moveDown($a);
+	Assert::same([$c => 0, $a => 1, $b => 2], $positions($parent));
+	$service()->moveUp($parent);
+	Assert::same([$parent => 0, $other => 1], $positions(null));
+	foreach ([$parent, $a, $b, $c, $other] as $id) {
+		Assert::same(1, $pages->getPage($id)?->version);
+	}
+});
+
+test('moveUp on the first and moveDown on the last sibling change nothing', function () use ($reset, $service, $pages, $snapshot): void {
+	$reset();
+	$a = $pages->createPage(null, 2, true);
+	$b = $pages->createPage(null, 5, true);
+	$only = $pages->createPage($a, 4, true);
+	$before = $snapshot();
+
+	$service()->moveUp($a);
+	$service()->moveDown($b);
+	$service()->moveUp($only);
+	$service()->moveDown($only);
+	Assert::same($before, $snapshot());
+});
+
+test('moveUp and moveDown on a missing page are an InvalidArgumentException', function () use ($reset, $service): void {
+	$reset();
+	Assert::exception(fn () => $service()->moveUp(999), InvalidArgumentException::class);
+	Assert::exception(fn () => $service()->moveDown(999), InvalidArgumentException::class);
+});
+
+test('moveUp between opening and saving the properties form: the save passes and keeps the moved position', function () use ($reset, $service, $pages, $positions): void {
+	$reset();
+	$a = $pages->createPage(null, 0, true);
+	$b = $pages->createPage(null, 1, true);
+	$opened = $pages->getPage($b);
+	assert($opened !== null);
+
+	$service()->moveUp($b);
+	Assert::same(1, $pages->getPage($b)?->version);
+	$saved = $service()->updatePage(new UpdatePage($b, $opened->parentId, false, $opened->version));
+
+	Assert::same([0, false, 2], [$saved->position, $saved->inMenu, $saved->version]);
+	Assert::same([$b => 0, $a => 1], $positions(null));
+});
+
+test('descendantIds lists every descendant, not the page itself', function () use ($reset, $service, $pages): void {
+	$reset();
+	$root = $pages->createPage(null, 0, true);
+	$child = $pages->createPage($root, 0, true);
+	$sibling = $pages->createPage($root, 1, true);
+	$grandchild = $pages->createPage($child, 0, true);
+	$pages->createPage(null, 1, true);
+
+	$ids = $service()->descendantIds($root);
+	sort($ids);
+	Assert::same([$child, $sibling, $grandchild], $ids);
+	Assert::same([$grandchild], $service()->descendantIds($child));
+	Assert::same([], $service()->descendantIds($grandchild));
+});
+
+test('a cycle in the stored tree makes descendantIds, updatePage and saveTranslation throw instead of looping', function () use ($reset, $service, $cmd, $pages, $explorer, $snapshot): void {
+	$reset();
+	$a = $pages->createPage(null, 0, true);
+	$b = $pages->createPage($a, 0, true);
+	$other = $pages->createPage(null, 1, true);
+	$explorer->query('UPDATE page SET parent_id = ? WHERE id = ?', $b, $a);
+	$before = $snapshot();
+
+	Assert::exception(fn () => $service()->descendantIds($a), UnexpectedValueException::class, 'Page tree contains a cycle at page ' . $a);
+	// the cycle check walks b -> a -> b
+	Assert::exception(fn () => $service()->updatePage(new UpdatePage($b, $other, true, 1)), UnexpectedValueException::class, 'Page tree contains a cycle at page ' . $b);
+	// ancestorSlugs walks b -> a -> b
+	Assert::exception(fn () => $service()->saveTranslation($cmd($b, 'kruh')), UnexpectedValueException::class, 'Page tree contains a cycle at page ' . $b);
+	Assert::same($before, $snapshot());
+	Assert::null($pages->findTranslation($b, 'cs'));
+
+	$explorer->query('UPDATE page SET parent_id = ? WHERE id = ?', $b, $b);
+	Assert::exception(fn () => $service()->saveTranslation($cmd($b, 'kruh')), UnexpectedValueException::class, 'Page tree contains a cycle at page ' . $b);
+});
+
+test('a cycle below the saved page makes the descendant recompute throw instead of looping', function () use ($reset, $service, $cmd, $pages, $explorer): void {
+	$reset();
+	$a = $pages->createPage(null, 0, true);
+	$b = $pages->createPage($a, 0, true);
+	$c = $pages->createPage($b, 0, true);
+	$explorer->query('UPDATE page SET parent_id = ? WHERE id = ?', $c, $a);
+	// The ancestor walk sees $a as a root, so only the walk down through the children meets the cycle.
+	$asRoot = new DelegatingPageRepository($pages, static function (): void {
+	}, static fn (Page $p): Page => $p->id === $a ? new Page($p->id, null, $p->position, $p->inMenu, $p->version) : $p);
+
+	Assert::exception(fn () => $service($asRoot)->saveTranslation($cmd($a, 'kruh')), UnexpectedValueException::class, 'Page tree contains a cycle at page ' . $a);
+	Assert::null($pages->findTranslation($a, 'cs'));
+});
+
+test('a parent change recomputes the paths of the page and its descendants in every locale', function () use ($reset, $service, $cmd, $pages, $tree, $redirectId): void {
+	$reset();
+	$firma = $pages->createPage(null, 0, true);
+	$sluzby = $pages->createPage(null, 1, true);
+	$tym = $pages->createPage($firma, 0, true);
+	$lide = $pages->createPage($tym, 0, true);
+	foreach (['cs' => ['firma', 'sluzby', 'tym', 'lide'], 'en' => ['company', 'services', 'team', 'people']] as $locale => $slugs) {
+		foreach ([$firma, $sluzby, $tym, $lide] as $i => $id) {
+			$service(null, $tree)->saveTranslation($cmd($id, $slugs[$i], $locale));
+		}
+	}
+
+	$service(null, $tree)->updatePage(new UpdatePage($tym, $sluzby, true, 1));
+
+	Assert::same('sluzby/tym', $pages->findTranslation($tym, 'cs')?->path);
+	Assert::same('sluzby/tym/lide', $pages->findTranslation($lide, 'cs')?->path);
+	Assert::same('services/team', $pages->findTranslation($tym, 'en')?->path);
+	Assert::same('services/team/people', $pages->findTranslation($lide, 'en')?->path);
+	Assert::same($tym, $redirectId('cs', 'firma/tym'));
+	Assert::same($lide, $redirectId('en', 'company/team/people'));
+});
+
+test('with the flat strategy a parent change leaves every path and records no redirect', function () use ($reset, $service, $cmd, $pages, $counts): void {
+	$reset();
+	$a = $pages->createPage(null, 0, true);
+	$b = $pages->createPage(null, 1, true);
+	$child = $pages->createPage($a, 0, true);
+	$service()->saveTranslation($cmd($child, 'dite'));
+	$service()->saveTranslation($cmd($child, 'child', 'en'));
+	$before = $counts();
+
+	$service()->updatePage(new UpdatePage($child, $b, true, 1));
+	Assert::same('dite', $pages->findTranslation($child, 'cs')?->path);
+	Assert::same('child', $pages->findTranslation($child, 'en')?->path);
+	Assert::same($before, $counts());
+});
+
+test('updatePage, moveUp and moveDown take the tree lock before reading the tree', function () use ($reset, $service, $pages, $treeLock): void {
+	$reset();
+	$a = $pages->createPage(null, 0, true);
+	$b = $pages->createPage(null, 1, true);
+	$child = $pages->createPage($a, 0, true);
+
+	/** @var ArrayObject<int, string> $log */
+	$log = new ArrayObject();
+	$lock = new class($treeLock, $log) implements PageTreeLock {
+		/** @param ArrayObject<int, string> $log */
+		public function __construct(private readonly PageTreeLock $inner, private readonly ArrayObject $log)
+		{
+		}
+
+
+		public function acquire(): void
+		{
+			$this->log[] = 'acquire';
+			$this->inner->acquire();
+		}
+	};
+	$recording = new RecordingPageRepository($pages, $log);
+	$cases = [
+		'updatePage' => fn () => $service($recording, null, $lock)->updatePage(new UpdatePage($a, $b, true, 1)),
+		'moveUp' => fn () => $service($recording, null, $lock)->moveUp($b),
+		'moveDown' => fn () => $service($recording, null, $lock)->moveDown($child),
+	];
+	foreach ($cases as $label => $run) {
+		$log->exchangeArray([]);
+		$run();
+		$calls = $log->getArrayCopy();
+		Assert::same('acquire', $calls[0] ?? null, $label);
+		Assert::same(1, count(array_keys($calls, 'acquire', true)), $label);
+		Assert::contains('findChildren', $calls, $label);
+	}
+});
+
+
+test('a reparent whose recomputed path is taken rolls back the page, the sibling positions, translations and redirects', function () use ($reset, $service, $cmd, $pages, $tree, $fullSnapshot): void {
+	$reset();
+	$firma = $pages->createPage(null, 0, true);
+	$sluzby = $pages->createPage(null, 1, true);
+	$first = $pages->createPage($firma, 0, true);
+	$tym = $pages->createPage($firma, 1, true);
+	$last = $pages->createPage($firma, 5, true);
+	$squatter = $pages->createPage(null, 2, true);
+	$service(null, $tree)->saveTranslation($cmd($firma, 'firma'));
+	$service(null, $tree)->saveTranslation($cmd($sluzby, 'sluzby'));
+	$service(null, $tree)->saveTranslation($cmd($tym, 'tym'));
+	$pages->saveTranslation(new PageTranslation($squatter, 'cs', 'S', 'tym', 'sluzby/tym', '', '', PublicationStatus::Draft, new DateTimeImmutable(), 1));
+	$before = $fullSnapshot();
+
+	$e = Assert::exception(fn () => $service(null, $tree)->updatePage(new UpdatePage($tym, $sluzby, false, 1)), InvalidSlugException::class);
+	assert($e instanceof InvalidSlugException);
+	Assert::same(InvalidSlugException::TAKEN, $e->reason);
+	Assert::same($before, $fullSnapshot());
+	Assert::same([$first, $last], [$pages->findChildren($firma)[0]->id, $pages->findChildren($firma)[2]->id]);
+});
+
+test('a reparent under a page whose ancestry is a cycle throws and rolls everything back', function () use ($reset, $service, $pages, $explorer, $fullSnapshot): void {
+	$reset();
+	$a = $pages->createPage(null, 0, true);
+	$b = $pages->createPage($a, 0, true);
+	$sibling = $pages->createPage(null, 1, true);
+	$moved = $pages->createPage(null, 2, true);
+	$after = $pages->createPage(null, 3, true);
+	$explorer->query('UPDATE page SET parent_id = ? WHERE id = ?', $b, $a);
+	$before = $fullSnapshot();
+
+	Assert::same([], $service()->descendantIds($moved));
+	Assert::exception(fn () => $service()->updatePage(new UpdatePage($moved, $a, false, 1)), UnexpectedValueException::class, 'Page tree contains a cycle at page %d%');
+	Assert::same($before, $fullSnapshot());
+	Assert::same([$sibling, $moved, $after], array_map(static fn (Page $p): int => $p->id, $pages->findChildren(null)));
+});
+
+test('a reparent also writes the menu flag', function () use ($reset, $service, $pages): void {
+	$reset();
+	$a = $pages->createPage(null, 0, true);
+	$b = $pages->createPage(null, 1, true);
+	$child = $pages->createPage($a, 0, true);
+
+	$updated = $service()->updatePage(new UpdatePage($child, $b, false, 1));
+	Assert::same([$b, false, 2], [$updated->parentId, $updated->inMenu, $updated->version]);
+	Assert::false($pages->getPage($child)?->inMenu);
+});
+
+test('a page missing from its own sibling list is an UnexpectedValueException and nothing moves', function () use ($reset, $service, $pages, $snapshot): void {
+	$reset();
+	$a = $pages->createPage(null, 0, true);
+	$b = $pages->createPage(null, 1, true);
+	$elsewhere = $pages->createPage(null, 2, true);
+	$child = $pages->createPage($elsewhere, 0, true);
+	// getPage reports $child under the top level, but findChildren(null) does not list it.
+	$lying = new DelegatingPageRepository($pages, static function (): void {
+	}, static fn (Page $p): Page => $p->id === $child ? new Page($p->id, null, $p->position, $p->inMenu, $p->version) : $p);
+	$before = $snapshot();
+
+	Assert::exception(fn () => $service($lying)->moveDown($child), UnexpectedValueException::class);
+	Assert::same($before, $snapshot());
+	Assert::same([$a, $b, $elsewhere], array_map(static fn (Page $p): int => $p->id, $pages->findChildren(null)));
 });

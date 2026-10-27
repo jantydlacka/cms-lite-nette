@@ -58,4 +58,29 @@ interface PageRepository
 
 
 	public function isPathTaken(string $locale, string $path, ?int $exceptPageId): bool;
+
+
+	/** Must run inside a transaction: takes a row lock (SELECT ... FOR UPDATE) on the page. */
+	public function lockPage(int $pageId): ?Page;
+
+
+	/** Writes parentId, position and inMenu; the version argument is ignored, the stored one goes up by 1. */
+	public function updatePage(Page $page): void;
+
+
+	/**
+	 * Leaves the version alone.
+	 *
+	 * @param array<int, int> $positionsById
+	 */
+	public function setPositions(array $positionsById): void;
+
+
+	/**
+	 * All pages in tree order: a parent before its children, siblings by position then id.
+	 * A cycle in parent_id is an UnexpectedValueException.
+	 *
+	 * @return list<PageTreeItem>
+	 */
+	public function findTree(string $locale): array;
 }

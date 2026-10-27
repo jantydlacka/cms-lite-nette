@@ -9,12 +9,18 @@ use App\Model\Page\PageRepository;
 use App\Model\Page\PageTranslation;
 use Closure;
 
-/** Forwards to a real repository; $beforeSave runs ahead of every saveTranslation (it may throw). */
+/** Forwards to a real repository; $beforeSave runs ahead of every saveTranslation (it may throw), $mapPage rewrites what getPage returns. */
 final class DelegatingPageRepository implements PageRepository
 {
-	/** @param Closure(): void $beforeSave */
-	public function __construct(private readonly PageRepository $inner, private readonly Closure $beforeSave)
-	{
+	/**
+	 * @param Closure(): void $beforeSave
+	 * @param (Closure(Page): Page)|null $mapPage
+	 */
+	public function __construct(
+		private readonly PageRepository $inner,
+		private readonly Closure $beforeSave,
+		private readonly ?Closure $mapPage = null,
+	) {
 	}
 
 
@@ -38,7 +44,9 @@ final class DelegatingPageRepository implements PageRepository
 
 	public function getPage(int $pageId): ?Page
 	{
-		return $this->inner->getPage($pageId);
+		$page = $this->inner->getPage($pageId);
+
+		return $page === null || $this->mapPage === null ? $page : ($this->mapPage)($page);
 	}
 
 
@@ -79,5 +87,31 @@ final class DelegatingPageRepository implements PageRepository
 	public function isPathTaken(string $locale, string $path, ?int $exceptPageId): bool
 	{
 		return $this->inner->isPathTaken($locale, $path, $exceptPageId);
+	}
+
+
+	public function lockPage(int $pageId): ?Page
+	{
+		return $this->inner->lockPage($pageId);
+	}
+
+
+	public function updatePage(Page $page): void
+	{
+		$this->inner->updatePage($page);
+	}
+
+
+	/** {@inheritDoc} */
+	public function setPositions(array $positionsById): void
+	{
+		$this->inner->setPositions($positionsById);
+	}
+
+
+	/** {@inheritDoc} */
+	public function findTree(string $locale): array
+	{
+		return $this->inner->findTree($locale);
 	}
 }

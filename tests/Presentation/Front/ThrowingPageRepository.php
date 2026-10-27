@@ -75,6 +75,32 @@ final class ThrowingPageRepository implements PageRepository
 	}
 
 
+	public function lockPage(int $pageId): ?Page
+	{
+		throw self::down();
+	}
+
+
+	public function updatePage(Page $page): void
+	{
+		throw self::down();
+	}
+
+
+	/** {@inheritDoc} */
+	public function setPositions(array $positionsById): void
+	{
+		throw self::down();
+	}
+
+
+	/** {@inheritDoc} */
+	public function findTree(string $locale): array
+	{
+		throw self::down();
+	}
+
+
 	private static function down(): RuntimeException
 	{
 		return new RuntimeException('Database is down.');

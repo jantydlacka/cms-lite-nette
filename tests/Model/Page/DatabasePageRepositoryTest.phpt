@@ -64,3 +64,17 @@ test('a clash on the primary key propagates as the database exception', function
 		});
 	}, UniqueConstraintViolationException::class);
 });
+
+test('findTree with a cycle in parent_id throws a readable exception instead of looping', function () use ($repo, $reset, $explorer): void {
+	$reset();
+	$root = $repo->createPage(null, 0, true);
+	$a = $repo->createPage(null, 1, true);
+	$b = $repo->createPage($a, 0, true);
+	$explorer->query('UPDATE page SET parent_id = ? WHERE id = ?', $b, $a);
+
+	Assert::exception(fn () => $repo->findTree('cs'), UnexpectedValueException::class, '~^Page tree contains a cycle at page (' . $a . '|' . $b . ')$~');
+	Assert::same($root, $repo->getPage($root)?->id);
+
+	$explorer->query('UPDATE page SET parent_id = ? WHERE id = ?', $root, $root);
+	Assert::exception(fn () => $repo->findTree('cs'), UnexpectedValueException::class, '~^Page tree contains a cycle at page \\d+$~');
+});

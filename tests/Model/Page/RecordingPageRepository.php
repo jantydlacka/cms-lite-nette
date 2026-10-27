@@ -98,4 +98,36 @@ final class RecordingPageRepository implements PageRepository
 
 		return $this->inner->isPathTaken($locale, $path, $exceptPageId);
 	}
+
+
+	public function lockPage(int $pageId): ?Page
+	{
+		$this->log[] = __FUNCTION__;
+
+		return $this->inner->lockPage($pageId);
+	}
+
+
+	public function updatePage(Page $page): void
+	{
+		$this->log[] = __FUNCTION__;
+		$this->inner->updatePage($page);
+	}
+
+
+	/** {@inheritDoc} */
+	public function setPositions(array $positionsById): void
+	{
+		$this->log[] = __FUNCTION__;
+		$this->inner->setPositions($positionsById);
+	}
+
+
+	/** {@inheritDoc} */
+	public function findTree(string $locale): array
+	{
+		$this->log[] = __FUNCTION__;
+
+		return $this->inner->findTree($locale);
+	}
 }

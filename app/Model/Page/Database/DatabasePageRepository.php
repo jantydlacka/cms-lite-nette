@@ -9,6 +9,7 @@ use App\Model\Page\MenuItem;
 use App\Model\Page\Page;
 use App\Model\Page\PageRepository;
 use App\Model\Page\PageTranslation;
+use App\Model\Page\PageTreeItem;
 use App\Model\PublicationStatus;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -201,6 +202,111 @@ final class DatabasePageRepository implements PageRepository
 	}
 
 
+	public function lockPage(int $pageId): ?Page
+	{
+		$row = $this->explorer->query('SELECT * FROM page WHERE id = ? FOR UPDATE', $pageId)->fetch();
+
+		return $row === null ? null : $this->hydratePage($row);
+	}
+
+
+	public function updatePage(Page $page): void
+	{
+		$this->explorer->table('page')->where('id', $page->id)->update([
+			'parent_id' => $page->parentId,
+			'position' => $page->position,
+			'in_menu' => $page->inMenu ? 1 : 0,
+			'updated_at' => $this->now(),
+			'version' => new SqlLiteral('version + 1'),
+		]);
+	}
+
+
+	/** {@inheritDoc} */
+	public function setPositions(array $positionsById): void
+	{
+		foreach ($positionsById as $id => $position) {
+			$this->explorer->table('page')->where('id', $id)->update(['position' => $position]);
+		}
+	}
+
+
+	/** {@inheritDoc} */
+	public function findTree(string $locale): array
+	{
+		$rows = $this->explorer->query(
+			'SELECT p.id, p.parent_id, p.in_menu, t.title, t.status
+			FROM page p
+			LEFT JOIN page_translation t ON t.page_id = p.id AND t.locale = ?
+			ORDER BY p.position, p.id',
+			$locale,
+		)->fetchAll();
+
+		$byParent = [];
+		$parentOf = [];
+		foreach ($rows as $row) {
+			$id = self::int($row->id);
+			$parentId = $row->parent_id === null ? null : self::int($row->parent_id);
+			$parentOf[$id] = $parentId;
+			$byParent[$parentId ?? 0][] = [
+				'id' => $id,
+				'parentId' => $parentId,
+				'title' => $row->title === null ? null : self::string($row->title),
+				'status' => $row->status === null ? null : PublicationStatus::from(self::string($row->status)),
+				'inMenu' => self::int($row->in_menu) === 1,
+			];
+		}
+
+		$items = [];
+		$this->appendTree($items, $byParent, 0, 0);
+		if (count($items) < count($parentOf)) {
+			throw self::cycleAt(self::pageOnCycle($parentOf, $items));
+		}
+
+		return $items;
+	}
+
+
+	/**
+	 * Every page reachable from the roots; a page whose ancestors loop back is never reached.
+	 *
+	 * @param list<PageTreeItem> $items
+	 * @param array<int, list<array{id: int, parentId: ?int, title: ?string, status: ?PublicationStatus, inMenu: bool}>> $byParent
+	 */
+	private function appendTree(array &$items, array $byParent, int $parentId, int $depth): void
+	{
+		foreach ($byParent[$parentId] ?? [] as $row) {
+			$items[] = new PageTreeItem($row['id'], $row['parentId'], $depth, $row['title'], $row['status'], $row['inMenu'], count($byParent[$row['id']] ?? []));
+			$this->appendTree($items, $byParent, $row['id'], $depth + 1);
+		}
+	}
+
+
+	/**
+	 * @param array<int, ?int> $parentOf
+	 * @param list<PageTreeItem> $reached
+	 */
+	private static function pageOnCycle(array $parentOf, array $reached): int
+	{
+		$unreached = array_diff_key($parentOf, array_flip(array_map(static fn (PageTreeItem $i): int => $i->pageId, $reached)));
+		$id = (int) array_key_first($unreached);
+		$seen = [];
+		// Walking up from an unreached page never meets a root (the foreign key rules out a missing parent), so it ends on the cycle.
+		while (!isset($seen[$id])) {
+			$seen[$id] = true;
+			$id = $parentOf[$id] ?? throw new UnexpectedValueException('Page ' . $id . ' is not reachable from the roots.');
+		}
+
+		return $id;
+	}
+
+
+	private static function cycleAt(int $pageId): UnexpectedValueException
+	{
+		return new UnexpectedValueException('Page tree contains a cycle at page ' . $pageId);
+	}
+
+
 	/**
 	 * @param array<int, list<array{id: int, title: string, path: string}>> $byParent
 	 * @return list<MenuItem>
@@ -216,7 +322,7 @@ final class DatabasePageRepository implements PageRepository
 	}
 
 
-	private function hydratePage(ActiveRow $row): Page
+	private function hydratePage(ActiveRow|Row $row): Page
 	{
 		return new Page(
 			self::int($row->id),

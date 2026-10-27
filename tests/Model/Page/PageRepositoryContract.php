@@ -8,6 +8,7 @@ use App\Model\Page\MenuItem;
 use App\Model\Page\Page;
 use App\Model\Page\PageRepository;
 use App\Model\Page\PageTranslation;
+use App\Model\Page\PageTreeItem;
 use App\Model\PublicationStatus;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -220,6 +221,76 @@ final class PageRepositoryContract
 			Assert::same(PublicationStatus::Draft, $repo->lockTranslation($id, 'cs')?->status);
 			Assert::null($repo->lockTranslation($id, 'en'));
 			Assert::null($repo->lockTranslation($id + 1000, 'cs'));
+		});
+
+		test('lockPage returns the page or null', function () use ($repo, $reset): void {
+			$reset();
+			$parent = $repo->createPage(null, 2, true);
+			$id = $repo->createPage($parent, 4, false);
+
+			$page = $repo->lockPage($id);
+			Assert::same([$id, $parent, 4, false, 1], [$page?->id, $page?->parentId, $page?->position, $page?->inMenu, $page?->version]);
+			Assert::null($repo->lockPage($id + 1000));
+		});
+
+		test('updatePage writes parent, position and menu flag and raises the stored version by one', function () use ($repo, $reset): void {
+			$reset();
+			$parent = $repo->createPage(null, 0, true);
+			$id = $repo->createPage(null, 1, true);
+
+			$repo->updatePage(new Page($id, $parent, 7, false, 99));
+			$page = $repo->getPage($id);
+			Assert::same([$parent, 7, false, 2], [$page?->parentId, $page?->position, $page?->inMenu, $page?->version]);
+
+			$repo->updatePage(new Page($id, null, 3, true, 1));
+			$page = $repo->getPage($id);
+			Assert::same([null, 3, true, 3], [$page?->parentId, $page?->position, $page?->inMenu, $page?->version]);
+			Assert::same(1, $repo->getPage($parent)?->version);
+		});
+
+		test('setPositions changes only the given positions and no version', function () use ($repo, $reset): void {
+			$reset();
+			$a = $repo->createPage(null, 5, true);
+			$b = $repo->createPage(null, 9, true);
+			$c = $repo->createPage(null, 2, true);
+
+			$repo->setPositions([$a => 1, $b => 0]);
+			Assert::same([1, 0, 2], [$repo->getPage($a)?->position, $repo->getPage($b)?->position, $repo->getPage($c)?->position]);
+			Assert::same([1, 1, 1], [$repo->getPage($a)?->version, $repo->getPage($b)?->version, $repo->getPage($c)?->version]);
+			$repo->setPositions([]);
+		});
+
+		test('findTree lists parents before children, siblings by position then id, with depth, title, status, menu flag and child count', function () use ($repo, $reset): void {
+			$reset();
+			$second = $repo->createPage(null, 1, false);
+			$first = $repo->createPage(null, 0, true);
+			$childB = $repo->createPage($first, 3, true);
+			$childA = $repo->createPage($first, 1, true);
+			$grandchild = $repo->createPage($childA, 0, true);
+			$tie = $repo->createPage($first, 1, false);
+			$repo->saveTranslation(self::translation($first, 'cs', 'prvni', 'Prvni', PublicationStatus::Published));
+			$repo->saveTranslation(self::translation($childA, 'cs', 'dite', 'Dite', PublicationStatus::Draft));
+			$repo->saveTranslation(self::translation($grandchild, 'cs', 'vnuk', 'Vnuk', PublicationStatus::Published));
+			$repo->saveTranslation(self::translation($second, 'en', 'second', 'Second', PublicationStatus::Published));
+
+			$tree = $repo->findTree('cs');
+			Assert::same(
+				[[$first, null, 0], [$childA, $first, 1], [$grandchild, $childA, 2], [$tie, $first, 1], [$childB, $first, 1], [$second, null, 0]],
+				array_map(static fn (PageTreeItem $i): array => [$i->pageId, $i->parentId, $i->depth], $tree),
+			);
+			Assert::same(['Prvni', 'Dite', 'Vnuk', null, null, null], array_map(static fn (PageTreeItem $i): ?string => $i->title, $tree));
+			Assert::same(
+				[PublicationStatus::Published, PublicationStatus::Draft, PublicationStatus::Published, null, null, null],
+				array_map(static fn (PageTreeItem $i): ?PublicationStatus => $i->status, $tree),
+			);
+			Assert::same([true, true, true, false, true, false], array_map(static fn (PageTreeItem $i): bool => $i->inMenu, $tree));
+			Assert::same([3, 1, 0, 0, 0, 0], array_map(static fn (PageTreeItem $i): int => $i->childCount, $tree));
+			Assert::same('Second', $repo->findTree('en')[5]->title);
+		});
+
+		test('findTree of an empty store is empty', function () use ($repo, $reset): void {
+			$reset();
+			Assert::same([], $repo->findTree('cs'));
 		});
 	}
 

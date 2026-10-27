@@ -70,6 +70,7 @@ final class PageService
 	/**
 	 * Slug problems are reported in this order: reserved (slug), long, format, reserved (computed path), taken.
 	 * An empty slug is derived from the title and then checked the same way.
+	 * Descendant paths the strategy changes are written too, which raises those translations' versions by 1.
 	 *
 	 * @throws InvalidSlugException nothing is written then
 	 * @throws StaleVersionException when the stored version differs from $command->expectedVersion; nothing is written then
@@ -95,6 +96,163 @@ final class PageService
 				$command->expectedVersion,
 			);
 		});
+	}
+
+
+	/**
+	 * Parent and menu flag; the position comes from the stored row, or is the last among the new siblings after a parent change.
+	 *
+	 * @throws StaleVersionException when the stored version differs from $command->expectedVersion; nothing is written then
+	 * @throws InvalidParentException when the parent is the page itself or its descendant; nothing is written then
+	 * After a parent change a recomputed path is written like any save, so that translation's version goes up by 1
+	 * (only when the strategy changes the path; the flat one never does).
+	 *
+	 * @throws InvalidSlugException when a recomputed path is taken; nothing is written then
+	 * @throws InvalidArgumentException when the page or the parent does not exist
+	 * @throws UnexpectedValueException when the stored tree has a cycle; nothing is written then
+	 */
+	public function updatePage(UpdatePage $command): Page
+	{
+		return $this->transaction->run(function () use ($command): Page {
+			$this->treeLock->acquire();
+			$page = $this->pages->lockPage($command->pageId)
+				?? throw new InvalidArgumentException('Page ' . $command->pageId . ' does not exist.');
+			if ($page->version !== $command->expectedVersion) {
+				throw new StaleVersionException('Page ' . $page->id . ' has changed since version ' . $command->expectedVersion . '.');
+			}
+
+			$parentId = $command->parentId;
+			if ($parentId === $page->parentId) {
+				$this->pages->updatePage(new Page($page->id, $parentId, $page->position, $command->inMenu, $page->version));
+
+				return $this->pageOrFail($page->id);
+			}
+
+			if ($parentId !== null && $this->pages->getPage($parentId) === null) {
+				throw new InvalidArgumentException('Parent page ' . $parentId . ' does not exist.');
+			}
+			if ($parentId === $page->id || ($parentId !== null && in_array($parentId, $this->descendantIds($page->id), true))) {
+				throw new InvalidParentException('Page ' . $page->id . ' cannot be moved under itself or its descendant ' . $parentId . '.');
+			}
+
+			$positions = array_map(static fn (Page $sibling): int => $sibling->position, $this->pages->findChildren($parentId));
+			$this->pages->updatePage(new Page($page->id, $parentId, $positions === [] ? 0 : max($positions) + 1, $command->inMenu, $page->version));
+			$this->renumber($this->pages->findChildren($page->parentId));
+
+			$moved = $this->pageOrFail($page->id);
+			foreach ($this->config->locales as $locale) {
+				$this->recomputePaths($moved, $locale);
+			}
+
+			return $moved;
+		});
+	}
+
+
+	/**
+	 * Swaps the page with its previous sibling; the first one stays. Leaves every version alone.
+	 *
+	 * @throws InvalidArgumentException when the page does not exist
+	 */
+	public function moveUp(int $pageId): void
+	{
+		$this->move($pageId, -1);
+	}
+
+
+	/**
+	 * Swaps the page with its next sibling; the last one stays. Leaves every version alone.
+	 *
+	 * @throws InvalidArgumentException when the page does not exist
+	 */
+	public function moveDown(int $pageId): void
+	{
+		$this->move($pageId, 1);
+	}
+
+
+	/**
+	 * Takes no lock: a write path must call it after PageTreeLock::acquire().
+	 *
+	 * @return list<int>
+	 * @throws UnexpectedValueException when the stored tree has a cycle
+	 */
+	public function descendantIds(int $pageId): array
+	{
+		$ids = [];
+		$seen = [$pageId => true];
+		$queue = [$pageId];
+		while ($queue !== []) {
+			foreach ($this->pages->findChildren(array_shift($queue)) as $child) {
+				if (isset($seen[$child->id])) {
+					throw self::cycleAt($child->id);
+				}
+				$seen[$child->id] = true;
+				$ids[] = $child->id;
+				$queue[] = $child->id;
+			}
+		}
+
+		return $ids;
+	}
+
+
+	private function move(int $pageId, int $step): void
+	{
+		$this->transaction->run(function () use ($pageId, $step): void {
+			$this->treeLock->acquire();
+			$page = $this->pages->getPage($pageId)
+				?? throw new InvalidArgumentException('Page ' . $pageId . ' does not exist.');
+			$siblings = $this->pages->findChildren($page->parentId);
+			$index = array_search($page->id, array_map(static fn (Page $sibling): int => $sibling->id, $siblings), true);
+			if ($index === false) {
+				throw new UnexpectedValueException('Page ' . $page->id . ' is missing among the children of its parent.');
+			}
+			$target = $index + $step;
+			if (!isset($siblings[$target])) {
+				return;
+			}
+			[$siblings[$index], $siblings[$target]] = [$siblings[$target], $siblings[$index]];
+			$this->renumber(array_values($siblings));
+		});
+	}
+
+
+	/**
+	 * Positions 0..n-1 in the given order; only changed rows are written.
+	 *
+	 * @param list<Page> $siblings
+	 */
+	private function renumber(array $siblings): void
+	{
+		$positions = [];
+		foreach ($siblings as $position => $sibling) {
+			if ($sibling->position !== $position) {
+				$positions[$sibling->id] = $position;
+			}
+		}
+		if ($positions !== []) {
+			$this->pages->setPositions($positions);
+		}
+	}
+
+
+	/** The page's own path and those of its descendants in $locale, from its current ancestors. */
+	private function recomputePaths(Page $page, string $locale): void
+	{
+		$ancestorSlugs = $this->ancestorSlugs($page, $locale);
+		$translation = $this->pages->lockTranslation($page->id, $locale);
+		if ($translation !== null) {
+			$this->repath($translation, $ancestorSlugs);
+			$ancestorSlugs[] = $translation->slug;
+		}
+		$this->recomputeDescendantPaths($page->id, $locale, $ancestorSlugs, []);
+	}
+
+
+	private static function cycleAt(int $pageId): UnexpectedValueException
+	{
+		return new UnexpectedValueException('Page tree contains a cycle at page ' . $pageId);
 	}
 
 
@@ -214,34 +372,46 @@ final class PageService
 		$seen[$pageId] = true;
 		foreach ($this->pages->findChildren($pageId) as $child) {
 			if (isset($seen[$child->id])) {
-				continue;
+				throw self::cycleAt($child->id);
 			}
 			$translation = $this->pages->lockTranslation($child->id, $locale);
 			$slugs = $ancestorSlugs;
 			if ($translation !== null) {
-				$path = $this->strategy->pathFor($translation->slug, $ancestorSlugs);
-				if ($path !== $translation->path) {
-					if ($this->pages->isPathTaken($locale, $path, $child->id)) {
-						throw new InvalidSlugException(InvalidSlugException::TAKEN);
-					}
-					$this->moveRedirects($child->id, $locale, $translation->path, $path);
-					$this->pages->saveTranslation(new PageTranslation(
-						$child->id,
-						$locale,
-						$translation->title,
-						$translation->slug,
-						$path,
-						$translation->content,
-						$translation->metaDescription,
-						$translation->status,
-						$translation->updatedAt,
-						1,
-					));
-				}
+				$this->repath($translation, $ancestorSlugs);
 				$slugs[] = $translation->slug;
 			}
 			$this->recomputeDescendantPaths($child->id, $locale, $slugs, $seen);
 		}
+	}
+
+
+	/**
+	 * Re-derives one stored path from the strategy and redirects the old one; an unchanged path writes nothing.
+	 *
+	 * @param list<string> $ancestorSlugs
+	 */
+	private function repath(PageTranslation $translation, array $ancestorSlugs): void
+	{
+		$path = $this->strategy->pathFor($translation->slug, $ancestorSlugs);
+		if ($path === $translation->path) {
+			return;
+		}
+		if ($this->pages->isPathTaken($translation->locale, $path, $translation->pageId)) {
+			throw new InvalidSlugException(InvalidSlugException::TAKEN);
+		}
+		$this->moveRedirects($translation->pageId, $translation->locale, $translation->path, $path);
+		$this->pages->saveTranslation(new PageTranslation(
+			$translation->pageId,
+			$translation->locale,
+			$translation->title,
+			$translation->slug,
+			$path,
+			$translation->content,
+			$translation->metaDescription,
+			$translation->status,
+			$translation->updatedAt,
+			1,
+		));
 	}
 
 
@@ -255,7 +425,10 @@ final class PageService
 		$slugs = [];
 		$seen = [$page->id => true];
 		$parentId = $page->parentId;
-		while ($parentId !== null && !isset($seen[$parentId])) {
+		while ($parentId !== null) {
+			if (isset($seen[$parentId])) {
+				throw self::cycleAt($parentId);
+			}
 			$seen[$parentId] = true;
 			$translation = $this->pages->findTranslation($parentId, $locale);
 			if ($translation !== null) {
