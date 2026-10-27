@@ -1,0 +1,29 @@
+{block title}{_admin.news.title}{/block}
+
+{block content}
+<div class="pages-heading">
+	<h1 data-testid="admin-title">{_admin.news.title}</h1>
+	<a n:href="new" role="button" data-testid="admin-news-new">{_admin.news.new}</a>
+</div>
+
+<ul n:if="$rows" class="pages-tree" data-testid="admin-news-list">
+	<li n:foreach="$rows as $row" class="pages-item" data-testid="admin-news-item">
+		<span data-testid="admin-news-item-title">{$row->title ?? ('admin.pages.missing'|translate)}</span>
+		<small title="{_admin.news.author}" data-testid="admin-news-author">{$row->author ?? ('admin.news.authorDeleted'|translate)}</small>
+		<span n:foreach="$row->states as $lang => $state" n:class="pages-badge, $state !== App\Model\News\NewsState::Visible ? pages-badge-draft" data-locale="{$lang}" data-testid="admin-news-state">
+			<span lang="{$lang}">{$lang}</span>
+			{switch $state}
+				{case App\Model\News\NewsState::Draft}{_admin.news.state.draft}
+				{case App\Model\News\NewsState::Scheduled}{_admin.news.state.scheduled, [date: ($row->news->publishedAt|siteDateTime)]}
+				{case App\Model\News\NewsState::Visible}{_admin.news.state.published, [date: ($row->news->publishedAt|siteDate)]}
+				{case App\Model\News\NewsState::Missing}{_admin.news.state.missing}
+			{/switch}
+		</span>
+	</li>
+</ul>
+<p n:if="!$rows" data-testid="admin-news-empty">{_admin.news.empty}</p>
+<nav n:if="$paginator->getPageCount() > 1" class="news-pagination" data-testid="admin-news-pagination">
+	<a n:if="!$paginator->isFirst()" n:href="default, page: $paginator->getPage() - 1" rel="prev">{_front.news.newer}</a>
+	<span>{_front.news.pageOf, [page: $paginator->getPage(), count: $paginator->getPageCount()]}</span>
+	<a n:if="!$paginator->isLast()" n:href="default, page: $paginator->getPage() + 1" rel="next">{_front.news.older}</a>
+</nav>

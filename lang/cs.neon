@@ -29,6 +29,7 @@ admin.role.admin: Administrátor
 error.403.title: Na tuto stránku nemáte oprávnění.
 admin.nav.dashboard: Nástěnka
 admin.nav.pages: Stránky
+admin.nav.news: Novinky
 admin.pages.title: Stránky
 admin.pages.new: Nová stránka
 admin.pages.empty: Zatím tu nejsou žádné stránky.
@@ -82,3 +83,12 @@ admin.pages.deleted: Stránka byla smazána.
 admin.pages.hasChildren: Stránku s podstránkami nejde smazat.
 format.date: 'j. n. Y'
 format.dateTime: 'j. n. Y H:i'
+admin.news.title: Novinky
+admin.news.new: Nová novinka
+admin.news.empty: Zatím tu nejsou žádné novinky.
+admin.news.author: Autor
+admin.news.authorDeleted: '(smazaný uživatel)'
+admin.news.state.draft: Koncept
+admin.news.state.scheduled: 'Naplánováno na %date%'
+admin.news.state.published: 'Zveřejněno %date%'
+admin.news.state.missing: Chybí překlad

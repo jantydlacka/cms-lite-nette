@@ -34,6 +34,7 @@ Translation keys of the public UI and the administration with their Czech (`lang
 | `admin.role.admin` | Administrátor | Administrator |
 | `admin.nav.dashboard` | Nástěnka | Dashboard |
 | `admin.nav.pages` | Stránky | Pages |
+| `admin.nav.news` | Novinky | News |
 | `admin.pages.title` | Stránky | Pages |
 | `admin.pages.new` | Nová stránka | New page |
 | `admin.pages.empty` | Zatím tu nejsou žádné stránky. | There are no pages yet. |
@@ -88,3 +89,12 @@ Translation keys of the public UI and the administration with their Czech (`lang
 | `error.403.title` | Na tuto stránku nemáte oprávnění. | You do not have permission to view this page. |
 | `format.date` | j. n. Y | j M Y |
 | `format.dateTime` | j. n. Y H:i | j M Y H:i |
+| `admin.news.title` | Novinky | News |
+| `admin.news.new` | Nová novinka | New news item |
+| `admin.news.empty` | Zatím tu nejsou žádné novinky. | There is no news yet. |
+| `admin.news.author` | Autor | Author |
+| `admin.news.authorDeleted` | (smazaný uživatel) | (deleted user) |
+| `admin.news.state.draft` | Koncept | Draft |
+| `admin.news.state.scheduled` | Naplánováno na %date% | Scheduled for %date% |
+| `admin.news.state.published` | Zveřejněno %date% | Published %date% |
+| `admin.news.state.missing` | Chybí překlad | Missing translation |

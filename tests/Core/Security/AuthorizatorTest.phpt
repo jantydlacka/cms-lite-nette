@@ -18,12 +18,12 @@ $allowed = static function (string $role) use ($acl): array {
 	));
 };
 
-test('editor may open the dashboard and the pages', function () use ($allowed): void {
-	Assert::same(['dashboard', 'pages'], $allowed('editor'));
+test('editor may open the dashboard, the pages and the news', function () use ($allowed): void {
+	Assert::same(['dashboard', 'pages', 'news'], $allowed('editor'));
 });
 
 test('admin may open every resource', function () use ($allowed): void {
-	Assert::same(['dashboard', 'pages', 'users', 'settings'], $allowed('admin'));
+	Assert::same(['dashboard', 'pages', 'news', 'users', 'settings'], $allowed('admin'));
 });
 
 test('guest may open nothing', function () use ($allowed): void {

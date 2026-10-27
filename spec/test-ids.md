@@ -62,6 +62,15 @@ Elements the end-to-end tests locate by `data-testid`.
 | `page-translation-heading` | Heading of the translation tab: the title, or `admin.pages.addTranslation` when the translation does not exist yet. |
 | `page-translation-form` | POST form of one translation (hidden version; empty for a missing translation). |
 | `page-new-form` | POST form of a new page (`/admin/pages/new`): parent, menu flag and the default-language translation. |
+| `admin-nav-news` | Link to the news list in the administration navigation, shown only to a signed-in user; `aria-current="page"` on the news screens. |
+| `admin-news-list` | List of the news items of one page of `/admin/news`; absent when there is no news. |
+| `admin-news-item` | One row of `admin-news-list`. |
+| `admin-news-item-title` | Title of the row in the default language, else the first existing translation. |
+| `admin-news-author` | Name of the author of the row, or `admin.news.authorDeleted`; its `title` is `admin.news.author`. |
+| `admin-news-state` | State badge of one enabled language in the row (`data-locale`): `admin.news.state.draft`, `.scheduled` (with date and time), `.published` (with date) or `.missing`. |
+| `admin-news-new` | Link `admin.news.new` above the list. |
+| `admin-news-empty` | Message `admin.news.empty` when there is no news. |
+| `admin-news-pagination` | Pagination of `/admin/news` with `front.news.pageOf`; only when there is more than one page; the links carry `rel="prev"` and `rel="next"`. |
 | `page-title-input` | Title field. |
 | `page-slug-input` | Address field; `aria-invalid="true"` when the address was refused, and `aria-describedby` names the hint and the error. |
 | `page-content-input` | Content field (Markdown). |

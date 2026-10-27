@@ -17,6 +17,7 @@
 		<nav n:ifset="$adminUser" class="admin-nav" aria-label="{_admin.dashboard.title}">
 			<a n:href=":Admin:Dashboard:default" n:attr="aria-current: $presenter->isLinkCurrent(':Admin:Dashboard:*') ? page">{_admin.nav.dashboard}</a>
 			<a n:href=":Admin:Pages:default" n:attr="aria-current: $presenter->isLinkCurrent(':Admin:Pages:*') ? page" data-testid="admin-nav-pages">{_admin.nav.pages}</a>
+			<a n:href=":Admin:News:default" n:attr="aria-current: $presenter->isLinkCurrent(':Admin:News:*') ? page" data-testid="admin-nav-news">{_admin.nav.news}</a>
 		</nav>
 		<div class="admin-header-tools">
 			{ifset $adminUser}

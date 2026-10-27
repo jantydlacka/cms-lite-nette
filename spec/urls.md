@@ -14,6 +14,7 @@ A site has one default language and optional further languages. A page path is a
 | `/admin` | Administration dashboard, see [Administration](#administration). |
 | `/admin/sign-in` | Sign-in form of the administration. |
 | `/admin/pages` | Page tree of the administration, see [Pages](#pages). |
+| `/admin/news` | News list of the administration, see [Admin news](#admin-news). |
 
 The default language has no prefix; every other language has the prefix `<locale>/`.
 
@@ -86,6 +87,13 @@ The administration has no language prefix and runs in the default language; its 
 | A save of a page deleted meanwhile (POST) | Page properties, translation or set as homepage of a page deleted after the form was rendered: 200, only that form, keeping the sent values, with `admin.pages.deletedMeanwhile`; nothing is saved. A GET of the deleted page stays 404. |
 | Set as homepage (POST) | 303 back with `admin.pages.homepageSet`; a page without a published default-language translation gives `admin.pages.homepageNeedsPublished`. |
 | ↑ / ↓ in the tree | A POST form of the row, only from the same origin: swaps the page with its previous / next sibling, 303 to `/admin/pages` with `admin.pages.moved`. The first sibling has no ↑, the last no ↓. A GET of the form signal changes nothing; a cross-site POST only redirects (303); a page that does not exist is 404. |
+
+### Admin news
+
+| Request | Response |
+|---------|----------|
+| `/admin/news` signed in (editor or administrator) | 200, the news list: 20 per page, items without a date first, then by publication date descending (newest first), then by id descending. A row shows the title in the default language (else the first existing translation), the author (`admin.news.authorDeleted` when the account is deleted) and a badge for every enabled language: `admin.news.state.draft`, `.scheduled` (date and time), `.published` (date) or `.missing`. Links to `/admin/news/new`. |
+| `/admin/news?page=<n>` | `<n>` is digits without a leading zero; `1` is 301 to `/admin/news`; a page beyond the last, `0`, a leading zero or anything else is 404. No news is page 1 with `admin.news.empty`. |
 
 ### Stored requests
 

@@ -29,6 +29,7 @@ admin.role.admin: Administrator
 error.403.title: You do not have permission to view this page.
 admin.nav.dashboard: Dashboard
 admin.nav.pages: Pages
+admin.nav.news: News
 admin.pages.title: Pages
 admin.pages.new: New page
 admin.pages.empty: There are no pages yet.
@@ -82,3 +83,12 @@ admin.pages.deleted: The page has been deleted.
 admin.pages.hasChildren: A page with subpages cannot be deleted.
 format.date: 'j M Y'
 format.dateTime: 'j M Y H:i'
+admin.news.title: News
+admin.news.new: New news item
+admin.news.empty: There is no news yet.
+admin.news.author: Author
+admin.news.authorDeleted: '(deleted user)'
+admin.news.state.draft: Draft
+admin.news.state.scheduled: 'Scheduled for %date%'
+admin.news.state.published: 'Published %date%'
+admin.news.state.missing: Missing translation

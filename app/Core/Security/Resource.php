@@ -8,6 +8,7 @@ enum Resource: string
 {
 	case Dashboard = 'dashboard';
 	case Pages = 'pages';
+	case News = 'news';
 	case Users = 'users';
 	case Settings = 'settings';
 }
