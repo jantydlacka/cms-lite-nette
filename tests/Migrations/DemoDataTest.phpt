@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Bootstrap;
+use App\Model\News\NewsRepository;
 use Nette\Database\Connection;
 use Nette\Security\Passwords;
 use Tester\Assert;
@@ -82,6 +83,36 @@ test('the dummy-data group creates the public demo accounts', function (): void 
 		Assert::same([$name, $role, 1], [$row->name, $row->role, $row->active], $email);
 		Assert::true($passwords->verify($password, $row->password_hash), $email);
 		Assert::false($passwords->verify('wrong-password-123', $row->password_hash), $email);
+	}
+});
+
+
+test('the dummy-data group creates the demo news', function (): void {
+	$container = container();
+	TestDatabase::loadDummyData($container);
+	$connection = $container->getByType(Connection::class);
+	$repository = $container->getByType(NewsRepository::class);
+
+	Assert::same(12, $repository->countVisible('cs'));
+	Assert::same(3, $repository->countVisible('en'));
+	Assert::same(14, $connection->fetchField('SELECT COUNT(*) FROM news'));
+
+	$draft = $connection->fetch('SELECT n.published_at, t.status FROM news n JOIN news_translation t ON t.news_id = n.id WHERE n.published_at IS NULL');
+	assert($draft !== null);
+	Assert::same('draft', $draft->status);
+
+	$scheduled = $connection->fetch('SELECT t.status FROM news n JOIN news_translation t ON t.news_id = n.id WHERE n.published_at > UTC_TIMESTAMP()');
+	assert($scheduled !== null);
+	Assert::same('published', $scheduled->status);
+
+	$admin = $connection->fetchField('SELECT id FROM `user` WHERE email = ?', 'admin@example.com');
+	Assert::same(0, $connection->fetchField('SELECT COUNT(*) FROM news WHERE author_id IS NULL OR author_id <> ?', $admin));
+
+	foreach ($connection->fetchAll('SELECT slug, title, perex, content FROM news_translation') as $row) {
+		assert(is_string($row->content) && is_string($row->title) && is_string($row->perex) && is_string($row->slug));
+		Assert::match('~^## .+~m', $row->content, $row->slug);
+		Assert::true(mb_strlen($row->perex) >= 1 && mb_strlen($row->perex) <= 300, $row->slug);
+		Assert::notSame($row->title, trim(ltrim(trim(explode("\n", ltrim($row->content), 2)[0]), '#')), $row->slug);
 	}
 });
 
