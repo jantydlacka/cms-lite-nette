@@ -106,8 +106,8 @@ Indexes:
 
 Columns:
 
-- `key` varchar(100) NOT NULL utf8mb4/utf8mb4_unicode_ci
-- `locale` varchar(10) NOT NULL DEFAULT '' utf8mb4/utf8mb4_unicode_ci
+- `key` varchar(100) NOT NULL ascii/ascii_bin
+- `locale` varchar(10) NOT NULL DEFAULT '' ascii/ascii_bin
 - `value` text NOT NULL utf8mb4/utf8mb4_unicode_ci
 
 Indexes:
