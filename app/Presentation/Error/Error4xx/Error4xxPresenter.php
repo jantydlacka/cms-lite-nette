@@ -42,6 +42,6 @@ final class Error4xxPresenter extends BasePresenter
 		$code = $exception->getHttpCode();
 		$this->getHttpResponse()->setCode($code);
 		$this->template->titleKey = self::TitleKeys[$code] ?? 'error.4xx.title';
-		$this->template->demoData = false;
+		$this->template->demoData = $this->cmsConfig->demoData;
 	}
 }

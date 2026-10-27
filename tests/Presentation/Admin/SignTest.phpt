@@ -136,6 +136,14 @@ test('a cross-site sign-in post is not processed', function () use ($app): void 
 });
 
 
+test('a same-site sign-in post is not processed', function () use ($app): void {
+	$app->newBrowser();
+	$result = AdminBrowser::signIn($app, EDITOR, headers: ['Sec-Fetch-Site' => 'same-site']);
+	Assert::notSame('/admin', $result->location);
+	assertSignedOut($app);
+});
+
+
 test('without Sec-Fetch-Site and without the strict cookie the sign-in post is not processed', function () use ($app): void {
 	$app->newBrowser();
 	AdminBrowser::signIn($app, EDITOR, headers: ['Sec-Fetch-Site' => null]);
@@ -158,6 +166,15 @@ test('a cross-site sign-out redirects and keeps the user signed in', function ()
 	$result = AdminBrowser::signOut($app, ['Sec-Fetch-Site' => 'cross-site']);
 	Assert::same(POST_REDIRECT, $result->code);
 	Assert::same('/admin', $result->location);
+	assertSignedIn($app);
+});
+
+
+test('a same-site sign-out keeps the user signed in', function () use ($app): void {
+	$app->newBrowser();
+	AdminBrowser::signIn($app, EDITOR);
+
+	AdminBrowser::signOut($app, ['Sec-Fetch-Site' => 'same-site']);
 	assertSignedIn($app);
 });
 
@@ -243,6 +260,9 @@ test('the demo banner shows only while demo data are enabled', function (): void
 			$expected = $demoData ? 'Běží demo data – účty se známým heslem, nepoužívat na ostrém webu.' : null;
 
 			Assert::same($expected, $app->get('/admin/sign-in')->text('demo-banner'), "sign-in page, CMS_DEMO_DATA=$env");
+			$notFound = $app->get('/admin/neexistuje');
+			Assert::same(404, $notFound->code);
+			Assert::same($expected, $notFound->text('demo-banner'), "admin 404, CMS_DEMO_DATA=$env");
 			AdminBrowser::signIn($app, EDITOR);
 			Assert::same($expected, $app->get('/admin')->text('demo-banner'), "dashboard, CMS_DEMO_DATA=$env");
 		}

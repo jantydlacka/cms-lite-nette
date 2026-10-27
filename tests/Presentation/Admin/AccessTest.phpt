@@ -31,8 +31,13 @@ function signInFlash(HttpApplication $app): ?string
 }
 
 
-/** Moves the inactivity deadline of the signed-in session into the past (SessionStorage compares it with time()). */
-function expireSignIn(HttpApplication $app): void
+/**
+ * Reads, and optionally rewrites, the sign-in section that SessionStorage keeps in the session of the browser.
+ *
+ * @param ?Closure(array<mixed>): array<mixed> $change
+ * @return array<mixed> the section as stored after the change
+ */
+function signInSection(HttpApplication $app, ?Closure $change = null): array
 {
 	$id = $app->cookies()[(string) session_name()] ?? throw new LogicException('No session cookie in the jar.');
 	session_id($id);
@@ -44,14 +49,25 @@ function expireSignIn(HttpApplication $app): void
 		assert(is_array($section));
 		Assert::true($section['authenticated'] ?? null);
 		Assert::type('int', $section['expireTime'] ?? null);
-		$section['expireTime'] = time() - 1;
-		$nf['DATA']['Nette.Http.UserStorage/'] = $section;
-		$_SESSION['__NF'] = $nf;
+		if ($change !== null) {
+			$section = $change($section);
+			$nf['DATA']['Nette.Http.UserStorage/'] = $section;
+			$_SESSION['__NF'] = $nf;
+		}
+
+		return $section;
 	} finally {
 		session_write_close();
 		session_id('');
 		$_SESSION = [];
 	}
+}
+
+
+/** Moves the inactivity deadline of the signed-in session into the past (SessionStorage compares it with time()). */
+function expireSignIn(HttpApplication $app): void
+{
+	signInSection($app, static fn (array $section): array => ['expireTime' => time() - 1] + $section);
 }
 
 
@@ -108,6 +124,18 @@ test('after the inactivity deadline the user is signed out with a message', func
 });
 
 
+test('each request moves the inactivity deadline three hours ahead', function () use ($app): void {
+	$app->newBrowser();
+	AdminBrowser::signIn($app, EDITOR);
+	signInSection($app, static fn (array $section): array => ['expireTime' => time() + 60] + $section);
+
+	Assert::same(200, $app->get('/admin')->code);
+	$expireTime = signInSection($app)['expireTime'];
+	assert(is_int($expireTime));
+	Assert::true(abs($expireTime - (time() + 3 * 3600)) <= 60, "expireTime is $expireTime, now is " . time());
+});
+
+
 test('a reactivated account does not revive the session signed out by the deactivation', function () use ($app, $editorId): void {
 	$app->newBrowser();
 	AdminBrowser::signIn($app, EDITOR);
@@ -143,7 +171,11 @@ test('a stored signal is not executed when its request is restored after sign-in
 	$stored = $app->post('/admin?do=signOut', []);
 	Assert::match('/admin/sign-in?backlink=%a%', (string) $stored->location);
 
-	AdminBrowser::signIn($app, EDITOR, page: (string) $stored->location);
+	$restored = AdminBrowser::signIn($app, EDITOR, page: (string) $stored->location);
+	// The stored POST is forwarded: the sign-in response is the dashboard, rendered without signing out.
+	Assert::same(200, $restored->code);
+	Assert::same('Administrace', $restored->text('admin-title'));
+	Assert::same('Eva Editorová', $restored->text('admin-user'));
 	Assert::same(200, $app->get('/admin')->code, 'still signed in');
 });
 
@@ -160,7 +192,10 @@ test('a stored component signal is not executed when its request is restored aft
 	$stored = $app->post('/admin/probe?do=probe-touch', []);
 	Assert::match('/admin/sign-in?backlink=%a%', (string) $stored->location);
 
-	AdminBrowser::signIn($app, EDITOR, page: (string) $stored->location);
+	$restored = AdminBrowser::signIn($app, EDITOR, page: (string) $stored->location);
+	// The stored POST is forwarded: the sign-in response is the probe page itself.
+	Assert::same(200, $restored->code);
+	Assert::same('probe', $restored->body);
 	Assert::same(0, ProbeControl::$calls);
 });
 
