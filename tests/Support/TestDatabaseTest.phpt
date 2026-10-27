@@ -161,3 +161,11 @@ test('prepare() resets AUTO_INCREMENT even when the rows were already deleted', 
 	Assert::same(1, $connection->fetchField('SELECT MIN(id) FROM page'));
 	TestDatabase::prepare($container);
 });
+
+
+test('prepare() leaves the session as a fresh app connection has it', function () use ($container, $connection): void {
+	TestDatabase::prepare($container);
+	$row = $connection->fetch('SELECT @@session.foreign_key_checks = @@global.foreign_key_checks AS fk, @@session.sql_mode = @@global.sql_mode AS mode, @@session.time_zone = @@global.time_zone AS tz');
+	assert($row !== null);
+	Assert::same([1, 1, 1], [$row->fk, $row->mode, $row->tz]);
+});

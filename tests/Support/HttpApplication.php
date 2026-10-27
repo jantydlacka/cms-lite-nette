@@ -7,6 +7,7 @@ namespace Tests\Support;
 use App\Bootstrap;
 use LogicException;
 use Nette\Application\Application;
+use Nette\Database\Connection;
 use Nette\DI\Container;
 use Nette\Http\IResponse;
 use Nette\Http\Request;
@@ -125,6 +126,7 @@ final class HttpApplication
 			$response = $container->getByType(IResponse::class);
 			assert($response instanceof RecordingHttpResponse);
 			$sessionId = $this->collect($container, $response);
+			self::disconnect($container);
 		}
 
 		if ($lateSession) {
@@ -171,6 +173,20 @@ final class HttpApplication
 		$this->closeNativeSession();
 
 		return $sessionId;
+	}
+
+
+	/** Each request container opens its own connection; without this they pile up until the server refuses new ones. */
+	private static function disconnect(Container $container): void
+	{
+		// Only an already created service: asking for it would open a connection just to close it.
+		foreach ($container->findByType(Connection::class) as $name) {
+			if ($container->isCreated($name)) {
+				$connection = $container->getService($name);
+				assert($connection instanceof Connection);
+				$connection->disconnect();
+			}
+		}
 	}
 
 

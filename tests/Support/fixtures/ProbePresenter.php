@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Support\fixtures;
 
 use Nette\Application\UI\Presenter;
+use Nette\Database\Connection;
 use Nette\Http\IRequest;
 use Nette\Http\IResponse;
 use Nette\Http\Session;
@@ -16,6 +17,7 @@ final class ProbePresenter extends Presenter
 		private readonly Session $session,
 		private readonly IRequest $httpRequest,
 		private readonly IResponse $httpResponse,
+		private readonly Connection $connection,
 	) {
 		parent::__construct();
 	}
@@ -23,6 +25,10 @@ final class ProbePresenter extends Presenter
 
 	public function actionDefault(): void
 	{
+		if ($this->httpRequest->getQuery('dbsession') !== null) {
+			$this->sendJson((array) $this->connection->fetch('SELECT @@session.foreign_key_checks = @@global.foreign_key_checks AS fk, @@session.sql_mode = @@global.sql_mode AS mode, @@session.time_zone = @@global.time_zone AS tz'));
+		}
+
 		$value = null;
 		if ($this->httpRequest->getQuery('nosession') === null) {
 			$section = $this->session->getSection('probe');

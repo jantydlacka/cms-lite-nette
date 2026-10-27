@@ -167,9 +167,14 @@ final class TestDatabase
 		foreach ($groups as $group) {
 			$runner->addGroup($group);
 		}
-		$runner->run(Runner::MODE_CONTINUE);
-		// The driver turns foreign key checks off on this shared connection; tests must see CASCADE and RESTRICT as production does.
-		$connection->query('SET FOREIGN_KEY_CHECKS = 1');
+		try {
+			$runner->run(Runner::MODE_CONTINUE);
+		} finally {
+			// The driver turns off foreign key checks and sets sql_mode and time_zone on this shared connection;
+			// tests must see CASCADE, RESTRICT and ONLY_FULL_GROUP_BY as production does.
+			// foreign_key_checks = DEFAULT leaves it OFF on MySQL 8.4 (measured), hence the explicit global value.
+			$connection->query('SET SESSION foreign_key_checks = @@global.foreign_key_checks, sql_mode = DEFAULT, time_zone = DEFAULT');
+		}
 	}
 
 

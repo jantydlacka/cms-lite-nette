@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Nette\Database\Connection;
 use Nette\Http\Helpers;
 use Nette\Http\Request;
 use Nette\Http\UrlScript;
@@ -91,3 +92,25 @@ Assert::false($cookie['partitioned']);
 // A session started after output began cannot send its cookie in production: the client refuses such a request.
 $app->newBrowser();
 Assert::exception(fn () => $app->get('/support-late-session'), LogicException::class, '%a%session started after output began%a%');
+
+// Requests do not leave their database connections open: the per-request containers are dropped, the connections must not pile up.
+$params = $app->container->getParameters();
+assert(is_string($params['dbHost']) && is_string($params['dbPort']) && is_string($params['dbUser']) && is_string($params['dbPassword']) && is_string($params['dbName']));
+$monitor = new Connection('mysql:host=' . $params['dbHost'] . ';port=' . $params['dbPort'], $params['dbUser'], $params['dbPassword']);
+// Counted per thread database: the global Threads_connected also moves with parallel Tester threads.
+$connections = static function () use ($monitor, $params): int {
+	$count = $monitor->fetchField('SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE DB = ? AND ID <> CONNECTION_ID()', $params['dbName']);
+	assert(is_numeric($count));
+
+	return (int) $count;
+};
+$app->get('/o-nas');
+$before = $connections();
+for ($i = 0; $i < 20; $i++) {
+	$app->get('/o-nas');
+}
+
+Assert::true($connections() - $before <= 1, 'connections grew from ' . $before . ' to ' . $connections() . ' after 20 requests');
+
+// A request's own connection has the server's defaults for foreign keys, sql_mode and time zone.
+Assert::same(['fk' => 1, 'mode' => 1, 'tz' => 1], probe($app->get('/support-probe?dbsession=1')));
