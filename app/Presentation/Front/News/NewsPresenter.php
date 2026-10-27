@@ -13,7 +13,7 @@ use Nette\Utils\Paginator;
 
 final class NewsPresenter extends FrontPresenter
 {
-	private const PAGE_PATTERN = '~^[1-9][0-9]*$~';
+	private const PAGE_PATTERN = '~^[1-9][0-9]*$~D';
 
 	/** @var list<NewsListItem> */
 	private array $items = [];
@@ -95,11 +95,14 @@ final class NewsPresenter extends FrontPresenter
 	}
 
 
-	/** The page parameter of another language (`/en/news?strana=2`) moves to the clean URL instead of silently showing page 1. */
+	/**
+	 * The page parameter of another language (`/en/news?strana=2`) moves to the clean URL instead of silently showing page 1.
+	 * A foreign name equal to the presenter's own `page` parameter is never cleared: that would drop the page the route has read.
+	 */
 	private function redirectForeignPageParameter(): void
 	{
 		$own = NewsSegments::forLocale($this->currentLocale->get())['pageParameter'];
-		$foreign = array_values(array_diff(NewsSegments::allPageParameters(), [$own]));
+		$foreign = array_values(array_diff(NewsSegments::allPageParameters(), [$own, 'page']));
 		$query = $this->getHttpRequest()->getQuery();
 		if (array_intersect_key($query, array_flip($foreign)) === []) {
 			return;

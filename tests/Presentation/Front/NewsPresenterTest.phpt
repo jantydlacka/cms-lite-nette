@@ -158,7 +158,7 @@ test('page 1 in the query redirects to the clean URL', function () use ($app): v
 });
 
 
-foreach (['0', '3', 'abc', '01', '-1', '1x', ''] as $page) {
+foreach (['0', '3', 'abc', '01', '-1', '1x', '', '2%0A'] as $page) {
 	test("page '$page' is not found", function () use ($app, $page): void {
 		assertNotFound($app->get('/novinky?strana=' . $page));
 	});
@@ -168,6 +168,12 @@ foreach (['0', '3', 'abc', '01', '-1', '1x', ''] as $page) {
 test('a foreign page parameter redirects to the clean URL', function () use ($app): void {
 	assertMovedTo('/novinky', $app->get('/novinky?page=2'));
 	assertMovedTo('/en/news', $app->get('/en/news?strana=2'));
+});
+
+
+test('a foreign page parameter next to the own one keeps the own page', function () use ($app): void {
+	assertMovedTo('/novinky?strana=2', $app->get('/novinky?strana=2&page=3'));
+	assertMovedTo('/novinky?strana=2', $app->get('/novinky?page=3&strana=2'));
 });
 
 
@@ -236,6 +242,29 @@ test('no news is page 1 with the empty message and no pagination', function (): 
 	Assert::null($result->text('news-list'));
 	Assert::null($result->text('news-pagination'));
 	assertNotFound($app->get('/novinky?strana=2'));
+});
+
+
+test('the English list pages with ?page=N', function (): void {
+	[$app, $seed] = newsApp();
+	for ($i = 1; $i <= 12; $i++) {
+		$seed->create("en-item-$i", sprintf('2026-01-%02d 10:00:00', $i), title: "News $i", locale: 'en');
+	}
+
+	$first = $app->get('/en/news');
+	Assert::same(200, $first->code);
+	Assert::count(10, itemTitles($first));
+	Assert::same('/en/news?page=2', (string) $first->dom()->find('[data-testid="news-older"]')[0]['href']);
+	Assert::contains('Page 1 of 2', (string) $first->text('news-pagination'));
+
+	$second = $app->get('/en/news?page=2');
+	Assert::same(200, $second->code);
+	Assert::same(['News 2', 'News 1'], itemTitles($second));
+	Assert::same('/en/news', (string) $second->dom()->find('[data-testid="news-newer"]')[0]['href']);
+
+	assertMovedTo('/en/news', $app->get('/en/news?page=1'));
+	assertMovedTo('/en/news?page=2', $app->get('/en/news?page=2&strana=3'));
+	assertNotFound($app->get('/en/news?page=3'));
 });
 
 
