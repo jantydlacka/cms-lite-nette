@@ -260,6 +260,18 @@ final class PageRepositoryContract
 			$repo->setPositions([]);
 		});
 
+		test('setParent writes the parent and the position and no version', function () use ($repo, $reset): void {
+			$reset();
+			$parent = $repo->createPage(null, 0, true);
+			$page = $repo->createPage(null, 1, false);
+
+			$repo->setParent($page, $parent, 3);
+			$stored = $repo->getPage($page);
+			Assert::same([$parent, 3, false, 1], [$stored?->parentId, $stored?->position, $stored?->inMenu, $stored?->version]);
+			$repo->setParent($page, null, 0);
+			Assert::same([null, 0, 1], [$repo->getPage($page)?->parentId, $repo->getPage($page)?->position, $repo->getPage($page)?->version]);
+		});
+
 		test('findTree lists parents before children, siblings by position then id, with depth, title, status, menu flag and child count', function () use ($repo, $reset): void {
 			$reset();
 			$second = $repo->createPage(null, 1, false);

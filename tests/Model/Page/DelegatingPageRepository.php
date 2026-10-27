@@ -111,6 +111,12 @@ final class DelegatingPageRepository implements PageRepository
 	}
 
 
+	public function setParent(int $pageId, ?int $parentId, int $position): void
+	{
+		$this->inner->setParent($pageId, $parentId, $position);
+	}
+
+
 	public function deletePage(int $pageId): void
 	{
 		if ($this->beforeDelete !== null) {

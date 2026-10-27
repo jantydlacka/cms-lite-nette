@@ -75,6 +75,12 @@ final class ThrowingPageRepository implements PageRepository
 	}
 
 
+	public function setParent(int $pageId, ?int $parentId, int $position): void
+	{
+		throw self::down();
+	}
+
+
 	public function lockPage(int $pageId): ?Page
 	{
 		throw self::down();

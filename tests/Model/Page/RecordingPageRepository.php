@@ -123,6 +123,13 @@ final class RecordingPageRepository implements PageRepository
 	}
 
 
+	public function setParent(int $pageId, ?int $parentId, int $position): void
+	{
+		$this->log[] = __FUNCTION__;
+		$this->inner->setParent($pageId, $parentId, $position);
+	}
+
+
 	public function deletePage(int $pageId): void
 	{
 		$this->log[] = __FUNCTION__;

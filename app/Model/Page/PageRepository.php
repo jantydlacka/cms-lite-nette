@@ -76,6 +76,10 @@ interface PageRepository
 	public function setPositions(array $positionsById): void;
 
 
+	/** Writes parentId and position; leaves the menu flag and the version alone. */
+	public function setParent(int $pageId, ?int $parentId, int $position): void;
+
+
 	/**
 	 * All pages in tree order: a parent before its children, siblings by position then id.
 	 * A cycle in parent_id is an UnexpectedValueException.

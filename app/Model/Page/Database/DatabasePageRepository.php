@@ -231,6 +231,12 @@ final class DatabasePageRepository implements PageRepository
 	}
 
 
+	public function setParent(int $pageId, ?int $parentId, int $position): void
+	{
+		$this->explorer->table('page')->where('id', $pageId)->update(['parent_id' => $parentId, 'position' => $position]);
+	}
+
+
 	public function deletePage(int $pageId): void
 	{
 		$this->explorer->table('page')->where('id', $pageId)->delete();

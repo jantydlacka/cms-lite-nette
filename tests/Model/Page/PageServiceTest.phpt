@@ -654,7 +654,7 @@ test('updatePage with a stale version is a StaleVersionException and nothing cha
 	Assert::same($before, $snapshot());
 });
 
-test('moving under another parent puts the page last among the new siblings and renumbers the old ones', function () use ($reset, $service, $pages, $positions): void {
+test('moving under another parent puts the page last among the new siblings and renumbers both sibling lists', function () use ($reset, $service, $pages, $positions): void {
 	$reset();
 	$oldParent = $pages->createPage(null, 0, true);
 	$newParent = $pages->createPage(null, 1, true);
@@ -667,8 +667,8 @@ test('moving under another parent puts the page last among the new siblings and 
 
 	$updated = $service()->updatePage(new UpdatePage($moved, $newParent, true, 1));
 
-	Assert::same([$newParent, 4, 2], [$updated->parentId, $updated->position, $updated->version]);
-	Assert::same([$x => 0, $y => 3, $moved => 4], $positions($newParent));
+	Assert::same([$newParent, 2, 2], [$updated->parentId, $updated->position, $updated->version]);
+	Assert::same([$x => 0, $y => 1, $moved => 2], $positions($newParent));
 	Assert::same([$a => 0, $b => 1, $c => 2], $positions($oldParent));
 	foreach ([$a, $b, $c, $x, $y, $oldParent, $newParent] as $other) {
 		Assert::same(1, $pages->getPage($other)?->version);
@@ -682,8 +682,8 @@ test('moving to the top level and under an empty parent', function () use ($rese
 	$child = $pages->createPage($root, 0, true);
 
 	Assert::same(0, $service()->updatePage(new UpdatePage($child, $empty, true, 1))->position);
-	Assert::same(7, $service()->updatePage(new UpdatePage($child, null, true, 2))->position);
-	Assert::same([$root => 2, $empty => 6, $child => 7], $positions(null));
+	Assert::same(2, $service()->updatePage(new UpdatePage($child, null, true, 2))->position);
+	Assert::same([$root => 0, $empty => 1, $child => 2], $positions(null));
 	Assert::same([], $positions($empty));
 });
 
@@ -718,6 +718,79 @@ test('moveUp on the first and moveDown on the last sibling change nothing', func
 	$service()->moveUp($only);
 	$service()->moveDown($only);
 	Assert::same($before, $snapshot());
+});
+
+test('movePage clamps the position to the new siblings, renumbers both sibling lists and keeps every version', function () use ($reset, $service, $pages, $positions): void {
+	$reset();
+	$oldParent = $pages->createPage(null, 0, true);
+	$newParent = $pages->createPage(null, 1, true);
+	$a = $pages->createPage($oldParent, 2, true);
+	$moved = $pages->createPage($oldParent, 4, true);
+	$b = $pages->createPage($oldParent, 9, true);
+	$x = $pages->createPage($newParent, 3, true);
+	$y = $pages->createPage($newParent, 8, true);
+
+	$service()->movePage($moved, $newParent, 1);
+	Assert::same([$x => 0, $moved => 1, $y => 2], $positions($newParent));
+	Assert::same([$a => 0, $b => 1], $positions($oldParent));
+
+	$service()->movePage($moved, $newParent, -5);
+	Assert::same([$moved => 0, $x => 1, $y => 2], $positions($newParent));
+	$service()->movePage($moved, $newParent, 99);
+	Assert::same([$x => 0, $y => 1, $moved => 2], $positions($newParent));
+	$service()->movePage($moved, null, 99);
+	Assert::same([$oldParent => 0, $newParent => 1, $moved => 2], $positions(null));
+	Assert::same([$x => 0, $y => 1], $positions($newParent));
+	foreach ([$oldParent, $newParent, $a, $moved, $b, $x, $y] as $id) {
+		Assert::same(1, $pages->getPage($id)?->version);
+	}
+});
+
+test('movePage under the page itself or its descendant is an InvalidParentException and a missing page or parent an InvalidArgumentException; nothing changes', function () use ($reset, $service, $pages, $snapshot): void {
+	$reset();
+	$page = $pages->createPage(null, 0, true);
+	$child = $pages->createPage($page, 0, true);
+	$grandchild = $pages->createPage($child, 0, true);
+	$before = $snapshot();
+
+	foreach (['self' => $page, 'child' => $child, 'grandchild' => $grandchild] as $label => $parent) {
+		Assert::exception(fn () => $service()->movePage($page, $parent, 0), InvalidParentException::class);
+		Assert::same($before, $snapshot(), $label);
+	}
+	Assert::exception(fn () => $service()->movePage($page + 1000, null, 0), InvalidArgumentException::class);
+	Assert::exception(fn () => $service()->movePage($child, $page + 1000, 0), InvalidArgumentException::class);
+	Assert::same($before, $snapshot());
+});
+
+test('a reparent in updatePage gives the same tree as movePage to the last position, plus the menu flag and version', function () use ($reset, $service, $pages, $positions): void {
+	$build = static function () use ($reset, $pages): array {
+		$reset();
+		$oldParent = $pages->createPage(null, 0, true);
+		$newParent = $pages->createPage(null, 3, true);
+		$pages->createPage($oldParent, 1, true);
+		$moved = $pages->createPage($oldParent, 4, true);
+		$pages->createPage($oldParent, 6, true);
+		$pages->createPage($newParent, 2, true);
+		$pages->createPage($newParent, 5, true);
+
+		return [$oldParent, $newParent, $moved];
+	};
+	$state = static fn (int $oldParent, int $newParent, int $moved): array => [
+		array_values($positions(null)),
+		array_values($positions($oldParent)),
+		array_values($positions($newParent)),
+		array_search($moved, array_keys($positions($newParent)), true),
+		$pages->getPage($moved)?->inMenu,
+		$pages->getPage($moved)?->version,
+	];
+
+	[$oldParent, $newParent, $moved] = $build();
+	$service()->movePage($moved, $newParent, PHP_INT_MAX);
+	Assert::same([[0, 3], [0, 1], [0, 1, 2], 2, true, 1], $state($oldParent, $newParent, $moved));
+
+	[$oldParent, $newParent, $moved] = $build();
+	$service()->updatePage(new UpdatePage($moved, $newParent, false, 1));
+	Assert::same([[0, 3], [0, 1], [0, 1, 2], 2, false, 2], $state($oldParent, $newParent, $moved));
 });
 
 test('moveUp and moveDown on a missing page are an InvalidArgumentException', function () use ($reset, $service): void {
@@ -827,7 +900,7 @@ test('with the flat strategy a parent change leaves every path and records no re
 	Assert::same($before, $counts());
 });
 
-test('updatePage, moveUp and moveDown take the tree lock before reading the tree', function () use ($reset, $service, $pages, $treeLock): void {
+test('updatePage, moveUp, moveDown and movePage take the tree lock before reading the tree', function () use ($reset, $service, $pages, $treeLock): void {
 	$reset();
 	$a = $pages->createPage(null, 0, true);
 	$b = $pages->createPage(null, 1, true);
@@ -853,6 +926,7 @@ test('updatePage, moveUp and moveDown take the tree lock before reading the tree
 		'updatePage' => fn () => $service($recording, null, $lock)->updatePage(new UpdatePage($a, $b, true, 1)),
 		'moveUp' => fn () => $service($recording, null, $lock)->moveUp($b),
 		'moveDown' => fn () => $service($recording, null, $lock)->moveDown($child),
+		'movePage' => fn () => $service($recording, null, $lock)->movePage($child, $b, 0),
 	];
 	foreach ($cases as $label => $run) {
 		$log->exchangeArray([]);
@@ -1146,6 +1220,7 @@ test('every write refuses to run inside an already open transaction and writes n
 		'updatePage' => static fn () => $service()->updatePage(new UpdatePage($id, null, false, 1)),
 		'moveUp' => static fn () => $service()->moveUp($id),
 		'moveDown' => static fn () => $service()->moveDown($id),
+		'movePage' => static fn () => $service()->movePage($id, null, 0),
 		'setHomepage' => static fn () => $service()->setHomepage($id),
 		'deletePage' => static fn () => $service()->deletePage($id),
 	];

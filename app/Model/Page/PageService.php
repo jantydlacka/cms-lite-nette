@@ -73,7 +73,8 @@ final class PageService
 
 
 	/**
-	 * Slug problems are reported in this order: reserved (slug), long, format, reserved (computed path), taken.
+	 * Problems are reported in this order: locale, title and description; slug reserved, long, format (all before the
+	 * transaction); then under the tree lock: missing page, homepage draft, computed path reserved, stale version, path taken.
 	 * An empty slug is derived from the title and then checked the same way.
 	 * Descendant paths the strategy changes are written too, which raises those translations' versions by 1.
 	 *
@@ -114,13 +115,13 @@ final class PageService
 
 
 	/**
-	 * Parent and menu flag; the position comes from the stored row, or is the last among the new siblings after a parent change.
-	 *
-	 * @throws StaleVersionException when the stored version differs from $command->expectedVersion; nothing is written then
-	 * @throws InvalidParentException when the parent is the page itself or its descendant; nothing is written then
+	 * Parent and menu flag; the position comes from the stored row, or is the last among the new siblings after a parent
+	 * change, which moves the page like movePage().
 	 * After a parent change a recomputed path is written like any save, so that translation's version goes up by 1
 	 * (only when the strategy changes the path; the flat one never does).
 	 *
+	 * @throws StaleVersionException when the stored version differs from $command->expectedVersion; nothing is written then
+	 * @throws InvalidParentException when the parent is the page itself or its descendant; nothing is written then
 	 * @throws InvalidSlugException when a recomputed path is taken; nothing is written then
 	 * @throws InvalidArgumentException when the page or the parent does not exist
 	 * @throws UnexpectedValueException when the stored tree has a cycle; nothing is written then
@@ -136,30 +137,12 @@ final class PageService
 				throw new StaleVersionException('Page ' . $page->id . ' has changed since version ' . $command->expectedVersion . '.');
 			}
 
-			$parentId = $command->parentId;
-			if ($parentId === $page->parentId) {
-				$this->pages->updatePage(new Page($page->id, $parentId, $page->position, $command->inMenu, $page->version));
-
-				return $this->pageOrFail($page->id);
+			$this->pages->updatePage(new Page($page->id, $page->parentId, $page->position, $command->inMenu, $page->version));
+			if ($command->parentId !== $page->parentId) {
+				$this->moveUnderLock($page, $command->parentId, PHP_INT_MAX);
 			}
 
-			if ($parentId !== null && $this->pages->getPage($parentId) === null) {
-				throw new InvalidArgumentException('Parent page ' . $parentId . ' does not exist.');
-			}
-			if ($parentId === $page->id || ($parentId !== null && in_array($parentId, $this->descendantIds($page->id), true))) {
-				throw new InvalidParentException('Page ' . $page->id . ' cannot be moved under itself or its descendant ' . $parentId . '.');
-			}
-
-			$positions = array_map(static fn (Page $sibling): int => $sibling->position, $this->pages->findChildren($parentId));
-			$this->pages->updatePage(new Page($page->id, $parentId, $positions === [] ? 0 : max($positions) + 1, $command->inMenu, $page->version));
-			$this->renumber($this->pages->findChildren($page->parentId));
-
-			$moved = $this->pageOrFail($page->id);
-			foreach ($this->config->locales as $locale) {
-				$this->recomputePaths($moved, $locale);
-			}
-
-			return $moved;
+			return $this->pageOrFail($page->id);
 		});
 	}
 
@@ -168,10 +151,11 @@ final class PageService
 	 * Swaps the page with its previous sibling; the first one stays. Leaves every version alone.
 	 *
 	 * @throws InvalidArgumentException when the page does not exist
+	 * @throws UnexpectedValueException when the page is missing among the children of its parent; nothing is written then
 	 */
 	public function moveUp(int $pageId): void
 	{
-		$this->move($pageId, -1);
+		$this->moveBy($pageId, -1);
 	}
 
 
@@ -179,10 +163,33 @@ final class PageService
 	 * Swaps the page with its next sibling; the last one stays. Leaves every version alone.
 	 *
 	 * @throws InvalidArgumentException when the page does not exist
+	 * @throws UnexpectedValueException when the page is missing among the children of its parent; nothing is written then
 	 */
 	public function moveDown(int $pageId): void
 	{
-		$this->move($pageId, 1);
+		$this->moveBy($pageId, 1);
+	}
+
+
+	/**
+	 * Puts the page at $position among the children of $parentId (top level for null); the position is clamped to 0..n.
+	 * Positions of the old and the new siblings become 0..n-1. Leaves every page version alone; after a parent change
+	 * the recomputed paths are written like in updatePage().
+	 *
+	 * @throws InvalidParentException when the parent is the page itself or its descendant; nothing is written then
+	 * @throws InvalidSlugException when a recomputed path is taken; nothing is written then
+	 * @throws InvalidArgumentException when the page or the parent does not exist
+	 * @throws UnexpectedValueException when the stored tree has a cycle; nothing is written then
+	 */
+	public function movePage(int $pageId, ?int $parentId, int $position): void
+	{
+		$this->assertOwnTransaction();
+		$this->transaction->run(function () use ($pageId, $parentId, $position): void {
+			$this->treeLock->acquire();
+			$page = $this->pages->getPage($pageId)
+				?? throw new InvalidArgumentException('Page ' . $pageId . ' does not exist.');
+			$this->moveUnderLock($page, $parentId, $position);
+		});
 	}
 
 
@@ -259,7 +266,8 @@ final class PageService
 	}
 
 
-	private function move(int $pageId, int $step): void
+	/** A step past the first or the last sibling writes nothing, so the stored positions stay as they are. */
+	private function moveBy(int $pageId, int $step): void
 	{
 		$this->assertOwnTransaction();
 		$this->transaction->run(function () use ($pageId, $step): void {
@@ -271,13 +279,48 @@ final class PageService
 			if ($index === false) {
 				throw new UnexpectedValueException('Page ' . $page->id . ' is missing among the children of its parent.');
 			}
-			$target = $index + $step;
-			if (!isset($siblings[$target])) {
-				return;
+			if (isset($siblings[$index + $step])) {
+				$this->moveUnderLock($page, $page->parentId, $index + $step);
 			}
-			[$siblings[$index], $siblings[$target]] = [$siblings[$target], $siblings[$index]];
-			$this->renumber(array_values($siblings));
 		});
+	}
+
+
+	/**
+	 * The body of movePage(); must run inside the transaction, after the tree lock. $locked is the page as stored
+	 * before the move (its parent and position); its other fields are not written.
+	 */
+	private function moveUnderLock(Page $locked, ?int $parentId, int $position): void
+	{
+		$reparent = $parentId !== $locked->parentId;
+		if ($reparent) {
+			if ($parentId !== null && $this->pages->getPage($parentId) === null) {
+				throw new InvalidArgumentException('Parent page ' . $parentId . ' does not exist.');
+			}
+			if ($parentId === $locked->id || ($parentId !== null && in_array($parentId, $this->descendantIds($locked->id), true))) {
+				throw new InvalidParentException('Page ' . $locked->id . ' cannot be moved under itself or its descendant ' . $parentId . '.');
+			}
+		}
+
+		$siblings = array_values(array_filter(
+			$this->pages->findChildren($parentId),
+			static fn (Page $sibling): bool => $sibling->id !== $locked->id,
+		));
+		$position = max(0, min($position, count($siblings)));
+		if ($reparent) {
+			$this->pages->setParent($locked->id, $parentId, $position);
+		}
+		array_splice($siblings, $position, 0, [new Page($locked->id, $parentId, $reparent ? $position : $locked->position, $locked->inMenu, $locked->version)]);
+		$this->renumber($siblings);
+		if (!$reparent) {
+			return;
+		}
+
+		$this->renumber($this->pages->findChildren($locked->parentId));
+		$moved = $this->pageOrFail($locked->id);
+		foreach ($this->config->locales as $locale) {
+			$this->recomputePaths($moved, $locale);
+		}
 	}
 
 
