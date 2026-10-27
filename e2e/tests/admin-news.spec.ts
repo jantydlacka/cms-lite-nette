@@ -36,9 +36,12 @@ async function createNews(page: Page, title: string, publishedAt: string, slug?:
 	await page.getByTestId('news-content-input').fill(`Obsah ${title}`);
 	await page.getByTestId('news-status-input').selectOption('published');
 	await page.getByTestId('news-save').click();
+	// Registered for cleanup as soon as the item exists, before any assertion can fail.
+	await page.waitForURL(/\/admin\/news\/\d+(\?|$)/);
+	const detail = new URL(page.url()).pathname;
+	created.push(detail);
 	await expect(page.getByTestId('flash')).toHaveText('Novinka byla vytvořena.');
-	created.push(new URL(page.url()).pathname);
-	return created[created.length - 1];
+	return detail;
 }
 
 test.beforeEach(async ({ page }) => {
@@ -49,9 +52,8 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(async ({ page }) => {
 	for (const detail of created.splice(0)) {
 		await page.goto(`${detail}/delete`);
-		if (await page.getByTestId('news-delete-confirm').count()) {
-			await page.getByTestId('news-delete-confirm').click();
-		}
+		await page.getByTestId('news-delete-confirm').click({ timeout: 5_000 });
+		await expect(page.getByTestId('flash')).toHaveText('Novinka byla smazána.');
 	}
 });
 
@@ -105,6 +107,7 @@ test('deleting a news item makes its address and its old address 404', async ({ 
 	await page.getByTestId('news-delete').click();
 	await page.getByTestId('news-delete-confirm').click();
 	await expect(page.getByTestId('flash')).toHaveText('Novinka byla smazána.');
+	created.splice(created.indexOf(detail), 1);
 
 	expect((await page.request.get(`/novinky/${newSlug}`, { maxRedirects: 0 })).status()).toBe(404);
 	expect((await page.request.get(`/novinky/${slug}`, { maxRedirects: 0 })).status()).toBe(404);
