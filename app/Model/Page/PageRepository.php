@@ -21,11 +21,11 @@ interface PageRepository
 
 
 	/**
-	 * Direct children ordered by position then id.
+	 * Direct children ordered by position then id; null gives the top-level pages.
 	 *
 	 * @return list<Page>
 	 */
-	public function findChildren(int $pageId): array;
+	public function findChildren(?int $parentId): array;
 
 
 	/**

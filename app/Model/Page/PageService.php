@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Model\Page;
 
 use App\Model\CmsConfig;
+use App\Model\PublicationStatus;
 use App\Model\Redirect\PathRedirectRepository;
 use App\Model\Redirect\RedirectTarget;
 use App\Model\Transaction;
 use InvalidArgumentException;
+use Nette\Utils\Strings;
 use Psr\Clock\ClockInterface;
 use UnexpectedValueException;
 
@@ -26,6 +28,7 @@ final class PageService
 		private readonly PagePathStrategy $strategy,
 		private readonly ReservedSegments $reserved,
 		private readonly Transaction $transaction,
+		private readonly PageTreeLock $treeLock,
 		private readonly CmsConfig $config,
 		private readonly ClockInterface $clock,
 	) {
@@ -33,64 +36,160 @@ final class PageService
 
 
 	/**
-	 * Slug problems are reported in this order: reserved (raw slug), format, reserved (computed path), taken.
-	 * Ancestor slugs are read before the transaction, so a future hierarchical strategy should read them under the lock.
+	 * Creates the page as the last of its siblings together with its first translation; a failing translation leaves no page.
 	 *
 	 * @throws InvalidSlugException nothing is written then
+	 * @throws InvalidArgumentException when the parent does not exist, or the input is invalid as in saveTranslation()
+	 */
+	public function createPage(CreatePage $command): PageTranslation
+	{
+		[$title, $slug] = $this->checkInput($command->locale, $command->title, $command->slug, $command->metaDescription);
+
+		return $this->transaction->run(function () use ($command, $title, $slug): PageTranslation {
+			$this->treeLock->acquire();
+			if ($command->parentId !== null && $this->pages->getPage($command->parentId) === null) {
+				throw new InvalidArgumentException('Parent page ' . $command->parentId . ' does not exist.');
+			}
+			$positions = array_map(static fn (Page $sibling): int => $sibling->position, $this->pages->findChildren($command->parentId));
+			$pageId = $this->pages->createPage($command->parentId, $positions === [] ? 0 : max($positions) + 1, $command->inMenu);
+
+			return $this->writeTranslation(
+				$this->pageOrFail($pageId),
+				$command->locale,
+				$title,
+				$slug,
+				$command->content,
+				$command->metaDescription,
+				$command->status,
+				null,
+			);
+		});
+	}
+
+
+	/**
+	 * Slug problems are reported in this order: reserved (slug), long, format, reserved (computed path), taken.
+	 * An empty slug is derived from the title and then checked the same way.
+	 *
+	 * @throws InvalidSlugException nothing is written then
+	 * @throws StaleVersionException when the stored version differs from $command->expectedVersion; nothing is written then
 	 * @throws InvalidArgumentException when the page does not exist, the locale is not configured, or the title or description is blank or too long
 	 */
 	public function saveTranslation(SavePageTranslation $command): PageTranslation
 	{
-		if (!in_array($command->locale, $this->config->locales, true)) {
-			throw new InvalidArgumentException('Locale "' . $command->locale . '" is not configured.');
+		[$title, $slug] = $this->checkInput($command->locale, $command->title, $command->slug, $command->metaDescription);
+
+		return $this->transaction->run(function () use ($command, $title, $slug): PageTranslation {
+			$this->treeLock->acquire();
+			$page = $this->pages->getPage($command->pageId)
+				?? throw new InvalidArgumentException('Page ' . $command->pageId . ' does not exist.');
+
+			return $this->writeTranslation(
+				$page,
+				$command->locale,
+				$title,
+				$slug,
+				$command->content,
+				$command->metaDescription,
+				$command->status,
+				$command->expectedVersion,
+			);
+		});
+	}
+
+
+	/**
+	 * Checks that need no stored data.
+	 *
+	 * @return array{string, string} trimmed title, slug (derived from the title when empty)
+	 */
+	private function checkInput(string $locale, string $title, string $slug, string $metaDescription): array
+	{
+		if (!in_array($locale, $this->config->locales, true)) {
+			throw new InvalidArgumentException('Locale "' . $locale . '" is not configured.');
 		}
-		$title = trim($command->title);
+		$title = Strings::trim($title);
 		if ($title === '' || mb_strlen($title) > self::TITLE_MAX_LENGTH) {
 			throw new InvalidArgumentException('Title must be 1-' . self::TITLE_MAX_LENGTH . ' characters.');
 		}
-		if (mb_strlen($command->metaDescription) > self::META_DESCRIPTION_MAX_LENGTH) {
+		if (mb_strlen($metaDescription) > self::META_DESCRIPTION_MAX_LENGTH) {
 			throw new InvalidArgumentException('Meta description must be at most ' . self::META_DESCRIPTION_MAX_LENGTH . ' characters.');
 		}
 
+		if ($slug === '') {
+			$slug = self::slugFromTitle($title);
+		}
 		// Reserved is judged on the raw slug first so that "Novinky" is reported as reserved, not as malformed.
-		if ($this->reserved->isReserved($command->slug)) {
+		if ($this->reserved->isReserved($slug)) {
 			throw new InvalidSlugException(InvalidSlugException::RESERVED);
 		}
-		if (strlen($command->slug) > self::SLUG_MAX_LENGTH || preg_match(self::SLUG_PATTERN, $command->slug) !== 1) {
+		if (strlen($slug) > self::SLUG_MAX_LENGTH) {
+			throw new InvalidSlugException(InvalidSlugException::LONG);
+		}
+		if (preg_match(self::SLUG_PATTERN, $slug) !== 1) {
 			throw new InvalidSlugException(InvalidSlugException::FORMAT);
 		}
 
-		$page = $this->pages->getPage($command->pageId)
-			?? throw new InvalidArgumentException('Page ' . $command->pageId . ' does not exist.');
-		$path = $this->strategy->pathFor($command->slug, $this->ancestorSlugs($page, $command->locale));
+		return [$title, $slug];
+	}
+
+
+	/** Cut at the last hyphen within the limit; a single word longer than the limit is cut hard. */
+	private static function slugFromTitle(string $title): string
+	{
+		$slug = Strings::webalize($title);
+		if (strlen($slug) > self::SLUG_MAX_LENGTH) {
+			$hyphen = strrpos(substr($slug, 0, self::SLUG_MAX_LENGTH + 1), '-');
+			$slug = substr($slug, 0, $hyphen === false ? self::SLUG_MAX_LENGTH : $hyphen);
+		}
+
+		return rtrim($slug, '-');
+	}
+
+
+	/** Must run inside the transaction, after the tree lock. */
+	private function writeTranslation(
+		Page $page,
+		string $locale,
+		string $title,
+		string $slug,
+		string $content,
+		string $metaDescription,
+		PublicationStatus $status,
+		?int $expectedVersion,
+	): PageTranslation {
+		$ancestorSlugs = $this->ancestorSlugs($page, $locale);
+		$path = $this->strategy->pathFor($slug, $ancestorSlugs);
 		if ($this->reserved->isReserved($path)) {
 			throw new InvalidSlugException(InvalidSlugException::RESERVED);
 		}
 
-		return $this->transaction->run(function () use ($command, $path, $title): PageTranslation {
-			$existing = $this->pages->lockTranslation($command->pageId, $command->locale);
-			if ($this->pages->isPathTaken($command->locale, $path, $command->pageId)) {
-				throw new InvalidSlugException(InvalidSlugException::TAKEN);
-			}
+		$existing = $this->pages->lockTranslation($page->id, $locale);
+		if ($existing?->version !== $expectedVersion) {
+			throw new StaleVersionException('Translation ' . $page->id . '/' . $locale . ' has changed since version ' . ($expectedVersion ?? 'none') . '.');
+		}
+		if ($this->pages->isPathTaken($locale, $path, $page->id)) {
+			throw new InvalidSlugException(InvalidSlugException::TAKEN);
+		}
 
-			$this->moveRedirects($command->pageId, $command->locale, $existing?->path, $path);
-			$this->pages->saveTranslation(new PageTranslation(
-				$command->pageId,
-				$command->locale,
-				$title,
-				$command->slug,
-				$path,
-				$command->content,
-				$command->metaDescription,
-				$command->status,
-				$this->clock->now(),
-				1,
-			));
-			$this->recomputeDescendantPaths($command->pageId, $command->locale, [...$this->ancestorSlugs($this->pageOrFail($command->pageId), $command->locale), $command->slug], []);
+		$this->moveRedirects($page->id, $locale, $existing?->path, $path);
+		// The repository sets the version itself (1 on insert, +1 on update); the argument is ignored.
+		$this->pages->saveTranslation(new PageTranslation(
+			$page->id,
+			$locale,
+			$title,
+			$slug,
+			$path,
+			$content,
+			$metaDescription,
+			$status,
+			$this->clock->now(),
+			1,
+		));
+		$this->recomputeDescendantPaths($page->id, $locale, [...$ancestorSlugs, $slug], []);
 
-			return $this->pages->findTranslation($command->pageId, $command->locale)
-				?? throw new UnexpectedValueException('Saved translation vanished.');
-		});
+		return $this->pages->findTranslation($page->id, $locale)
+			?? throw new UnexpectedValueException('Saved translation vanished.');
 	}
 
 

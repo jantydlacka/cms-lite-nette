@@ -43,9 +43,9 @@ final class DelegatingPageRepository implements PageRepository
 
 
 	/** {@inheritDoc} */
-	public function findChildren(int $pageId): array
+	public function findChildren(?int $parentId): array
 	{
-		return $this->inner->findChildren($pageId);
+		return $this->inner->findChildren($parentId);
 	}
 
 

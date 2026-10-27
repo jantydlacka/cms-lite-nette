@@ -202,6 +202,15 @@ final class PageRepositoryContract
 			Assert::same([], $repo->findChildren($root + 1000));
 		});
 
+		test('findChildren with null returns the top-level pages ordered by position then id', function () use ($repo, $reset): void {
+			$reset();
+			$late = $repo->createPage(null, 3, true);
+			$early = $repo->createPage(null, 0, true);
+			$repo->createPage($early, 0, true);
+
+			Assert::same([$early, $late], array_map(static fn (Page $p): int => $p->id, $repo->findChildren(null)));
+		});
+
 		test('lockTranslation returns the row of any status or null', function () use ($repo, $reset): void {
 			$reset();
 			$id = $repo->createPage(null, 0, true);

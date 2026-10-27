@@ -78,10 +78,10 @@ final class DatabasePageRepository implements PageRepository
 
 
 	/** @return list<Page> */
-	public function findChildren(int $pageId): array
+	public function findChildren(?int $parentId): array
 	{
 		$children = [];
-		foreach ($this->explorer->table('page')->where('parent_id', $pageId)->order('position, id') as $row) {
+		foreach ($this->explorer->table('page')->where('parent_id', $parentId)->order('position, id') as $row) {
 			$children[] = $this->hydratePage($row);
 		}
 

@@ -16,6 +16,8 @@ final readonly class SavePageTranslation
 		public string $content,
 		public string $metaDescription,
 		public PublicationStatus $status,
+		/** Version the editor started from; null for a translation that does not exist yet. */
+		public ?int $expectedVersion = null,
 	) {
 	}
 }

@@ -37,7 +37,7 @@ final class ThrowingPageRepository implements PageRepository
 
 
 	/** {@inheritDoc} */
-	public function findChildren(int $pageId): array
+	public function findChildren(?int $parentId): array
 	{
 		throw self::down();
 	}
