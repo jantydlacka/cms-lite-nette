@@ -63,6 +63,16 @@ Optional `config/local.neon` (gitignored) is loaded when present, for machine-sp
 
 `NETTE_DEBUG=1` is the default in the compose setup. In this mode an unknown URL shows the Tracy error screen, not the 404 page. Set `NETTE_DEBUG=0` (in `.env` or the shell, then `docker compose up -d`) to see production behaviour. `CMS_DEMO_DATA=1` or `0` forces demo data on or off; when unset it follows debug mode. Demo data also enables the `en` language; to enable a second language without it, add `cms: locales: [cs, en]` to `config/local.neon`.
 
+## Configuration
+
+The `cms:` section of `config/config.neon` (override it in `config/local.neon`):
+
+| Key | Default | Meaning |
+|-----|---------|---------|
+| `timezone` | `Europe/Prague` | Time zone for showing and entering dates (news publication). Must be a valid identifier; times are stored in UTC. |
+| `newsInMenu` | `true` | Shows the news link at the end of the top menu. |
+| `newsPerPage` | `10` | News items per page of the public list. |
+
 ## Quality
 
 Everything runs inside the container:
@@ -152,6 +162,10 @@ Sign in at `/admin`. Editors and administrators manage pages under `/admin/pages
 - **Versions and concurrent edits:** the properties and every translation carry a version number that each save raises by one. A save based on an older version stores nothing and shows `admin.pages.stale`; the sent text stays in the form, to be copied over the current version. A save whose sign-in expired comes back after sign-in as the filled form, unsaved.
 - **Homepage:** **Nastavit jako úvodní** works only for a page with a published translation in the default language. The homepage cannot be deleted and its default-language translation cannot become a draft until another page is chosen. Its detail lists the enabled languages without a published translation, whose root (`/en/` …) is 404.
 - **Deleting:** only a whole page, with all its languages, after a confirmation screen. A page with subpages or the homepage cannot be deleted. Redirects to a deleted page are removed too, so its old addresses become 404. A single translation is hidden by switching it to a draft.
+
+### News
+
+Editors and administrators manage news under `/admin/news` (addresses and responses in [`spec/urls.md`](spec/urls.md#admin-news)). A news item has a publication date shared by its languages and one translation per language (title, address, perex, Markdown content, search description, draft/published status). It is visible on the website when its translation is published and the date has passed, so a future date schedules it. The date is entered in the `timezone` of the configuration; empty means "now" at the moment of publishing. A changed address redirects the old one (301), and deleting the item removes the redirects.
 
 ## Deployment note
 
