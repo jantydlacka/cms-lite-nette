@@ -28,7 +28,8 @@ final class UserService
 			throw new InvalidUserException(InvalidUserException::EMAIL_FORMAT);
 		}
 
-		$name = Strings::trim($command->name);
+		// Invalid UTF-8 cannot be trimmed; it is no usable name.
+		$name = preg_match('~~u', $command->name) === 1 ? Strings::trim($command->name) : '';
 		if ($name === '') {
 			throw new InvalidUserException(InvalidUserException::NAME_EMPTY);
 		}

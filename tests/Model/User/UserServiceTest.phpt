@@ -189,3 +189,10 @@ test('e-mail and name are trimmed of non-ASCII whitespace before storing', funct
 	Assert::same('Ann', $user->name);
 	Assert::same('user.name.empty', $reason($valid(email: 'x@b.cz', name: "\u{A0}\u{A0}")));
 });
+
+test('invalid UTF-8 in the e-mail or the name is refused, not thrown', function () use ($reason, $reset, $valid): void {
+	$reset();
+	Assert::same('user.email.format', $reason($valid(email: "\xff@x.cz")));
+	Assert::same('user.email.format', $reason($valid(email: '"a"@example.com')));
+	Assert::same('user.name.empty', $reason($valid(name: "Ann\xff")));
+});

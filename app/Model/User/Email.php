@@ -18,9 +18,15 @@ final class Email
 	private const TRANSITIONAL = ['ß' => 'ss', 'ς' => 'σ', "\u{200C}" => '', "\u{200D}" => ''];
 
 
-	/** Trims, lowercases and converts a non-ASCII domain to punycode; never throws (unconvertible domain kept, see isValid()). */
+	/**
+	 * Trims, lowercases and converts a non-ASCII domain to punycode. Never throws: invalid UTF-8 and an unconvertible
+	 * domain are returned as they are, and isValid() refuses them.
+	 */
 	public static function normalize(string $email): string
 	{
+		if (preg_match('~~u', $email) !== 1) {
+			return $email;
+		}
 		$email = mb_strtolower(Strings::trim($email));
 		$at = strrpos($email, '@');
 		if ($at === false) {
@@ -38,12 +44,12 @@ final class Email
 	}
 
 
-	/** For a normalized address: ASCII only (the browser sends no other), well-formed, at most 254 bytes. */
+	/** For a normalized address: ASCII without quotes (the browser sends no other), well-formed, at most 254 bytes. */
 	public static function isValid(string $email): bool
 	{
 		return $email !== ''
 			&& strlen($email) <= self::MAX_LENGTH
-			&& preg_match('~^[\x21-\x7E]+$~', $email) === 1
+			&& preg_match('~^[\x21\x23-\x7E]+$~D', $email) === 1
 			&& Validators::isEmail($email);
 	}
 }

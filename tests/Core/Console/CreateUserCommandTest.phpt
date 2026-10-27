@@ -147,3 +147,12 @@ test('failure: duplicate e-mail', function () use ($run, $count, $reset): void {
 	Assert::contains('A user with this e-mail already exists.', $t->getErrorOutput());
 	Assert::same(1, $count());
 });
+
+test('an e-mail with invalid UTF-8 fails with a readable message', function () use ($run, $count, $reset): void {
+	$reset();
+	$t = $run(['email' => "\xff@x.cz", 'name' => 'A', '--password-stdin' => true], ["correct horse battery\n"], false);
+
+	Assert::same(1, $t->getStatusCode());
+	Assert::contains('E-mail is not valid.', $t->getErrorOutput());
+	Assert::same(0, $count());
+});

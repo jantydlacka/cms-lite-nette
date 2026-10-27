@@ -55,3 +55,15 @@ test('isValid accepts only an ASCII address within 254 bytes', function (): void
 	Assert::false(Email::isValid(''));
 	Assert::false(Email::isValid(str_repeat('a', 243) . '@example.com'));
 });
+
+test('isValid refuses a quoted local part (a browser with type=email does not submit it)', function (): void {
+	Assert::false(Email::isValid('"a"@example.com'));
+	Assert::false(Email::isValid('"a b"@example.com'));
+});
+
+test('normalize does not throw on invalid UTF-8; the result is not valid', function (): void {
+	foreach (["\xff@x.cz", "a@x\xff.cz", " \xc3@x.cz "] as $input) {
+		$normalized = Email::normalize($input);
+		Assert::false(Email::isValid($normalized), bin2hex($input));
+	}
+});
