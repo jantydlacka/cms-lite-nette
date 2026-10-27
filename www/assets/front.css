@@ -101,6 +101,16 @@ nav.breadcrumbs li::before {
 	content: none;
 }
 
+ul.news-list {
+	padding: 0;
+	list-style: none;
+}
+
+ul.news-list li {
+	padding: 0;
+	list-style: none;
+}
+
 .breadcrumbs-separator {
 	margin-left: 0.25rem;
 	color: var(--pico-muted-color);
