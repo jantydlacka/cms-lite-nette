@@ -5,7 +5,7 @@
 
 A small, well-structured CMS built on [Nette](https://nette.org): pages, news, images and a contact form. It is the first of a planned family, `cms-lite-<framework>`: every implementation follows the same specification in [`spec/`](spec/) and is checked by the same browser-level end-to-end suite in `e2e/`.
 
-Status: phases 1 (skeleton), 2 (pages) and 3a (sign-in) are done - application bootstrap, Docker setup, migrations, translator, clock, light/dark theme, quality gate and CI configuration; public pages from the database with translations, flat URLs, menu, breadcrumbs, 301 redirects from old paths and safely rendered Markdown. Sign-in, roles and an administration skeleton exist (phase 3a), and editors and administrators manage pages in the administration (phase 3b). News, images and the contact form come in later phases. The CI workflow is configured but has not run yet, so there are no published runs, and the coverage badge shows as broken until the first CI run on `main` publishes it.
+Status: phases 1 (skeleton), 2 (pages), 3a (sign-in), 3b (page administration) and 4a (news) are done - application bootstrap, Docker setup, migrations, translator, clock, light/dark theme, quality gate and CI configuration; public pages from the database with translations, flat URLs, menu, breadcrumbs, 301 redirects from old paths and safely rendered Markdown. Sign-in, roles and an administration skeleton exist (phase 3a), and editors and administrators manage pages in the administration (phase 3b). News (phase 4a) has a paginated public list with detail pages and is managed in the administration, including scheduled publication. Images and the contact form come in later phases. The CI workflow is configured but has not run yet, so there are no published runs, and the coverage badge shows as broken until the first CI run on `main` publishes it.
 
 ## Quick start
 
@@ -65,7 +65,7 @@ Optional `config/local.neon` (gitignored) is loaded when present, for machine-sp
 
 ## Configuration
 
-The `cms:` section of `config/config.neon` (override it in `config/local.neon`):
+The `cms:` section of `config/common.neon` (override it in `config/local.neon`; when demo data is enabled, `config/demo.neon` is loaded as well and only sets `locales: [cs, en]`). Keys not set there use the defaults below:
 
 | Key | Default | Meaning |
 |-----|---------|---------|

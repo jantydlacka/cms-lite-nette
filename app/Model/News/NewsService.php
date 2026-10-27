@@ -224,7 +224,8 @@ final class NewsService
 	private function moveRedirects(int $newsId, string $locale, ?string $oldSlug, string $newSlug): void
 	{
 		$segment = NewsSegments::forLocale($locale)['segment'];
-		// record() before deleteByPath(): after the gap lock of the DELETE, no insert into path_redirect may follow in this transaction, or concurrent writers deadlock.
+		// Called once per news transaction, record() before deleteByPath(): no insert into path_redirect follows the DELETE's
+		// gap lock, so concurrent news writers do not deadlock (news writes take no tree lock).
 		if ($oldSlug !== null && $oldSlug !== $newSlug) {
 			$this->redirects->record($locale, $segment . '/' . $oldSlug, new RedirectTarget('news', $newsId));
 		}
