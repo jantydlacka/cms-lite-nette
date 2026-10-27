@@ -1,19 +1,43 @@
 #!/usr/bin/env bash
 # Fails when a migration that exists in <base> was modified, deleted, renamed or changed type, or when an added
 # migration does not sort after every migration in the order base (the runner refuses a pending file named before an
-# executed one in any related group, and all groups are related). Hidden files such as .gitkeep are no migrations.
-# Usage: bin/check-migrations-immutable [--order-base <ref>] [base]   (default base: origin/main; order base: base)
+# executed one in any related group, and all groups are related). Only *.sql and *.php files, which the runner
+# executes, are ordered; the immutability check covers every file under migrations/.
+# Usage: bin/check-migrations-immutable [--order-base <ref>] [base]   (default base: origin/main; order base: base;
+# options may follow the base; a bad option or argument exits with 2)
 # --order-base exists for a push whose base is the previous push: files merged in from main count as added against
 # it, so the order is judged against the main line instead.
 set -eu
 export LC_ALL=C
 
+usage_error() {
+	echo "ERROR: $1" >&2
+	echo "usage: bin/check-migrations-immutable [--order-base <ref>] [base]" >&2
+	exit 2
+}
+
 order_base=""
-if [ "${1:-}" = --order-base ]; then
-	order_base="${2:?--order-base needs a ref}"
-	shift 2
-fi
-base="${1:-origin/main}"
+base=""
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--order-base)
+			if [ $# -lt 2 ] || [ -z "$2" ]; then
+				usage_error "--order-base needs a ref"
+			fi
+			order_base="$2"
+			shift 2
+			;;
+		-*) usage_error "unknown option $1" ;;
+		*)
+			if [ -n "$base" ]; then
+				usage_error "unexpected argument $1"
+			fi
+			base="$1"
+			shift
+			;;
+	esac
+done
+base="${base:-origin/main}"
 order_base="${order_base:-$base}"
 cd "$(git rev-parse --show-toplevel)"
 
@@ -31,11 +55,27 @@ if [ -n "$changed" ]; then
 	exit 1
 fi
 
-latest="$(git ls-tree -r --name-only "$order_base" -- migrations/ | sed 's~.*/~~' | grep -v '^\.' | sort | tail -n 1 || true)"
+# Only what the runner executes is ordered: nextras/migrations registers handlers for *.sql and *.php.
+is_migration() {
+	case "$1" in
+		.*) return 1 ;;
+		*.sql | *.php) return 0 ;;
+		*) return 1 ;;
+	esac
+}
+
+latest=""
+while IFS= read -r path; do
+	name="${path##*/}"
+	if [ -n "$path" ] && is_migration "$name" && [[ "$name" > "$latest" ]]; then
+		latest="$name"
+	fi
+done <<< "$(git ls-tree -r --name-only "$order_base" -- migrations/)"
+
 misplaced=""
 while IFS= read -r path; do
 	name="${path##*/}"
-	if [ -z "$path" ] || [ "${name#.}" != "$name" ]; then
+	if [ -z "$path" ] || ! is_migration "$name"; then
 		continue
 	fi
 	if [ -n "$latest" ] && [[ ! "$name" > "$latest" ]]; then

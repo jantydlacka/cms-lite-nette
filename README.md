@@ -95,7 +95,7 @@ Set `E2E_BASE_URL` to your `CMS_HTTP_PORT`. Against a debug-mode stack (`NETTE_D
 The pre-push hook and CI also run `bin/check-migrations-immutable [--order-base <ref>] [base]`. It makes two checks:
 
 - **Immutability:** fails when a migration that exists in `base` was modified, deleted or renamed (compared from the merge base of `base` and `HEAD`).
-- **Order:** fails when a migration added since the order base does not sort after every migration at the tip of the order base. The order base is `--order-base` when given, otherwise `base`; hidden files such as `.gitkeep` are ignored.
+- **Order:** fails when a migration added since the order base does not sort after every migration at the tip of the order base. The order base is `--order-base` when given, otherwise `base`; only `*.sql` and `*.php` files count (the files the migration runner executes), so `.gitkeep` or a `README.md` are ignored. A missing `--order-base` value, an unknown option or a second base exits with 2.
 
 Which base each check uses:
 

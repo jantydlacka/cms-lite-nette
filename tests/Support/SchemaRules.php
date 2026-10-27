@@ -19,6 +19,8 @@ final class SchemaRules
 	public const BINARY_COLUMNS = ['slug', 'path', 'locale', 'email', 'ip', 'old_path'];
 	public const BINARY_COLLATIONS = ['ascii_bin', 'utf8mb4_bin', 'utf8mb4_0900_bin'];
 	public const COLUMN_CHARSETS = ['utf8mb4', 'ascii'];
+	/** Every CREATE TABLE in migrations/ states this; columns that need byte comparison override it. */
+	public const TABLE_COLLATION = 'utf8mb4_unicode_ci';
 	private const KEY_STRING_TYPES = ['char', 'varchar'];
 	private const BINARY_TYPES = ['binary', 'varbinary', 'tinyblob', 'blob', 'mediumblob', 'longblob'];
 
@@ -59,8 +61,8 @@ final class SchemaRules
 			if ($table['engine'] !== 'InnoDB') {
 				$violations[] = $name . ': engine ' . $table['engine'] . ', expected InnoDB';
 			}
-			if (!str_starts_with($table['collation'], 'utf8mb4_')) {
-				$violations[] = $name . ': collation ' . $table['collation'] . ', expected utf8mb4';
+			if ($table['collation'] !== self::TABLE_COLLATION) {
+				$violations[] = $name . ': collation ' . $table['collation'] . ', expected ' . self::TABLE_COLLATION;
 			}
 			foreach ($table['columns'] as $column => $definition) {
 				// Binary and non-text types have no charset.

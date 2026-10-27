@@ -289,6 +289,75 @@ test('an added hidden file such as .gitkeep is not a migration', function (): vo
 });
 
 
+test('a README.md in the base does not count as the latest migration', function (): void {
+	$dir = guardRepository();
+	file_put_contents($dir . '/migrations/README.md', "Notes\n");
+	gitIn($dir, 'checkout', '-q', 'main');
+	commitAll($dir);
+	gitIn($dir, 'checkout', '-q', 'work');
+	gitIn($dir, 'merge', '-q', 'main');
+	file_put_contents($dir . '/migrations/structures/0002.sql', "SELECT 2;\n");
+	commitAll($dir);
+	[$code, $output] = runGuard($dir);
+
+	Assert::same(0, $code, $output);
+});
+
+
+test('an added file the runner does not execute is never misplaced', function (): void {
+	$dir = guardRepository();
+	file_put_contents($dir . '/migrations/README.md', "Notes\n");
+	file_put_contents($dir . '/migrations/structures/0000-notes.md', "Notes\n");
+	commitAll($dir);
+	[$code, $output] = runGuard($dir);
+
+	Assert::same(0, $code, $output);
+});
+
+
+test('a PHP migration in the base counts for the order like an SQL one', function (): void {
+	$dir = guardRepository();
+	gitIn($dir, 'checkout', '-q', 'main');
+	file_put_contents($dir . '/migrations/structures/0003.php', "<?php\n");
+	commitAll($dir);
+	gitIn($dir, 'checkout', '-q', 'work');
+	gitIn($dir, 'merge', '-q', 'main');
+	file_put_contents($dir . '/migrations/structures/0002.sql', "SELECT 2;\n");
+	commitAll($dir);
+	[$code, $output] = runGuard($dir);
+
+	Assert::same(1, $code, $output);
+	Assert::contains('migrations/structures/0002.sql', $output);
+});
+
+
+test('--order-base after the base is parsed too', function (): void {
+	[$dir, $before] = mergedMainAfterPush();
+	$result = execIn($dir, [GUARD, $before, '--order-base', 'main']);
+	Helpers::purge($dir);
+	rmdir($dir);
+
+	Assert::same(0, $result[0], $result[1]);
+});
+
+
+test('--order-base without a value, an unknown option and a second base fail with code 2', function (): void {
+	$dir = guardRepository();
+	$runs = [
+		'missing value' => [GUARD, '--order-base'],
+		'missing value after the base' => [GUARD, 'main', '--order-base'],
+		'unknown option' => [GUARD, '--order', 'main'],
+		'second base' => [GUARD, 'main', 'main'],
+	];
+	foreach ($runs as $label => $command) {
+		[$code, $output] = execIn($dir, $command);
+		Assert::same(2, $code, $label . ': ' . $output);
+	}
+	Helpers::purge($dir);
+	rmdir($dir);
+});
+
+
 /**
  * Runs the pre-push hook's guard function in $dir (a repository without any remote).
  *

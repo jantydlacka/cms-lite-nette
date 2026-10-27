@@ -136,9 +136,20 @@ test('the synthetic schema satisfies every rule', function (): void {
 
 test('a table outside InnoDB or utf8mb4 is reported', function (): void {
 	Assert::same(
-		['item: engine MyISAM, expected InnoDB', 'item: collation latin1_swedish_ci, expected utf8mb4'],
+		['item: engine MyISAM, expected InnoDB', 'item: collation latin1_swedish_ci, expected utf8mb4_unicode_ci'],
 		SchemaRules::innoDbUtf8mb4(schema(engine: 'MyISAM', collation: 'latin1_swedish_ci')),
 	);
+});
+
+
+test('a utf8mb4 table with another collation than the migrations state is reported', function (): void {
+	foreach (['utf8mb4_general_ci', 'utf8mb4_0900_ai_ci', 'utf8mb4_bin'] as $collation) {
+		Assert::same(
+			['item: collation ' . $collation . ', expected utf8mb4_unicode_ci'],
+			SchemaRules::innoDbUtf8mb4(schema(collation: $collation)),
+			$collation,
+		);
+	}
 });
 
 
