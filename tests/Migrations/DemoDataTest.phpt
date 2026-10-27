@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Bootstrap;
 use Nette\Database\Connection;
+use Nette\Security\Passwords;
 use Tester\Assert;
 use Tests\Support\TestDatabase;
 use function Tests\container;
@@ -58,6 +59,27 @@ test('the dummy-data group creates the demo pages', function (): void {
 		assert(is_string($row->content) && is_string($row->title) && is_string($row->slug));
 		$first = trim(explode("\n", ltrim($row->content), 2)[0]);
 		Assert::notSame($row->title, trim(ltrim($first, "#")), $row->slug);
+	}
+});
+
+
+test('the dummy-data group creates the public demo accounts', function (): void {
+	$container = container();
+	TestDatabase::loadDummyData($container);
+	$connection = $container->getByType(Connection::class);
+	$passwords = new Passwords();
+
+	$accounts = [
+		'admin@example.com' => ['Demo Admin', 'admin', 'demo-admin-password'],
+		'editor@example.com' => ['Demo Editor', 'editor', 'demo-editor-password'],
+	];
+	Assert::same(2, $connection->fetchField('SELECT COUNT(*) FROM `user`'));
+	foreach ($accounts as $email => [$name, $role, $password]) {
+		$row = $connection->fetch('SELECT * FROM `user` WHERE email = ?', $email);
+		assert($row !== null && is_string($row->password_hash));
+		Assert::same([$name, $role, 1], [$row->name, $row->role, $row->active], $email);
+		Assert::true($passwords->verify($password, $row->password_hash), $email);
+		Assert::false($passwords->verify('wrong-password-123', $row->password_hash), $email);
 	}
 });
 

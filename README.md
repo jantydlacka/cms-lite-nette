@@ -5,7 +5,7 @@
 
 A small, well-structured CMS built on [Nette](https://nette.org): pages, news, images and a contact form. It is the first of a planned family, `cms-lite-<framework>`: every implementation follows the same specification in [`spec/`](spec/) and is checked by the same browser-level end-to-end suite in `e2e/`.
 
-Status: phases 1 (skeleton) and 2 (pages) are done - application bootstrap, Docker setup, migrations, translator, clock, light/dark theme, quality gate and CI configuration; public pages from the database with translations, flat URLs, menu, breadcrumbs, 301 redirects from old paths and safely rendered Markdown. There is no administration yet: pages are written by the demo data and the tests. Administration, news, images and the contact form come in later phases. The CI workflow is configured but has not run yet, so there are no published runs, and the coverage badge shows as broken until the first CI run on `main` publishes it.
+Status: phases 1 (skeleton), 2 (pages) and 3a (sign-in) are done - application bootstrap, Docker setup, migrations, translator, clock, light/dark theme, quality gate and CI configuration; public pages from the database with translations, flat URLs, menu, breadcrumbs, 301 redirects from old paths and safely rendered Markdown. Sign-in, roles and an administration skeleton exist (phase 3a); there is no page administration yet: pages are written by the demo data and the tests. Page administration, news, images and the contact form come in later phases. The CI workflow is configured but has not run yet, so there are no published runs, and the coverage badge shows as broken until the first CI run on `main` publishes it.
 
 ## Quick start
 
@@ -26,7 +26,9 @@ Migration files are ordered by file name across all groups (`structures`, `basic
 
 Released migrations are never edited; a fix is always a new migration.
 
-After upgrading from a build in which a released migration was edited locally, run `migrations:reset` on the development database (it drops all data); `migrations:continue` refuses a changed migration. Enabling the demo data on a database migrated without it also needs `migrations:reset`, because the demo files sort before newer structure migrations.
+After pulling a new version, run `docker compose exec app bin/console migrations:continue` to apply new migrations.
+
+After upgrading from a build in which a released migration was edited locally, run `migrations:reset` on the development database (it drops all data); `migrations:continue` refuses a changed migration. Enabling the demo data on a database migrated without it also needs `migrations:reset`: migrations are ordered globally by file name, so demo files that sort before already executed ones are refused.
 
 Then open <http://localhost:8080>.
 
@@ -92,6 +94,17 @@ Set `E2E_BASE_URL` to your `CMS_HTTP_PORT`. Against a debug-mode stack (`NETTE_D
 
 The pre-push hook and CI also run `bin/check-migrations-immutable [base]`, which fails when a migration that exists in the base branch was modified, deleted or renamed. The hook compares against `origin/main`; without it, against the merge base with the local `main` branch. It prints a warning and skips the check when neither exists or when `main` itself is checked out.
 
+## Demo accounts
+
+When demo data is enabled (`CMS_DEMO_DATA=1`, or unset in debug mode), two accounts exist. Their passwords are public:
+
+| E-mail | Password | Role |
+| --- | --- | --- |
+| `admin@example.com` | `demo-admin-password` | admin |
+| `editor@example.com` | `demo-editor-password` | editor |
+
+**Demo data must never run on a live site.** While it is enabled, the administration shows a warning banner. Sign in at <http://localhost:8080/admin>.
+
 ## First administrator
 
 Users are created from the command line (there is no administration UI for it yet). Interactively, the password is asked twice and not echoed:
@@ -106,9 +119,22 @@ For scripts, pass the password on standard input (first line; only the line endi
 printf '%s\n' "$PASSWORD" | docker compose exec -T app bin/console user:create admin@example.com "Jane Admin" --password-stdin
 ```
 
-`--role=editor` creates an editor; the default is `admin`. Passwords have at least 12 characters and at most 72 bytes, and no leading or trailing whitespace.
+`--role=editor` creates an editor; the default is `admin`. Passwords have at least 12 characters and at most 72 bytes, and no leading or trailing whitespace. The e-mail is trimmed and lower-cased.
+
+Failed sign-ins are rate limited per e-mail and IP address and per IP address alone (limits in `cms: login:`); a blocked client cannot sign in even with the right password. Sessions end when the browser closes or after 3 hours of inactivity.
+
+### Cookies
+
+The public site starts no session. The only technical cookie it may set is `_nss`, Nette's CSRF fallback for browsers that do not send `Sec-Fetch-Site`. A session cookie exists only in the administration.
 
 ## Deployment note
+
+Behind a reverse proxy, set Nette's trusted proxies, otherwise the rate limit sees the proxy's address instead of the client's and one client can block everyone:
+
+```neon
+http:
+	proxy: [192.0.2.10]  # address or CIDR range of your proxy
+```
 
 Asset URLs and redirect `Location` headers are absolute URLs built from the request `Host`, so set `ServerName` (or trusted proxies) at deployment. Behind a TLS-terminating reverse proxy, configure trusted proxies and HTTPS detection in the application; otherwise the browser receives `http://` asset URLs on an HTTPS page (mixed content).
 

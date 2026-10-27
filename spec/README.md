@@ -9,3 +9,14 @@ Contract shared by every `cms-lite-<framework>` implementation. An implementatio
 The end-to-end suite lives in `e2e/` and runs against any implementation in production mode with the demo data loaded: `E2E_BASE_URL=<url> npx playwright test`.
 
 `E2E_IGNORE_CONSOLE_PATTERN` (optional, a JavaScript regular expression) excludes matching browser console errors from the "nothing throws" checks. It exists for an implementation's development tooling, such as a debug toolbar injected into pages in development mode; errors of the page itself are never to be ignored.
+
+## Test sign-in
+
+With the demo data loaded, the administration accepts two public accounts (sign-in at `/admin/sign-in`):
+
+| E-mail | Password | Role |
+| --- | --- | --- |
+| `admin@example.com` | `demo-admin-password` | admin |
+| `editor@example.com` | `demo-editor-password` | editor |
+
+They exist only in the demo data and must never be present on a live site.
