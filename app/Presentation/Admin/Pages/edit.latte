@@ -42,6 +42,7 @@
 			<button n:name="preview" class="secondary" data-testid="page-preview">{_admin.pages.preview}</button>
 		</div>
 	</form>
+	<p class="page-delete-link"><a n:href="delete $page->id" data-testid="page-delete">{_admin.pages.delete}</a></p>
 
 	<section n:if="$preview !== null" class="page-preview" aria-labelledby="page-preview-heading">
 		<h3 id="page-preview-heading">{_admin.pages.previewTitle}</h3>

@@ -37,6 +37,12 @@ Elements the end-to-end tests locate by `data-testid`.
 | `page-properties-save` | Save button of the properties form. |
 | `page-homepage-form` | POST form with `page-set-homepage`; absent on the homepage. |
 | `page-set-homepage` | Button `admin.pages.setHomepage`. |
+| `page-delete` | Link `admin.pages.delete` in the detail. |
+| `page-delete-form` | POST form of the confirmation screen; absent when the page cannot be deleted. |
+| `page-delete-question` | Confirmation question with the page title. |
+| `page-delete-confirm` | Submit button of `page-delete-form` ([Smazat]). |
+| `page-delete-reason` | Why the page cannot be deleted (homepage, subpages); replaces the question and the form. |
+| `page-delete-back` | Link `admin.pages.deleteBack` to the detail. |
 | `page-homepage-missing` | On the homepage: `admin.pages.homepageMissing` with the enabled languages without a published translation; absent when there are none. |
 | `page-tab` | Link to the translation tab of one enabled language, `aria-current="page"` on the current one; only with more than one language. |
 | `page-translation-heading` | Heading of the translation tab: the title, or `admin.pages.addTranslation` when the translation does not exist yet. |

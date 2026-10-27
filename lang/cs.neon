@@ -66,3 +66,8 @@ admin.pages.slug.format: 'Adresa smí obsahovat jen malá písmena bez diakritik
 admin.pages.slug.reserved: Tento slug je vyhrazený systémem.
 admin.pages.slug.taken: Tuto adresu už používá jiná stránka.
 admin.pages.slug.long: Adresa může mít nejvýš 100 znaků.
+admin.pages.delete: Smazat stránku
+admin.pages.deleteConfirm: 'Opravdu smazat stránku „%title%“? Smažou se všechny jazyky a staré adresy přestanou přesměrovávat.'
+admin.pages.deleteBack: Zpět
+admin.pages.deleted: Stránka byla smazána.
+admin.pages.hasChildren: Stránku s podstránkami nejde smazat.

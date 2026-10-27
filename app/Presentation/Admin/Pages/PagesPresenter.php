@@ -11,6 +11,7 @@ use App\Model\Page\HomepageProtectedException;
 use App\Model\Page\InvalidParentException;
 use App\Model\Page\InvalidSlugException;
 use App\Model\Page\Page;
+use App\Model\Page\PageHasChildrenException;
 use App\Model\Page\PageRepository;
 use App\Model\Page\PageService;
 use App\Model\Page\PageTreeItem;
@@ -129,6 +130,21 @@ final class PagesPresenter extends AdminPresenter
 	}
 
 
+	public function actionDelete(int $id): void
+	{
+		$this->page = $this->pages->getPage($id) ?? $this->error();
+	}
+
+
+	public function renderDelete(): void
+	{
+		$this->template->page = $this->page;
+		$this->template->title = $this->pages->findTranslation($this->page->id, $this->cmsConfig->defaultLocale)->title
+			?? $this->translator->translate('admin.pages.missing');
+		$this->template->reason = $this->deleteRefusal();
+	}
+
+
 	/**
 	 * One ↑/↓ form per page; the component name carries the page id, a malformed one is 404.
 	 *
@@ -192,6 +208,17 @@ final class PagesPresenter extends AdminPresenter
 		$form = $this->formFactory->create();
 		$form->addSubmit('set', 'admin.pages.setHomepage');
 		$form->onSuccess[] = $this->homepageSucceeded(...);
+
+		return $form;
+	}
+
+
+	protected function createComponentDelete(): Form
+	{
+		$this->requireAction('delete');
+		$form = $this->formFactory->create();
+		$form->addSubmit('delete', 'admin.pages.delete');
+		$form->onSuccess[] = $this->deleteSucceeded(...);
 
 		return $form;
 	}
@@ -324,6 +351,34 @@ final class PagesPresenter extends AdminPresenter
 
 		$this->flashMessage('admin.pages.homepageSet');
 		$this->redirect('this');
+	}
+
+
+	private function deleteSucceeded(): void
+	{
+		try {
+			$this->pageService->deletePage($this->page->id);
+		} catch (HomepageProtectedException | PageHasChildrenException $e) {
+			// A forged POST, or the page changed after the screen was rendered; the screen shows the reason again.
+			$this->flashMessage($e instanceof HomepageProtectedException ? 'admin.pages.homepageProtected' : 'admin.pages.hasChildren');
+			$this->redirect('this');
+		} catch (InvalidArgumentException) {
+			$this->error();
+		}
+
+		$this->flashMessage('admin.pages.deleted');
+		$this->redirect('default');
+	}
+
+
+	/** Message key of the reason this page cannot be deleted, null when it can. */
+	private function deleteRefusal(): ?string
+	{
+		if ($this->homepage->isHomepage($this->page->id)) {
+			return 'admin.pages.homepageProtected';
+		}
+
+		return $this->pages->findChildren($this->page->id) === [] ? null : 'admin.pages.hasChildren';
 	}
 
 

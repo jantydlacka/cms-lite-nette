@@ -66,3 +66,8 @@ admin.pages.slug.format: 'The address may contain only lowercase letters, digits
 admin.pages.slug.reserved: This address is reserved by the system.
 admin.pages.slug.taken: Another page already uses this address.
 admin.pages.slug.long: The address may have at most 100 characters.
+admin.pages.delete: Delete page
+admin.pages.deleteConfirm: 'Really delete the page “%title%”? All languages are deleted and old addresses stop redirecting.'
+admin.pages.deleteBack: Back
+admin.pages.deleted: The page has been deleted.
+admin.pages.hasChildren: A page with subpages cannot be deleted.

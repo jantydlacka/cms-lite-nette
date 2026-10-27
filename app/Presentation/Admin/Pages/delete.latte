@@ -1,0 +1,17 @@
+{block title}{_admin.pages.delete}{/block}
+
+{block content}
+<div class="pages-heading">
+	<h1 data-testid="admin-title">{include title}</h1>
+	<a n:href="default">{_admin.pages.title}</a>
+</div>
+
+{if $reason !== null}
+	<p class="page-delete-reason" role="status" data-testid="page-delete-reason">{_$reason}</p>
+{else}
+	<p data-testid="page-delete-question">{_admin.pages.deleteConfirm, [title: $title]}</p>
+	<form n:name="delete" data-testid="page-delete-form">
+		<button n:name="delete" data-testid="page-delete-confirm">{_admin.pages.delete}</button>
+	</form>
+{/if}
+<p><a n:href="edit $page->id" data-testid="page-delete-back">{_admin.pages.deleteBack}</a></p>

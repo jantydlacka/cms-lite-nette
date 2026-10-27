@@ -71,4 +71,9 @@ Translation keys of the public UI and the administration with their Czech (`lang
 | `admin.pages.slug.reserved` | Tento slug je vyhrazený systémem. | This address is reserved by the system. |
 | `admin.pages.slug.taken` | Tuto adresu už používá jiná stránka. | Another page already uses this address. |
 | `admin.pages.slug.long` | Adresa může mít nejvýš 100 znaků. | The address may have at most 100 characters. |
+| `admin.pages.delete` | Smazat stránku | Delete page |
+| `admin.pages.deleteConfirm` | Opravdu smazat stránku „%title%“? Smažou se všechny jazyky a staré adresy přestanou přesměrovávat. | Really delete the page “%title%”? All languages are deleted and old addresses stop redirecting. |
+| `admin.pages.deleteBack` | Zpět | Back |
+| `admin.pages.deleted` | Stránka byla smazána. | The page has been deleted. |
+| `admin.pages.hasChildren` | Stránku s podstránkami nejde smazat. | A page with subpages cannot be deleted. |
 | `error.403.title` | Na tuto stránku nemáte oprávnění. | You do not have permission to view this page. |
