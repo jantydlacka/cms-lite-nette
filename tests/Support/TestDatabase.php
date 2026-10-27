@@ -14,12 +14,17 @@ use Nextras\Migrations\Engine\Runner;
 use Nextras\Migrations\Entities\Group;
 use Nextras\Migrations\Extensions\SqlHandler;
 use Nextras\Migrations\LogicException as MigrationsLogicException;
+use Throwable;
 
 /** One MySQL database per Nette Tester thread, so parallel test files never share data. */
 final class TestDatabase
 {
 	private const MIGRATIONS_TABLE = 'migrations';
 	private const MIGRATIONS_DIR = __DIR__ . '/../../migrations';
+	private const DEMO_TEMPLATE_SUFFIX = '_demo';
+
+	/** @var array<string, array{structure: string, tables: array<string, ?int>}> thread database => its demo template (see resetDummyData) */
+	private static array $demoTemplates = [];
 
 
 	public static function name(?string $thread): string
@@ -146,6 +151,116 @@ final class TestDatabase
 			self::group('basic-data', self::MIGRATIONS_DIR . '/basic-data', ['structures']),
 			self::group('dummy-data', self::MIGRATIONS_DIR . '/dummy-data', ['basic-data']),
 		]);
+	}
+
+
+	/**
+	 * Leaves the database exactly as loadDummyData() does, but runs the migrations only once per process.
+	 *
+	 * The first call loads the demo through the migrations and copies every table into a template database
+	 * (`<thread db>_demo`); later calls empty the tables, copy the rows back and reset AUTO_INCREMENT counters.
+	 * The template is rebuilt by every new process, so it never outlives a change of the migration files,
+	 * and whenever the columns or indexes of the database no longer match it or a restore failed.
+	 */
+	public static function resetDummyData(Container $container): void
+	{
+		$connection = $container->getByType(Connection::class);
+		$database = $connection->fetchField('SELECT DATABASE()');
+		self::assertTestDatabase($database);
+		assert(is_string($database));
+
+		$template = self::$demoTemplates[$database] ?? null;
+		$structure = self::structure($connection);
+		if ($template === null || $template['structure'] !== $structure) {
+			self::loadDummyData($container);
+			self::$demoTemplates[$database] = ['structure' => self::structure($connection), 'tables' => self::createDemoTemplate($connection, $database)];
+
+			return;
+		}
+
+		$tables = $template['tables'];
+		$current = self::tables($connection);
+		$connection->query('SET SESSION foreign_key_checks = 0');
+		try {
+			// One commit instead of one per statement; START TRANSACTION also ends whatever a test left open.
+			$connection->query('START TRANSACTION');
+			try {
+				foreach (array_keys($tables) as $table) {
+					$connection->query('DELETE FROM ?name', $table);
+					$connection->query('INSERT INTO ?name SELECT * FROM ?name', $table, $database . self::DEMO_TEMPLATE_SUFFIX . '.' . $table);
+				}
+				$connection->query('COMMIT');
+			} catch (Throwable $e) {
+				$connection->query('ROLLBACK');
+				unset(self::$demoTemplates[$database]);
+				throw $e;
+			}
+
+			// DELETE and the copy leave the counter where it was; ALTER (DDL, slow) only where it moved.
+			foreach ($tables as $table => $next) {
+				if ($next !== null && $current[$table] !== $next) {
+					$connection->query('ALTER TABLE ?name AUTO_INCREMENT = ?', $table, $next);
+				}
+			}
+		} finally {
+			$connection->query('SET SESSION foreign_key_checks = @@global.foreign_key_checks, sql_mode = DEFAULT, time_zone = DEFAULT');
+		}
+	}
+
+
+	/** @return array<string, ?int> table => next AUTO_INCREMENT of the freshly loaded database */
+	private static function createDemoTemplate(Connection $connection, string $database): array
+	{
+		$template = $database . self::DEMO_TEMPLATE_SUFFIX;
+		self::assertTestDatabase($template);
+		$tables = self::tables($connection);
+
+		$connection->query('DROP DATABASE IF EXISTS ?name', $template);
+		$connection->query('CREATE DATABASE ?name CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci', $template);
+		foreach (array_keys($tables) as $table) {
+			$connection->query('CREATE TABLE ?name LIKE ?name', $template . '.' . $table, $table);
+			$connection->query('INSERT INTO ?name SELECT * FROM ?name', $template . '.' . $table, $table);
+		}
+
+		return $tables;
+	}
+
+
+	/** Fingerprint of the columns and indexes of the current database. */
+	private static function structure(Connection $connection): string
+	{
+		$columns = $connection->fetchAll(
+			'SELECT TABLE_NAME, COLUMN_NAME, ORDINAL_POSITION, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, EXTRA, COLLATION_NAME
+			FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME, ORDINAL_POSITION',
+		);
+		$indexes = $connection->fetchAll(
+			'SELECT TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX, COLUMN_NAME, NON_UNIQUE
+			FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX',
+		);
+
+		return md5(serialize([array_map(static fn ($row): array => (array) $row, $columns), array_map(static fn ($row): array => (array) $row, $indexes)]));
+	}
+
+
+	/** @return array<string, ?int> table => next AUTO_INCREMENT (null without one), sorted by name */
+	private static function tables(Connection $connection): array
+	{
+		// MySQL 8 caches information_schema statistics (a day by default), AUTO_INCREMENT included.
+		$connection->query('SET SESSION information_schema_stats_expiry = 0');
+		$tables = [];
+		// A table whose counter was never used reports NULL, like a table without one; the column tells them apart.
+		$rows = $connection->fetchAll(
+			'SELECT t.TABLE_NAME AS name, t.AUTO_INCREMENT AS next, EXISTS(SELECT 1 FROM information_schema.COLUMNS c WHERE c.TABLE_SCHEMA = t.TABLE_SCHEMA AND c.TABLE_NAME = t.TABLE_NAME AND c.EXTRA LIKE ?) AS counted
+			FROM information_schema.TABLES t WHERE t.TABLE_SCHEMA = DATABASE() AND t.TABLE_TYPE = ? ORDER BY t.TABLE_NAME',
+			'%auto_increment%',
+			'BASE TABLE',
+		);
+		foreach ($rows as $row) {
+			assert(is_string($row->name));
+			$tables[$row->name] = (bool) $row->counted ? (is_numeric($row->next) ? (int) $row->next : 1) : null;
+		}
+
+		return $tables;
 	}
 
 

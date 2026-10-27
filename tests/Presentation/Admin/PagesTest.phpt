@@ -21,7 +21,7 @@ const DEMO_ORDER = ['Úvod', 'O nás', 'Tým', 'Kontakt', 'Rozpracováno'];
 // Demo pages and two fresh accounts; every mutating test starts from here.
 function resetDemo(HttpApplication $app): void
 {
-	TestDatabase::loadDummyData($app->container);
+	TestDatabase::resetDummyData($app->container);
 	AdminBrowser::seed($app->container, EDITOR, 'Eva Editorová', Role::Editor);
 	AdminBrowser::seed($app->container, ADMIN, 'Adam Admin', Role::Admin);
 }

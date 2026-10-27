@@ -25,7 +25,7 @@ const ADMIN = 'edit-admin@example.com';
 // Demo pages and two fresh accounts; every mutating test starts from here.
 function resetDemo(HttpApplication $app): void
 {
-	TestDatabase::loadDummyData($app->container);
+	TestDatabase::resetDummyData($app->container);
 	AdminBrowser::seed($app->container, EDITOR, 'Eva Editorová', Role::Editor);
 	AdminBrowser::seed($app->container, ADMIN, 'Adam Admin', Role::Admin);
 }
@@ -910,7 +910,7 @@ test('without sign-in the detail and the new page redirect to sign-in', function
 
 test('with one language there are no language tabs', function (): void {
 	$app = HttpApplication::boot();
-	TestDatabase::loadDummyData($app->container);
+	TestDatabase::resetDummyData($app->container);
 	AdminBrowser::seed($app->container, EDITOR, 'Eva Editorová', Role::Editor);
 	signedIn($app);
 	$result = $app->get('/admin/pages/' . pageId($app, 'O nás'));
