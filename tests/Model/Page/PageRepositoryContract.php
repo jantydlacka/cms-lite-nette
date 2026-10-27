@@ -70,6 +70,22 @@ final class PageRepositoryContract
 			Assert::same('Novy', $repo->findPublishedByPath('cs', 'novy')?->title);
 		});
 
+		test('rows carry a version counter: pages start at 1, a translation goes 1, 2 and ignores the argument', function () use ($repo, $reset): void {
+			$reset();
+			$id = $repo->createPage(null, 0, true);
+			Assert::same(1, $repo->getPage($id)?->version);
+			Assert::null($repo->findTranslation($id, 'cs'));
+
+			$repo->saveTranslation(self::translation($id, 'cs', 'a', 'A', PublicationStatus::Draft));
+			Assert::same(1, $repo->findTranslation($id, 'cs')?->version);
+			Assert::same(1, $repo->lockTranslation($id, 'cs')?->version);
+			$repo->saveTranslation(self::translation($id, 'cs', 'a', 'A2', PublicationStatus::Draft));
+			Assert::same(2, $repo->findTranslation($id, 'cs')?->version);
+			$repo->saveTranslation(self::translation($id, 'en', 'a', 'A', PublicationStatus::Draft));
+			Assert::same(1, $repo->findTranslation($id, 'en')?->version);
+			Assert::same(1, $repo->getPage($id)?->version);
+		});
+
 		test('menu is ordered by position then id and nests children', function () use ($repo, $reset): void {
 			$reset();
 			$b = $repo->createPage(null, 2, true);
@@ -203,6 +219,6 @@ final class PageRepositoryContract
 	{
 		$slug = substr($path, (int) strrpos('/' . $path, '/'));
 
-		return new PageTranslation($pageId, $locale, $title, $slug, $path, 'content', 'description', $status, new DateTimeImmutable('2000-01-01'));
+		return new PageTranslation($pageId, $locale, $title, $slug, $path, 'content', 'description', $status, new DateTimeImmutable('2000-01-01'), 99);
 	}
 }

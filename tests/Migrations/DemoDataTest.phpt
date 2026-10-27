@@ -31,8 +31,10 @@ test('the dummy-data group creates the demo pages', function (): void {
 	$homepage = $connection->fetchField('SELECT value FROM setting WHERE `key` = ? AND locale = ?', 'homepage', '');
 	Assert::same('uvod', $connection->fetchField('SELECT slug FROM page_translation WHERE locale = ? AND page_id = ?', 'cs', $homepage));
 
-	Assert::same(['o-nas' => 'about-us'], $connection->fetchPairs('SELECT cs.slug AS cs_slug, en.slug AS en_slug FROM page_translation en JOIN page_translation cs ON cs.page_id = en.page_id AND cs.locale = ? WHERE en.locale = ?', 'cs', 'en'));
+	Assert::same(['o-nas' => 'about-us', 'uvod' => 'welcome'], $connection->fetchPairs('SELECT cs.slug AS cs_slug, en.slug AS en_slug FROM page_translation en JOIN page_translation cs ON cs.page_id = en.page_id AND cs.locale = ? WHERE en.locale = ? ORDER BY en.slug', 'cs', 'en'));
 	Assert::same('published', $connection->fetchField('SELECT status FROM page_translation WHERE locale = ? AND slug = ?', 'en', 'about-us'));
+	Assert::same(['Welcome', 'published'], [$connection->fetchField('SELECT title FROM page_translation WHERE locale = ? AND slug = ?', 'en', 'welcome'), $connection->fetchField('SELECT status FROM page_translation WHERE locale = ? AND slug = ?', 'en', 'welcome')]);
+	Assert::same((int) (is_scalar($homepage) ? $homepage : 0), $connection->fetchField('SELECT page_id FROM page_translation WHERE locale = ? AND slug = ?', 'en', 'welcome'));
 	Assert::same(['rozpracovano' => 'draft'], $connection->fetchPairs('SELECT slug, status FROM page_translation WHERE status = ?', 'draft'));
 
 	$parent = $connection->fetchField('SELECT p.parent_id FROM page p JOIN page_translation t ON t.page_id = p.id AND t.locale = ? WHERE t.slug = ?', 'cs', 'tym');

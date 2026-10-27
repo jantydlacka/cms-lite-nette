@@ -84,6 +84,7 @@ final class PageService
 				$command->metaDescription,
 				$command->status,
 				$this->clock->now(),
+				1,
 			));
 			$this->recomputeDescendantPaths($command->pageId, $command->locale, [...$this->ancestorSlugs($this->pageOrFail($command->pageId), $command->locale), $command->slug], []);
 
@@ -135,6 +136,7 @@ final class PageService
 						$translation->metaDescription,
 						$translation->status,
 						$translation->updatedAt,
+						1,
 					));
 				}
 				$slugs[] = $translation->slug;

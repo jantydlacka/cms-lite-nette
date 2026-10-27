@@ -275,7 +275,7 @@ test('a descendant path that collides rolls the whole save back', function () us
 	};
 	$service(null, $tree)->saveTranslation($cmd($parent, 'firma'));
 	$service(null, $tree)->saveTranslation($cmd($child, 'tym'));
-	$pages->saveTranslation(new PageTranslation($squatter, 'cs', 'S', 'tym', 'spolecnost/tym', '', '', PublicationStatus::Draft, new DateTimeImmutable()));
+	$pages->saveTranslation(new PageTranslation($squatter, 'cs', 'S', 'tym', 'spolecnost/tym', '', '', PublicationStatus::Draft, new DateTimeImmutable(), 1));
 	$before = $counts();
 
 	$e = Assert::exception(fn () => $service(null, $tree)->saveTranslation($cmd($parent, 'spolecnost')), InvalidSlugException::class);

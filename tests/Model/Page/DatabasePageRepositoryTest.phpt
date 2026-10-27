@@ -31,7 +31,7 @@ test('the container autowires the database adapter for PageRepository', function
 	Assert::type(DatabasePageRepository::class, $container->getByType(PageRepository::class));
 });
 
-$translation = static fn (int $pageId, string $path): PageTranslation => new PageTranslation($pageId, 'cs', 'T', $path, $path, '', '', PublicationStatus::Draft, new DateTimeImmutable());
+$translation = static fn (int $pageId, string $path): PageTranslation => new PageTranslation($pageId, 'cs', 'T', $path, $path, '', '', PublicationStatus::Draft, new DateTimeImmutable(), 1);
 
 test('a clash on the (locale, path) key becomes InvalidSlugException taken and writes nothing', function () use ($repo, $reset, $explorer, $translation): void {
 	$reset();

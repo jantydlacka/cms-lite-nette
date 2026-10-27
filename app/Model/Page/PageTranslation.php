@@ -19,6 +19,7 @@ final readonly class PageTranslation
 		public string $metaDescription,
 		public PublicationStatus $status,
 		public DateTimeImmutable $updatedAt,
+		public int $version,
 	) {
 	}
 }

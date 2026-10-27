@@ -30,6 +30,7 @@ $translate = static function (int $id, string $locale, PublicationStatus $status
 		'',
 		$status,
 		new DateTimeImmutable('2026-01-01 00:00:00', new DateTimeZone('UTC')),
+		1,
 	));
 };
 

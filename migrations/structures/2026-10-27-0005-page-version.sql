@@ -1,0 +1,7 @@
+ALTER TABLE `page` ADD `version` INT UNSIGNED NOT NULL DEFAULT 1;
+ALTER TABLE `page_translation` ADD `version` INT UNSIGNED NOT NULL DEFAULT 1;
+
+CREATE TABLE `page_tree_lock` (
+	`id` TINYINT UNSIGNED NOT NULL,
+	PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

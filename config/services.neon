@@ -6,6 +6,7 @@ services:
 	- App\Core\SystemClock
 	- App\Core\Database\ExplorerTransaction
 	pageRepository: App\Model\Page\Database\DatabasePageRepository # named so a test can replace it
+	- App\Model\Page\Database\DatabasePageTreeLock
 	- App\Model\Setting\Database\DatabaseSettingRepository
 	pathRedirectRepository: App\Model\Redirect\Database\DatabasePathRedirectRepository # named so a test can replace it
 	- App\Model\Page\FlatPagePathStrategy

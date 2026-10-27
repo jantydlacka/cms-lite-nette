@@ -11,6 +11,7 @@ final readonly class Page
 		public ?int $parentId,
 		public int $position,
 		public bool $inMenu,
+		public int $version,
 	) {
 	}
 }

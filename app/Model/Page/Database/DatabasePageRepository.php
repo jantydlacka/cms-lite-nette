@@ -14,6 +14,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Nette\Database\Explorer;
 use Nette\Database\Row;
+use Nette\Database\SqlLiteral;
 use Nette\Database\Table\ActiveRow;
 use Nette\Database\Table\Selection;
 use Nette\Database\UniqueConstraintViolationException;
@@ -164,6 +165,7 @@ final class DatabasePageRepository implements PageRepository
 			'status' => $translation->status->value,
 			'updated_at' => $now,
 		];
+		// The version argument is ignored: the counter is owned by the store.
 		$existing = $this->explorer->table('page_translation')
 			->where('page_id', $translation->pageId)
 			->where('locale', $translation->locale);
@@ -171,7 +173,7 @@ final class DatabasePageRepository implements PageRepository
 		// Not ON DUPLICATE KEY UPDATE: a clash on the (locale, path) unique key would overwrite another page's row.
 		try {
 			if ($existing->count('*') > 0) {
-				$existing->update($values);
+				$existing->update($values + ['version' => new SqlLiteral('version + 1')]);
 			} else {
 				$this->explorer->table('page_translation')->insert($values + [
 					'page_id' => $translation->pageId,
@@ -221,6 +223,7 @@ final class DatabasePageRepository implements PageRepository
 			$row->parent_id === null ? null : self::int($row->parent_id),
 			self::int($row->position),
 			self::int($row->in_menu) === 1,
+			self::int($row->version),
 		);
 	}
 
@@ -237,6 +240,7 @@ final class DatabasePageRepository implements PageRepository
 			self::string($row->meta_description),
 			PublicationStatus::from(self::string($row->status)),
 			$this->readTime($row->updated_at_text),
+			self::int($row->version),
 		);
 	}
 
