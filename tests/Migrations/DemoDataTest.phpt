@@ -12,8 +12,12 @@ use function Tests\container;
 
 require __DIR__ . '/../bootstrap.php';
 
-test('the prepared test database has no pages', function (): void {
-	$connection = container()->getByType(Connection::class);
+// One container for the file: container() prepares the database on every call, and resetDummyData() runs the
+// migrations only on its first call.
+$container = container();
+
+test('the prepared test database has no pages', function () use ($container): void {
+	$connection = $container->getByType(Connection::class);
 
 	Assert::same(0, $connection->fetchField('SELECT COUNT(*) FROM page'));
 	Assert::same(0, $connection->fetchField('SELECT COUNT(*) FROM page_translation'));
@@ -21,9 +25,8 @@ test('the prepared test database has no pages', function (): void {
 });
 
 
-test('the dummy-data group creates the demo pages', function (): void {
-	$container = container();
-	TestDatabase::loadDummyData($container);
+test('the dummy-data group creates the demo pages', function () use ($container): void {
+	TestDatabase::resetDummyData($container);
 	$connection = $container->getByType(Connection::class);
 
 	Assert::same(5, $connection->fetchField('SELECT COUNT(*) FROM page'));
@@ -66,9 +69,8 @@ test('the dummy-data group creates the demo pages', function (): void {
 });
 
 
-test('the dummy-data group creates the public demo accounts', function (): void {
-	$container = container();
-	TestDatabase::loadDummyData($container);
+test('the dummy-data group creates the public demo accounts', function () use ($container): void {
+	TestDatabase::resetDummyData($container);
 	$connection = $container->getByType(Connection::class);
 	$passwords = new Passwords();
 
@@ -87,9 +89,8 @@ test('the dummy-data group creates the public demo accounts', function (): void 
 });
 
 
-test('the dummy-data group creates the demo news', function (): void {
-	$container = container();
-	TestDatabase::loadDummyData($container);
+test('the dummy-data group creates the demo news', function () use ($container): void {
+	TestDatabase::resetDummyData($container);
 	$connection = $container->getByType(Connection::class);
 	$repository = $container->getByType(NewsRepository::class);
 
@@ -141,8 +142,11 @@ function resetThroughConsole(array $extraEnv): array
 }
 
 
-test('migrations:reset loads demo pages only when CMS_DEMO_DATA is 1', function (): void {
-	$connection = container()->getByType(Connection::class);
+test('migrations:reset loads demo pages only when CMS_DEMO_DATA is 1', function () use ($container): void {
+	$connection = $container->getByType(Connection::class);
+	// The earlier tests left the demo data here; start empty so that the console has to load the pages.
+	TestDatabase::prepare($container);
+	Assert::same(0, $connection->fetchField('SELECT COUNT(*) FROM page'));
 
 	[$code, $output] = resetThroughConsole(['CMS_DEMO_DATA' => '1']);
 	Assert::same(0, $code, $output);

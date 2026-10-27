@@ -49,6 +49,17 @@ final class HttpApplication
 
 
 	/**
+	 * Another configuration over the same thread database, without preparing it again; the caller resets the data.
+	 *
+	 * @param list<string|array<string, mixed>> $configs NEON files or config arrays loaded after config/test.neon
+	 */
+	public function withConfigs(array $configs): self
+	{
+		return new self($configs, self::createContainer($configs));
+	}
+
+
+	/**
 	 * @param string $path absolute path with an optional query, e.g. '/o-nas?x=1'
 	 * @param array<string, ?string> $headers null removes a default header
 	 */

@@ -702,8 +702,8 @@ test('without sign-in the screens redirect to sign-in', function () use ($app): 
 });
 
 
-test('with one language there are no tabs', function (): void {
-	$app = HttpApplication::boot();
+test('with one language there are no tabs', function () use ($app): void {
+	$app = $app->withConfigs([]);
 	[$editor] = resetNews($app);
 	$id = createNews($app, $editor, 'Jednojazyčná');
 	signedIn($app);
