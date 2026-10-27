@@ -60,6 +60,9 @@ final class PagesPresenter extends AdminPresenter
 	/** The page of the detail; set in actionEdit(). */
 	private Page $page;
 
+	/** Name of the submitted form when the page was deleted before the save; only that form is rendered. */
+	private ?string $deletedForm = null;
+
 	/** Language of the translation tab. */
 	private string $lang;
 
@@ -85,7 +88,7 @@ final class PagesPresenter extends AdminPresenter
 		if (!in_array($this->lang, $this->cmsConfig->locales, true)) {
 			$this->error();
 		}
-		$this->page = $this->pages->getPage($id) ?? $this->error();
+		$this->page = $this->pages->getPage($id) ?? $this->deletedMeanwhile($id);
 
 		// Defaults apply only to a form that was not submitted, so a refused or restored save keeps what was sent.
 		$this['properties']->setDefaults([
@@ -127,6 +130,7 @@ final class PagesPresenter extends AdminPresenter
 		$this->template->isHomepage = $isHomepage;
 		$this->template->missingLocales = $isHomepage ? $this->homepage->missingLocales() : [];
 		$this->template->preview = $this->preview;
+		$this->template->deletedForm = $this->deletedForm;
 	}
 
 
@@ -507,6 +511,26 @@ final class PagesPresenter extends AdminPresenter
 		if ($this->getAction() !== $action) {
 			$this->error();
 		}
+	}
+
+
+	/**
+	 * A save of a page deleted after the form was rendered keeps the typed values with an error and writes nothing;
+	 * any other request is 404. The returned page only carries the id for rendering.
+	 */
+	private function deletedMeanwhile(int $id): Page
+	{
+		foreach (['properties', 'translation', 'homepage'] as $name) {
+			$form = $this->getComponent($name);
+			if ($form->isSubmitted() !== false) {
+				// An error before the signal skips validation and onSuccess, so nothing reaches the service.
+				$form->addError('admin.pages.deletedMeanwhile');
+				$this->deletedForm = $name;
+
+				return new Page($id, null, 0, false, 1);
+			}
+		}
+		$this->error();
 	}
 
 

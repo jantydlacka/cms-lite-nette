@@ -830,20 +830,45 @@ test('a properties version that is empty, zero or not a number is stale', functi
 });
 
 
-test('a page deleted between rendering and saving is 404 for every form', function () use ($app): void {
+test('a save of a page deleted meanwhile keeps the submitted values with a message and writes nothing; GET stays 404', function () use ($app): void {
 	resetDemo($app);
 	signedIn($app);
 	$contact = pageId($app, 'Kontakt');
+	$about = pageId($app, 'O nás');
 	$detail = $app->get("/admin/pages/$contact");
 	$submissions = [
-		formSubmit($detail, 'page-properties-form', 'page-properties-save'),
-		formSubmit($detail, 'page-translation-form', 'page-save'),
-		formSubmit($detail, 'page-homepage-form', 'page-set-homepage'),
+		'page-properties-form' => formSubmit($detail, 'page-properties-form', 'page-properties-save', ['parent' => (string) $about]),
+		'page-translation-form' => formSubmit($detail, 'page-translation-form', 'page-save', ['content' => 'Rozepsaný text', 'title' => 'Nový název']),
+		'page-homepage-form' => formSubmit($detail, 'page-homepage-form', 'page-set-homepage'),
 	];
-	$app->container->getByType(Explorer::class)->query('DELETE FROM page WHERE id = ?', $contact);
-	foreach ($submissions as [$action, $body]) {
-		Assert::same(404, $app->post($action, $body)->code, $action);
+	$explorer = $app->container->getByType(Explorer::class);
+	$explorer->query('DELETE FROM page WHERE id = ?', $contact);
+	$state = static fn (): array => [
+		$explorer->table('page')->count('*'),
+		$explorer->table('page_translation')->count('*'),
+		$explorer->table('path_redirect')->count('*'),
+		$app->container->getByType(SettingRepository::class)->get('homepage'),
+	];
+	$before = $state();
+
+	$message = 'Stránka mezitím byla smazána. Text zůstal ve formuláři – zkopírujte si ho.';
+	foreach ($submissions as $formTestId => [$action, $body]) {
+		$result = $app->post($action, $body);
+		Assert::same(200, $result->code, $formTestId);
+		Assert::same([$message], errors($result, $formTestId), $formTestId);
+		Assert::null($result->text('flash'), $formTestId);
+		Assert::same($before, $state(), $formTestId);
+		if ($formTestId === 'page-translation-form') {
+			Assert::same('Rozepsaný text', fieldValue($result, 'page-content-input'));
+			Assert::same('Nový název', fieldValue($result, 'page-title-input'));
+		}
+		if ($formTestId === 'page-properties-form') {
+			Assert::same((string) $about, selectedParent($result, 'page-properties-form'));
+		}
 	}
+
+	Assert::same(404, $app->get("/admin/pages/$contact")->code);
+	Assert::same(404, $app->post("/admin/pages/$contact", [])->code);
 });
 
 
