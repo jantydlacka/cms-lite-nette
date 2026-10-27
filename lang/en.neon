@@ -59,6 +59,7 @@ admin.pages.homepageSet: The homepage has been set.
 admin.pages.homepageNeedsPublished: The homepage needs a published translation in the default language.
 admin.pages.homepageProtected: The homepage cannot be deleted or hidden until another one is chosen.
 admin.pages.homepageMissing: 'The homepage has no published translation in: %locales%'
+admin.pages.menuHiddenByParent: Not shown in the menu because the parent page is not in the menu.
 admin.pages.invalidParent: A page cannot be moved under itself or its subpage.
 admin.pages.deletedMeanwhile: 'The page was deleted in the meantime. Your text is still in the form – copy it.'
 admin.pages.parentGone: 'The selected parent page no longer exists, choose another one.'

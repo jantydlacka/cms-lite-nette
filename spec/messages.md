@@ -64,6 +64,7 @@ Translation keys of the public UI and the administration with their Czech (`lang
 | `admin.pages.homepageNeedsPublished` | Úvodní stránka musí mít publikovaný překlad ve výchozím jazyce. | The homepage needs a published translation in the default language. |
 | `admin.pages.homepageProtected` | Úvodní stránku nejde smazat ani skrýt, dokud nevyberete jinou. | The homepage cannot be deleted or hidden until another one is chosen. |
 | `admin.pages.homepageMissing` | Úvodní stránka nemá publikovaný překlad v jazyce: %locales% | The homepage has no published translation in: %locales% |
+| `admin.pages.menuHiddenByParent` | V menu se nezobrazí, protože nadřazená stránka v menu není. | Not shown in the menu because the parent page is not in the menu. |
 | `admin.pages.invalidParent` | Stránku nejde přesunout pod sebe ani pod svou podstránku. | A page cannot be moved under itself or its subpage. |
 | `admin.pages.deletedMeanwhile` | Stránka mezitím byla smazána. Text zůstal ve formuláři – zkopírujte si ho. | The page was deleted in the meantime. Your text is still in the form – copy it. |
 | `admin.pages.parentGone` | Vybraná nadřazená stránka už neexistuje, vyberte jinou. | The selected parent page no longer exists, choose another one. |

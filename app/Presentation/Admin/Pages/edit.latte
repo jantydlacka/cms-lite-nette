@@ -14,7 +14,7 @@
 	<h2 id="page-properties-heading">{_admin.pages.properties}</h2>
 	<form n:if="$shows('properties')" n:name="properties" data-testid="page-properties-form">
 		{include formErrors, form: $form}
-		{include parentFields, form: $form}
+		{include parentFields, form: $form, menuHidden: $menuHiddenByParent}
 		<input n:name="version">
 		<button n:name="save" data-testid="page-properties-save">{_admin.pages.saveProperties}</button>
 	</form>

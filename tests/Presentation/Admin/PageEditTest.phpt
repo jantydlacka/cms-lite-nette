@@ -325,6 +325,44 @@ test('a title over the limit and an empty title are refused by the form', functi
 });
 
 
+test('a page in the menu under a parent outside the menu or unpublished in the default language gets a note at the checkbox', function () use ($app): void {
+	resetDemo($app);
+	signedIn($app);
+	$about = pageId($app, 'O nás');
+	$team = pageId($app, 'Tým');
+	$explorer = $app->container->getByType(Explorer::class);
+	$note = 'V menu se nezobrazí, protože nadřazená stránka v menu není.';
+	$noteOf = static function (HttpResult $result): ?string {
+		$checkbox = nodes($result->dom(), '//input[@data-testid="page-in-menu"]')[0];
+		$noteNode = nodes($result->dom(), '//*[@data-testid="page-menu-hidden-note"]');
+		if ($noteNode === []) {
+			Assert::false(isset($checkbox['aria-describedby']));
+
+			return null;
+		}
+		Assert::same((string) $noteNode[0]['id'], (string) $checkbox['aria-describedby']);
+
+		return trim((string) $noteNode[0]);
+	};
+
+	Assert::null($noteOf($app->get("/admin/pages/$team")));
+
+	$explorer->query('UPDATE page SET in_menu = 0 WHERE id = ?', $about);
+	Assert::same($note, $noteOf($app->get("/admin/pages/$team")));
+	Assert::same($note, $noteOf($app->get("/admin/pages/$team/en")));
+	Assert::null($noteOf($app->get("/admin/pages/$about")));
+	$explorer->query('UPDATE page SET in_menu = 0 WHERE id = ?', $team);
+	Assert::null($noteOf($app->get("/admin/pages/$team")));
+
+	$explorer->query('UPDATE page SET in_menu = 1 WHERE id IN (?)', [$about, $team]);
+	$explorer->query("UPDATE page_translation SET status = 'draft' WHERE page_id = ? AND locale = 'cs'", $about);
+	Assert::same($note, $noteOf($app->get("/admin/pages/$team")));
+	$explorer->query("UPDATE page_translation SET status = 'published' WHERE page_id = ? AND locale = 'cs'", $about);
+	$explorer->query("UPDATE page_translation SET status = 'draft' WHERE page_id = ? AND locale = 'en'", $about);
+	Assert::null($noteOf($app->get("/admin/pages/$team")));
+});
+
+
 test('two browsers save the same translation version: the second is stale and keeps its text', function () use ($app): void {
 	resetDemo($app);
 	$about = pageId($app, 'O nás');

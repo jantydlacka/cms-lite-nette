@@ -121,6 +121,10 @@ final class PagesPresenter extends AdminPresenter
 			$parent->setValue($this->page->parentId);
 		}
 
+		$inMenu = self::control($this['properties'], 'inMenu')->getValue();
+		$parentId = $parent->getValue();
+		$this->template->menuHiddenByParent = $inMenu === true && $this->hiddenAncestor(is_int($parentId) ? $parentId : null);
+
 		$isHomepage = $this->homepage->isHomepage($this->page->id);
 		$this->template->page = $this->page;
 		$this->template->title = $this->pages->findTranslation($this->page->id, $this->cmsConfig->defaultLocale)?->title;
@@ -561,6 +565,27 @@ final class PagesPresenter extends AdminPresenter
 	private function tree(): array
 	{
 		return $this->tree ??= $this->pages->findTree($this->cmsConfig->defaultLocale);
+	}
+
+
+	/** Whether the page or an ancestor of it is left out of the menu, by the rule of PageRepository::findMenu() in the default locale. */
+	private function hiddenAncestor(?int $pageId): bool
+	{
+		$byId = [];
+		foreach ($this->tree() as $item) {
+			$byId[$item->pageId] = $item;
+		}
+		$seen = [];
+		while ($pageId !== null && isset($byId[$pageId]) && !isset($seen[$pageId])) {
+			$seen[$pageId] = true;
+			$item = $byId[$pageId];
+			if (!$item->inMenu || $item->status !== PublicationStatus::Published) {
+				return true;
+			}
+			$pageId = $item->parentId;
+		}
+
+		return false;
 	}
 
 

@@ -59,6 +59,7 @@ admin.pages.homepageSet: Úvodní stránka byla nastavena.
 admin.pages.homepageNeedsPublished: Úvodní stránka musí mít publikovaný překlad ve výchozím jazyce.
 admin.pages.homepageProtected: 'Úvodní stránku nejde smazat ani skrýt, dokud nevyberete jinou.'
 admin.pages.homepageMissing: 'Úvodní stránka nemá publikovaný překlad v jazyce: %locales%'
+admin.pages.menuHiddenByParent: 'V menu se nezobrazí, protože nadřazená stránka v menu není.'
 admin.pages.invalidParent: Stránku nejde přesunout pod sebe ani pod svou podstránku.
 admin.pages.deletedMeanwhile: 'Stránka mezitím byla smazána. Text zůstal ve formuláři – zkopírujte si ho.'
 admin.pages.parentGone: 'Vybraná nadřazená stránka už neexistuje, vyberte jinou.'

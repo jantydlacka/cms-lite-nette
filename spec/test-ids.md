@@ -34,6 +34,7 @@ Elements the end-to-end tests locate by `data-testid`.
 | `page-properties-form` | POST form of the page properties in the page detail (parent, menu flag, hidden version). |
 | `page-parent` | Parent dropdown: `admin.pages.root` and every page except the page itself and its descendants. After a refused parent the detail selects the stored parent again. On a new page: `admin.pages.root` (chosen by default) and every page; the select is `required` and its first option is the placeholder `– admin.pages.parent –` (empty value, refused with `admin.form.invalidChoice`); after a refused parent nothing is selected, so the placeholder shows. A refused parent is an error of the dropdown (`aria-invalid`, `aria-describedby`). |
 | `page-in-menu` | Checkbox `admin.pages.inMenu`. |
+| `page-menu-hidden-note` | Note `admin.pages.menuHiddenByParent` below `page-in-menu` on the page detail, shown when the menu flag is checked and an ancestor is not in the menu or has no published default-language translation; the checkbox points to it with `aria-describedby`. |
 | `page-properties-save` | Save button of the properties form. |
 | `page-homepage-form` | POST form with `page-set-homepage`; absent on the homepage. |
 | `page-set-homepage` | Button `admin.pages.setHomepage`. |

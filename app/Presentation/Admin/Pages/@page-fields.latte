@@ -10,14 +10,15 @@
 	</ul>
 {/define}
 
-{define parentFields, Nette\Forms\Form $form}
+{define parentFields, Nette\Forms\Form $form, bool $menuHidden = false}
 	<label n:name="parent" />
 	{var $parent = $form['parent']}
 	<select n:name="parent" required={$parent->getOption('requiredInBrowser') === true} n:attr="aria-invalid: $parent->hasErrors() ? 'true', aria-describedby: $parent->hasErrors() ? $parent->getHtmlId() . '-error'" data-testid="page-parent"></select>
 	<label>
-		<input n:name="inMenu:" data-testid="page-in-menu">
+		<input n:name="inMenu:" n:attr="aria-describedby: $menuHidden ? 'page-in-menu-note'" data-testid="page-in-menu">
 		{_admin.pages.inMenu}
 	</label>
+	<small n:if="$menuHidden" id="page-in-menu-note" data-testid="page-menu-hidden-note">{_admin.pages.menuHiddenByParent}</small>
 {/define}
 
 {define translationFields, Nette\Forms\Form $form}
