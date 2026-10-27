@@ -1,0 +1,4 @@
+services:
+	lockByClass:
+		create: App\Model\Page\Database\DatabasePageTreeLock
+		autowired: self

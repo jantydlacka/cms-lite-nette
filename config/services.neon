@@ -4,20 +4,42 @@ services:
 	- App\Core\Localization\CurrentLocale
 	translator: App\Core\Localization\NeonTranslator(langDir: %appDir%/../lang, strict: %debugMode%)
 	- App\Core\SystemClock
-	- App\Core\Database\ExplorerTransaction
-	pageRepository: App\Model\Page\Database\DatabasePageRepository # named so a test can replace it
-	- App\Model\Page\Database\DatabasePageTreeLock
-	- App\Model\Setting\Database\DatabaseSettingRepository
-	pathRedirectRepository: App\Model\Redirect\Database\DatabasePathRedirectRepository # named so a test can replace it
-	- App\Model\Page\FlatPagePathStrategy
+	# Implementations of App\Model ports are typed as their port, so only the interface is autowired
+	# (`autowired: <port>` would still autowire the class).
+	transaction:
+		create: App\Core\Database\ExplorerTransaction
+		type: App\Model\Transaction
+	pageRepository: # named so a test can replace it
+		create: App\Model\Page\Database\DatabasePageRepository
+		type: App\Model\Page\PageRepository
+	pageTreeLock:
+		create: App\Model\Page\Database\DatabasePageTreeLock
+		type: App\Model\Page\PageTreeLock
+	settingRepository:
+		create: App\Model\Setting\Database\DatabaseSettingRepository
+		type: App\Model\Setting\SettingRepository
+	pathRedirectRepository: # named so a test can replace it
+		create: App\Model\Redirect\Database\DatabasePathRedirectRepository
+		type: App\Model\Redirect\PathRedirectRepository
+	pagePathStrategy:
+		create: App\Model\Page\FlatPagePathStrategy
+		type: App\Model\Page\PagePathStrategy
 	- App\Model\Page\ReservedSegments
 	- App\Model\Page\PageService
 	- App\Model\Page\Homepage
-	- App\Core\Markdown\CommonMarkRenderer
-	- App\Core\Security\NettePasswordHasher
-	userRepository: App\Model\User\Database\DatabaseUserRepository # named so a test can replace it
+	markdownRenderer:
+		create: App\Core\Markdown\CommonMarkRenderer
+		type: App\Model\Content\MarkdownRenderer
+	passwordHasher:
+		create: App\Core\Security\NettePasswordHasher
+		type: App\Model\User\PasswordHasher
+	userRepository: # named so a test can replace it
+		create: App\Model\User\Database\DatabaseUserRepository
+		type: App\Model\User\UserRepository
 	- App\Model\User\UserService
-	- App\Model\Login\Database\DatabaseLoginAttemptRepository
+	loginAttemptRepository:
+		create: App\Model\Login\Database\DatabaseLoginAttemptRepository
+		type: App\Model\Login\LoginAttemptRepository
 	- App\Model\Login\LoginThrottle
 	- App\Core\Security\CmsAuthenticator
 	- App\Core\Security\AuthorizatorFactory

@@ -1,0 +1,4 @@
+# Two implementations of a port that nothing in this bare container consumes, so it still compiles.
+services:
+	- App\Core\Markdown\CommonMarkRenderer
+	secondRenderer: App\Core\Markdown\CommonMarkRenderer
