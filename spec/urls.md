@@ -11,6 +11,7 @@ A site has one default language and optional further languages. A page path is a
 | `/_health` | Health check, see below. |
 | `/admin` | Administration dashboard, see [Administration](#administration). |
 | `/admin/sign-in` | Sign-in form of the administration. |
+| `/admin/pages` | Page tree of the administration, see [Pages](#pages). |
 
 The default language has no prefix; every other language has the prefix `<locale>/`.
 
@@ -48,8 +49,20 @@ The administration has no language prefix and runs in the default language; its 
 | After 5 failures of one e-mail from one IP within 15 minutes (or 20 from one IP) | 200, the form with `admin.sign.throttled`, even with the right password. |
 | Sign-out | The signal `signOut!` (`/admin?do=signOut`), only by a POST from the same origin: signs out, 303 to `/admin/sign-in` with `admin.sign.outDone`. A GET is refused (405); a cross-site POST only redirects (303) and signs nobody out. |
 | A sign-in POST from another site | Not processed: 303 back to the form. |
+| `/admin/pages` signed in (editor or administrator) | 200, the page tree. |
 | `/admin/<anything else>` | 404 in the administration layout (default language). `/administrace` is a public 404. |
 | A server error under `/admin` | 500 with `error.500.title` in the administration layout; the error is logged. |
+
+### Pages
+
+| Request | Response |
+|---------|----------|
+| `/admin/pages` | The page tree: every page in tree order (parent before its children, siblings by position), indented by depth, titled in the default language or `admin.pages.missing`, with the badges `admin.pages.homepage` and `admin.pages.draft`. |
+| `/admin/pages/new` | A new page. |
+| `/admin/pages/<id>` | Detail of the page in the default language; `<id>` is digits. |
+| `/admin/pages/<id>/<locale>` | Detail of the page with the tab of an enabled language; any other language is 404. |
+| `/admin/pages/<id>/delete` | Confirmation of the deletion of the page. |
+| ↑ / ↓ in the tree | A POST form of the row, only from the same origin: swaps the page with its previous / next sibling, 303 to `/admin/pages` with `admin.pages.moved`. The first sibling has no ↑, the last no ↓. A GET of the form signal changes nothing; a cross-site POST only redirects (303); a page that does not exist is 404. |
 
 ### Stored requests
 

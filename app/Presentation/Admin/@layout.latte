@@ -14,6 +14,10 @@
 	<p n:if="$demoData" class="demo-banner" role="note" data-testid="demo-banner">{_admin.demo.banner}</p>
 	<header class="admin-header container">
 		<strong class="admin-site-name">{$siteName}</strong>
+		<nav n:ifset="$adminUser" class="admin-nav">
+			<a n:href=":Admin:Dashboard:default" n:attr="aria-current: $presenter->isLinkCurrent(':Admin:Dashboard:*') ? page">{_admin.nav.dashboard}</a>
+			<a n:href=":Admin:Pages:default" n:attr="aria-current: $presenter->isLinkCurrent(':Admin:Pages:*') ? page" data-testid="admin-nav-pages">{_admin.nav.pages}</a>
+		</nav>
 		<div class="admin-header-tools">
 			{ifset $adminUser}
 				<span class="admin-user"><span data-testid="admin-user">{$adminUser}</span> <small data-testid="admin-role">{_$adminRoleKey}</small></span>

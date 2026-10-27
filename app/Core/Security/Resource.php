@@ -7,6 +7,7 @@ namespace App\Core\Security;
 enum Resource: string
 {
 	case Dashboard = 'dashboard';
+	case Pages = 'pages';
 	case Users = 'users';
 	case Settings = 'settings';
 }

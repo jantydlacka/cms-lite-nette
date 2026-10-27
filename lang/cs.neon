@@ -20,3 +20,14 @@ admin.demo.banner: 'Běží demo data – účty se známým heslem, nepoužíva
 admin.role.editor: Editor
 admin.role.admin: Administrátor
 error.403.title: Na tuto stránku nemáte oprávnění.
+admin.nav.dashboard: Nástěnka
+admin.nav.pages: Stránky
+admin.pages.title: Stránky
+admin.pages.new: Nová stránka
+admin.pages.empty: Zatím tu nejsou žádné stránky.
+admin.pages.homepage: Úvodní
+admin.pages.draft: Koncept
+admin.pages.missing: Chybí překlad
+admin.pages.up: Posunout výš
+admin.pages.down: Posunout níž
+admin.pages.moved: Pořadí bylo změněno.

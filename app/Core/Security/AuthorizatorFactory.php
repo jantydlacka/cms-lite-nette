@@ -23,7 +23,7 @@ final class AuthorizatorFactory
 			$acl->addResource($resource->value);
 		}
 
-		$acl->allow(Role::Editor->value, Resource::Dashboard->value);
+		$acl->allow(Role::Editor->value, [Resource::Dashboard->value, Resource::Pages->value]);
 		$acl->allow(Role::Admin->value, [Resource::Users->value, Resource::Settings->value]);
 
 		return $acl;

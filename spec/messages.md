@@ -25,4 +25,15 @@ Translation keys of the public UI and the administration with their Czech (`lang
 | `admin.demo.banner` | Běží demo data – účty se známým heslem, nepoužívat na ostrém webu. | Demo data are enabled – accounts with a known password, never use on a live site. |
 | `admin.role.editor` | Editor | Editor |
 | `admin.role.admin` | Administrátor | Administrator |
+| `admin.nav.dashboard` | Nástěnka | Dashboard |
+| `admin.nav.pages` | Stránky | Pages |
+| `admin.pages.title` | Stránky | Pages |
+| `admin.pages.new` | Nová stránka | New page |
+| `admin.pages.empty` | Zatím tu nejsou žádné stránky. | There are no pages yet. |
+| `admin.pages.homepage` | Úvodní | Homepage |
+| `admin.pages.draft` | Koncept | Draft |
+| `admin.pages.missing` | Chybí překlad | Missing translation |
+| `admin.pages.up` | Posunout výš | Move up |
+| `admin.pages.down` | Posunout níž | Move down |
+| `admin.pages.moved` | Pořadí bylo změněno. | The order has been changed. |
 | `error.403.title` | Na tuto stránku nemáte oprávnění. | You do not have permission to view this page. |

@@ -32,6 +32,18 @@
 	padding: 0.25rem 0.75rem;
 }
 
+.admin-nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--cms-gap);
+	margin-right: auto;
+}
+
+.admin-nav a[aria-current="page"] {
+	font-weight: 700;
+	text-decoration: underline;
+}
+
 .admin-user small {
 	color: var(--pico-muted-color);
 }
@@ -64,4 +76,61 @@
 
 .form-errors li {
 	list-style: none;
+}
+
+.pages-heading {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--cms-gap);
+	margin-bottom: var(--cms-gap);
+}
+
+.pages-heading h1 {
+	margin: 0;
+}
+
+.pages-tree {
+	padding: 0;
+}
+
+.pages-tree .pages-item {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 0;
+	padding: 0.5rem 0 0.5rem calc(var(--depth, 0) * 1.5rem);
+	border-bottom: 1px solid var(--pico-muted-border-color);
+	list-style: none;
+}
+
+.pages-item-missing {
+	font-style: italic;
+}
+
+.pages-badge {
+	padding: 0 0.5rem;
+	border-radius: var(--pico-border-radius);
+	background: var(--pico-primary-background);
+	color: var(--pico-primary-inverse);
+	font-size: 0.8rem;
+}
+
+.pages-badge-draft {
+	background: var(--pico-muted-border-color);
+	color: var(--pico-color);
+}
+
+.pages-move {
+	display: flex;
+	gap: 0.25rem;
+	margin: 0 0 0 auto;
+}
+
+.pages-move button {
+	width: auto;
+	margin: 0;
+	padding: 0.125rem 0.5rem;
 }

@@ -22,6 +22,15 @@ Elements the end-to-end tests locate by `data-testid`.
 | `admin-user` | Name of the signed-in user in the administration header. |
 | `admin-role` | Role of the signed-in user next to the name (`admin.role.editor`, `admin.role.admin`). |
 | `sign-out` | Sign-out button in the administration header; it submits a POST form. |
+| `admin-nav-pages` | Link to the page tree in the administration navigation, shown only to a signed-in user; `aria-current="page"` on the pages screens. |
+| `pages-new` | Link to a new page above the page tree. |
+| `pages-tree` | List of all pages in tree order (`/admin/pages`); absent when there are no pages. |
+| `pages-item` | One row of the page tree; `data-depth` is its depth (0 for a top-level page). |
+| `pages-item-title` | Link to the page detail, with the default-language title or `admin.pages.missing`. |
+| `pages-homepage-badge` | Badge `admin.pages.homepage` of the homepage row. |
+| `pages-draft-badge` | Badge `admin.pages.draft` of a row whose default-language translation is a draft. |
+| `pages-up` | ↑ button of a row (POST form); absent on the first sibling. |
+| `pages-down` | ↓ button of a row (POST form); absent on the last sibling. |
 | `demo-banner` | Warning strip of the administration (`admin.demo.banner`), shown only while demo data are enabled. |
 
 ## Theme contract

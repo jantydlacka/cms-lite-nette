@@ -20,3 +20,14 @@ admin.demo.banner: 'Demo data are enabled – accounts with a known password, ne
 admin.role.editor: Editor
 admin.role.admin: Administrator
 error.403.title: You do not have permission to view this page.
+admin.nav.dashboard: Dashboard
+admin.nav.pages: Pages
+admin.pages.title: Pages
+admin.pages.new: New page
+admin.pages.empty: There are no pages yet.
+admin.pages.homepage: Homepage
+admin.pages.draft: Draft
+admin.pages.missing: Missing translation
+admin.pages.up: Move up
+admin.pages.down: Move down
+admin.pages.moved: The order has been changed.
