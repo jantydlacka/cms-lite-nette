@@ -1,0 +1,10 @@
+# Test-only presenter for HttpApplicationTest.
+application:
+	mapping:
+		SupportTest: Tests\Support\fixtures\*Presenter
+
+services:
+	- Tests\Support\fixtures\ProbePresenter
+	router:
+		setup:
+			- prepend(Nette\Application\Routers\Route('support-probe', 'SupportTest:Probe:default'))

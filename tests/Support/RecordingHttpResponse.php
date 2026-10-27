@@ -6,6 +6,7 @@ namespace Tests\Support;
 
 use DateTimeInterface;
 use Nette\Http\IResponse;
+use Nette\Http\SameSite;
 
 /** Keeps status and headers in memory: header() is not observable under the CLI. */
 final class RecordingHttpResponse implements IResponse
@@ -16,6 +17,9 @@ final class RecordingHttpResponse implements IResponse
 	public string $cookiePath = '/';
 
 	public bool $cookieSecure = false;
+
+	/** @var list<array{name: string, value: string, expire: string|int|DateTimeInterface|null, path: ?string, domain: ?string, secure: ?bool, httpOnly: ?bool, sameSite: ?string, partitioned: bool}> */
+	private array $cookies = [];
 
 	private int $code = self::S200_OK;
 
@@ -96,6 +100,17 @@ final class RecordingHttpResponse implements IResponse
 	}
 
 
+	/**
+	 * Cookies in the order they were set, with their attributes; a deletion has an empty value.
+	 *
+	 * @return list<array{name: string, value: string, expire: string|int|DateTimeInterface|null, path: ?string, domain: ?string, secure: ?bool, httpOnly: ?bool, sameSite: ?string, partitioned: bool}>
+	 */
+	public function getCookies(): array
+	{
+		return $this->cookies;
+	}
+
+
 	public function setCookie(
 		string $name,
 		string $value,
@@ -104,13 +119,19 @@ final class RecordingHttpResponse implements IResponse
 		?string $domain = null,
 		?bool $secure = null,
 		?bool $httpOnly = null,
+		SameSite|string|null $sameSite = null,
+		bool $partitioned = false,
 	): static {
+		$sameSite = $sameSite instanceof SameSite ? $sameSite->value : $sameSite;
+		$this->cookies[] = compact('name', 'value', 'expire', 'path', 'domain', 'secure', 'httpOnly', 'sameSite', 'partitioned');
+
 		return $this->addHeader('Set-Cookie', $name . '=' . $value);
 	}
 
 
 	public function deleteCookie(string $name, ?string $path = null, ?string $domain = null, ?bool $secure = null): void
 	{
+		$this->cookies[] = ['name' => $name, 'value' => '', 'expire' => 1, 'path' => $path, 'domain' => $domain, 'secure' => $secure, 'httpOnly' => null, 'sameSite' => null, 'partitioned' => false];
 		$this->addHeader('Set-Cookie', $name . '=');
 	}
 }

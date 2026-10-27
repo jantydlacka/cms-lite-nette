@@ -17,7 +17,21 @@ final readonly class HttpResult
 		public array $headers,
 		/** The container that served the request (logger, services). */
 		public Container $container,
+		/** Session id at the end of the request; null when no session was active then (never started, or destroyed). */
+		private ?string $sessionId = null,
 	) {
+	}
+
+
+	public function sessionId(): ?string
+	{
+		return $this->sessionId;
+	}
+
+
+	public function sessionStarted(): bool
+	{
+		return $this->sessionId !== null;
 	}
 
 
