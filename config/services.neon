@@ -13,3 +13,6 @@ services:
 	- App\Model\Page\PageService
 	- App\Model\Page\Homepage
 	- App\Core\Markdown\CommonMarkRenderer
+	- App\Core\Security\NettePasswordHasher
+	- App\Model\User\Database\DatabaseUserRepository
+	- App\Model\User\UserService
