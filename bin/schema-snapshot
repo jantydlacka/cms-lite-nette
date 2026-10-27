@@ -1,0 +1,18 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// Regenerates docs/schema.md from the structures and basic-data migrations run on an empty test database.
+// Run deliberately after adding a migration; the changed snapshot then shows up in review.
+
+use App\Bootstrap;
+use Tests\Support\SchemaDump;
+use Tests\Support\TestDatabase;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+// Own suffix: a test run in the same (thread-less) database name must not drop this one mid-way.
+$schema = TestDatabase::migratedSchema(Bootstrap::bootForTests()->createContainer(), '_snapshot');
+file_put_contents(SchemaDump::SNAPSHOT_FILE, SchemaDump::render($schema));
+echo 'Written ' . realpath(SchemaDump::SNAPSHOT_FILE) . "\n";

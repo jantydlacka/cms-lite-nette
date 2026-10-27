@@ -1,0 +1,1 @@
+CREATE TABLE `probe` (`name` VARCHAR(10) NOT NULL) ENGINE=InnoDB;

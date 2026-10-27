@@ -16,10 +16,15 @@ use Nextras\Migrations\Extensions\SqlHandler;
 use Nextras\Migrations\LogicException as MigrationsLogicException;
 use Throwable;
 
-/** One MySQL database per Nette Tester thread, so parallel test files never share data. */
+/**
+ * One MySQL database per Nette Tester thread, so parallel test files never share data.
+ *
+ * @phpstan-import-type Schema from SchemaDump
+ */
 final class TestDatabase
 {
 	private const MIGRATIONS_TABLE = 'migrations';
+	private const DATA_MIGRATIONS_TABLE = 'migrations_test_data';
 	private const MIGRATIONS_DIR = __DIR__ . '/../../migrations';
 	private const DEMO_TEMPLATE_SUFFIX = '_demo';
 
@@ -36,8 +41,10 @@ final class TestDatabase
 	/**
 	 * Leaves the database at its schema plus basic data only.
 	 *
-	 * Basic data is not re-inserted by replaying SQL by hand: after TRUNCATE the migrations table still
-	 * lists it as executed, so its rows are dropped from the table and the groups run again.
+	 * Basic data is not re-inserted by replaying SQL by hand but by the runner, from its own bookkeeping table
+	 * (emptied before every replay). It cannot share the migrations table with the structures: nextras orders files
+	 * globally, so a structures migration newer than a basic-data file would make that file "older than the latest
+	 * executed" and the runner would refuse it.
 	 * Dummy data is never loaded. Structure migrations must not insert data: everything is truncated after them.
 	 *
 	 * @param list<string> $extraBasicDataDirs additional directories loaded after migrations/basic-data
@@ -94,12 +101,15 @@ final class TestDatabase
 
 		self::truncateDirtyTables($connection);
 
-		$groups = [$structures, self::group('basic-data', self::MIGRATIONS_DIR . '/basic-data', ['structures'])];
-		// Nextras orders files globally across groups, so extra fixtures need names sorting after all executed ones (hence 2099-...).
+		$groups = [self::group('basic-data', self::MIGRATIONS_DIR . '/basic-data', [])];
+		// Extra fixtures are ordered after basic data by name (hence 2099-...).
 		foreach ($extraBasicDataDirs as $i => $dir) {
 			$groups[] = self::group('basic-data-extra-' . $i, $dir, ['basic-data']);
 		}
-		self::migrate($connection, $groups);
+		if ($connection->fetchField('SHOW TABLES LIKE ?', self::DATA_MIGRATIONS_TABLE) !== null) {
+			$connection->query('DELETE FROM ?name', self::DATA_MIGRATIONS_TABLE);
+		}
+		self::migrate($connection, $groups, self::DATA_MIGRATIONS_TABLE);
 	}
 
 
@@ -112,9 +122,9 @@ final class TestDatabase
 		// MySQL 8 caches information_schema statistics (a day by default); a stale AUTO_INCREMENT would skip a dirty table.
 		$connection->query('SET SESSION information_schema_stats_expiry = 0');
 		$tables = $connection->fetchAll(
-			'SELECT TABLE_NAME AS name, AUTO_INCREMENT AS next FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = ? AND TABLE_NAME <> ?',
+			'SELECT TABLE_NAME AS name, AUTO_INCREMENT AS next FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = ? AND TABLE_NAME NOT IN (?)',
 			'BASE TABLE',
-			self::MIGRATIONS_TABLE,
+			[self::MIGRATIONS_TABLE, self::DATA_MIGRATIONS_TABLE],
 		);
 
 		$connection->query('SET FOREIGN_KEY_CHECKS = 0');
@@ -208,6 +218,45 @@ final class TestDatabase
 	}
 
 
+	/**
+	 * Builds `<thread db><suffix>` from nothing but the structures and basic-data migrations, dumps its schema and drops it.
+	 * The thread database is left alone, so the schema never carries what an earlier test run left behind.
+	 *
+	 * The database is created with the server's default character set and collation, as the application database is
+	 * (docker's MYSQL_DATABASE): a migration that relies on the default then shows up in the dump as it would in production.
+	 *
+	 * @param string $suffix distinguishes callers that may run at the same time (test vs. bin/schema-snapshot)
+	 * @param list<string> $extraStructureDirs additional structure migrations (file names must sort after all others)
+	 * @return Schema
+	 */
+	public static function migratedSchema(Container $container, string $suffix, array $extraStructureDirs = []): array
+	{
+		$params = $container->getParameters();
+		assert(is_string($params['dbName']) && is_string($params['dbHost']) && is_string($params['dbPort']) && is_string($params['dbUser']) && is_string($params['dbPassword']));
+		$database = $params['dbName'] . $suffix;
+		self::assertTestDatabase($database);
+
+		$server = 'mysql:host=' . $params['dbHost'] . ';port=' . $params['dbPort'];
+		$admin = new Connection($server, $params['dbUser'], $params['dbPassword']);
+		$admin->query('DROP DATABASE IF EXISTS ?name', $database);
+		$admin->query('CREATE DATABASE ?name', $database);
+		try {
+			$connection = new Connection($server . ';dbname=' . $database, $params['dbUser'], $params['dbPassword']);
+			self::assertTestDatabase($connection->fetchField('SELECT DATABASE()'));
+			$groups = [self::group('structures', self::MIGRATIONS_DIR . '/structures', [])];
+			foreach ($extraStructureDirs as $i => $dir) {
+				$groups[] = self::group('structures-extra-' . $i, $dir, ['structures']);
+			}
+			$groups[] = self::group('basic-data', self::MIGRATIONS_DIR . '/basic-data', ['structures']);
+			self::migrate($connection, $groups);
+
+			return SchemaDump::read($connection);
+		} finally {
+			$admin->query('DROP DATABASE IF EXISTS ?name', $database);
+		}
+	}
+
+
 	/** @return array<string, ?int> table => next AUTO_INCREMENT of the freshly loaded database */
 	private static function createDemoTemplate(Connection $connection, string $database): array
 	{
@@ -274,9 +323,9 @@ final class TestDatabase
 
 
 	/** @param list<Group> $groups */
-	private static function migrate(Connection $connection, array $groups): void
+	private static function migrate(Connection $connection, array $groups, string $table = self::MIGRATIONS_TABLE): void
 	{
-		$driver = new MySqlDriver(new NetteAdapter($connection), self::MIGRATIONS_TABLE);
+		$driver = new MySqlDriver(new NetteAdapter($connection), $table);
 		$runner = new Runner($driver, new ThrowingPrinter());
 		$runner->addExtensionHandler('sql', new SqlHandler($driver));
 		foreach ($groups as $group) {

@@ -14,6 +14,7 @@ parameters:
 		- tests
 		- bin/console
 		- bin/latte-lint
+		- bin/schema-snapshot
 		- bin/coverage-badge.php
 	# Fixtures intentionally violate the architecture rules; they are analysed
 	# on their own by tests/Architecture/ArchitectureRulesTest.phpt.

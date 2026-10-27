@@ -1,0 +1,1 @@
+ALTER TABLE `page` ADD `note` VARCHAR(50) NULL;
