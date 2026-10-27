@@ -102,7 +102,7 @@ Translation keys of the public UI and the administration with their Czech (`lang
 | `admin.news.scheduledNote` | Na webu se zobrazí od %date%. | It will appear on the website from %date%. |
 | `admin.news.properties` | Vlastnosti novinky | News properties |
 | `admin.news.field.publishedAt` | Datum zveřejnění | Publication date |
-| `admin.news.field.publishedAtHint` | Prázdné = v okamžiku zveřejnění. Čas je v pásmu %timezone%. | Leave empty to use the moment of publishing. The time is in %timezone%. |
+| `admin.news.field.publishedAtHint` | Prázdné = okamžik zveřejnění; u už zveřejněné novinky okamžik uložení. Čas je v pásmu %timezone%. | Leave empty to use the moment of publishing; for an already published item, the moment of saving. The time is in %timezone%. |
 | `admin.news.field.perex` | Perex (krátký úvod) | Perex (short summary) |
 | `admin.news.field.perexRequired` | Vyplňte perex. | Fill in the perex. |
 | `admin.news.field.invalidDate` | Zadejte platné datum a čas. | Enter a valid date and time. |

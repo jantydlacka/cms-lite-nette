@@ -96,7 +96,7 @@ admin.news.state.missing: Missing translation
 admin.news.scheduledNote: 'It will appear on the website from %date%.'
 admin.news.properties: 'News properties'
 admin.news.field.publishedAt: 'Publication date'
-admin.news.field.publishedAtHint: 'Leave empty to use the moment of publishing. The time is in %timezone%.'
+admin.news.field.publishedAtHint: 'Leave empty to use the moment of publishing; for an already published item, the moment of saving. The time is in %timezone%.'
 admin.news.field.perex: 'Perex (short summary)'
 admin.news.field.perexRequired: 'Fill in the perex.'
 admin.news.field.invalidDate: 'Enter a valid date and time.'

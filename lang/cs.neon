@@ -96,7 +96,7 @@ admin.news.state.missing: Chybí překlad
 admin.news.scheduledNote: 'Na webu se zobrazí od %date%.'
 admin.news.properties: 'Vlastnosti novinky'
 admin.news.field.publishedAt: 'Datum zveřejnění'
-admin.news.field.publishedAtHint: 'Prázdné = v okamžiku zveřejnění. Čas je v pásmu %timezone%.'
+admin.news.field.publishedAtHint: 'Prázdné = okamžik zveřejnění; u už zveřejněné novinky okamžik uložení. Čas je v pásmu %timezone%.'
 admin.news.field.perex: 'Perex (krátký úvod)'
 admin.news.field.perexRequired: 'Vyplňte perex.'
 admin.news.field.invalidDate: 'Zadejte platné datum a čas.'

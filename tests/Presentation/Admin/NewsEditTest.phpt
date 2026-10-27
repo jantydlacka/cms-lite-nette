@@ -243,7 +243,7 @@ test('a new item with an empty slug and date gets the slug from the title, the s
 	Assert::same('Nová novinka', $form->text('admin-title'));
 	Assert::same('', fieldValue($form, 'news-published-at'));
 	Assert::same('datetime-local', (string) nodes($form->dom(), '//*[@data-testid="news-published-at"]')[0]['type']);
-	Assert::contains('Prázdné = v okamžiku zveřejnění. Čas je v pásmu Europe/Prague.', $form->body);
+	Assert::contains('Prázdné = okamžik zveřejnění; u už zveřejněné novinky okamžik uložení. Čas je v pásmu Europe/Prague.', $form->body);
 	Assert::same('draft', fieldValue($form, 'news-status-input'));
 
 	[$action, $body] = formSubmit($form, NEW_FORM, 'news-save', [
