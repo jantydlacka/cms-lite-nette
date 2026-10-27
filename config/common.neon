@@ -27,6 +27,10 @@ assets:
 session:
 	autoStart: false
 
+security:
+	authentication:
+		expiration: 3 hours
+
 http:
 	headers:
 		X-Powered-By: null # do not advertise the framework

@@ -18,3 +18,6 @@ services:
 	- App\Model\User\UserService
 	- App\Model\Login\Database\DatabaseLoginAttemptRepository
 	- App\Model\Login\LoginThrottle
+	- App\Core\Security\CmsAuthenticator
+	- App\Core\Security\AuthorizatorFactory
+	security.authorizator: @App\Core\Security\AuthorizatorFactory::create()

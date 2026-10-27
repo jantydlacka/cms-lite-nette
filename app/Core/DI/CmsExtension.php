@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Core\DI;
 
+use App\Core\Security\CmsAuthenticator;
 use App\Model\CmsConfig;
 use App\Model\Login\LoginLimits;
 use Nette\DI\CompilerExtension;
+use Nette\DI\Definitions\ServiceDefinition;
 use Nette\Schema\Expect;
 use Nette\Schema\Schema;
 use stdClass;
@@ -59,5 +61,17 @@ final class CmsExtension extends CompilerExtension
 				$login->maxIpFailures,
 				$login->windowMinutes,
 			]);
+	}
+
+
+	public function beforeCompile(): void
+	{
+		// Computed per container build, so it always matches the PHP default algorithm and cost.
+		// The container cache key includes the PHP minor version.
+		// Containers without the security services (extension-only tests) have nothing to patch.
+		foreach ($this->getContainerBuilder()->findByType(CmsAuthenticator::class) as $authenticator) {
+			assert($authenticator instanceof ServiceDefinition);
+			$authenticator->getFactory()->arguments['dummyHash'] = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
+		}
 	}
 }
