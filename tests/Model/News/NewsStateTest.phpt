@@ -37,6 +37,6 @@ test('the moment compares across time zones', function () use ($news, $translati
 	Assert::same(NewsState::Visible, NewsState::of($news($prague), $translation(PublicationStatus::Published), $now));
 });
 
-test('a published translation without a date is not visible (never stored; listed as Draft)', function () use ($news, $translation, $now): void {
+test('a published translation without a date is not visible (publishing never stores one; listed as Draft)', function () use ($news, $translation, $now): void {
 	Assert::same(NewsState::Draft, NewsState::of($news(null), $translation(PublicationStatus::Published), $now));
 });

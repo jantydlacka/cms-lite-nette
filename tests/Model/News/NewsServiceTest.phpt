@@ -218,7 +218,7 @@ test('another item taking an old slug wins: the redirect from that path is delet
 	Assert::same($b, $news->findVisibleBySlug('cs', 'stary')?->news->id);
 });
 
-test('a page and a news item with the same slug do not collide', function () use ($reset, $service, $create, $cmd, $redirect, $container): void {
+test('a page and a news item with the same slug do not collide (the news path has its segment)', function () use ($reset, $service, $create, $cmd, $redirect, $container): void {
 	$author = $reset();
 	$pages = $container->getByType(PageService::class);
 	$page = $pages->createPage(new CreatePage(null, true, 'cs', 'Akce', 'akce', 'c', '', PublicationStatus::Published));

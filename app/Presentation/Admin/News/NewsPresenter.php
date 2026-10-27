@@ -208,8 +208,8 @@ final class NewsPresenter extends AdminPresenter
 	public function renderDelete(): void
 	{
 		$this->template->item = $this->item;
-		$this->template->title = $this->news->findTranslation($this->item->id, $this->cmsConfig->defaultLocale)->title
-			?? $this->translator->translate('admin.pages.missing');
+		$translation = $this->news->findTranslation($this->item->id, $this->cmsConfig->defaultLocale);
+		$this->template->title = $translation !== null ? $translation->title : $this->translator->translate('admin.pages.missing');
 	}
 
 
@@ -442,7 +442,7 @@ final class NewsPresenter extends AdminPresenter
 	}
 
 
-	/** P6: a local time skipped by the change to summer time is saved shifted; say so instead of changing it silently. */
+	/** A local time skipped by the change to summer time is saved shifted; say so instead of changing it silently. */
 	private function reportShift(?DateTimeImmutable $entered, ?DateTimeImmutable $saved): void
 	{
 		if ($entered === null || $saved === null) {
@@ -491,7 +491,7 @@ final class NewsPresenter extends AdminPresenter
 	}
 
 
-	/** A news slug can only clash with another news item; the format and length texts are shared with pages. */
+	/** A news slug can only clash with another news item (its path lies under the news segment); the format and length texts are shared with pages. */
 	private static function slugMessage(InvalidSlugException $e): string
 	{
 		return $e->reason === InvalidSlugException::TAKEN ? 'admin.news.slug.taken' : 'admin.pages.slug.' . $e->reason;

@@ -8,7 +8,7 @@ use DateTimeImmutable;
 
 final class NewsPropertiesFormData
 {
-	/** Typed wall time labelled UTC by the control; null when empty (see NewsPresenter::publishedAt()). */
+	/** Typed wall time labelled UTC by the control; null when empty (see NewsPresenter::addPublishedAtField()). */
 	public ?DateTimeImmutable $publishedAt;
 
 	/** News version the form was rendered from. */

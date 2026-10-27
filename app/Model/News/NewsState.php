@@ -17,7 +17,7 @@ enum NewsState
 
 	/**
 	 * The admin's view of the visibility rule NewsRepository applies on the website; both must agree.
-	 * Compared in whole seconds, as stored. A published translation without a date (never stored) counts as Draft.
+	 * Compared in whole seconds, as stored. A published translation without a date (never stored: publishing a translation sets the date) counts as Draft.
 	 */
 	public static function of(News $news, ?NewsTranslation $translation, DateTimeImmutable $now): self
 	{
