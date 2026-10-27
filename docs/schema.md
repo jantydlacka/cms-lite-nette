@@ -21,6 +21,56 @@ Indexes:
 - `idx_login_attempt_pair` BTREE (`email`, `ip`, `attempted_at`)
 - `idx_login_attempt_time` BTREE (`attempted_at`)
 
+## news
+
+- engine InnoDB, collation utf8mb4_unicode_ci
+
+Columns:
+
+- `id` int unsigned NOT NULL auto_increment
+- `published_at` datetime NULL
+- `author_id` int unsigned NULL
+- `version` int unsigned NOT NULL DEFAULT '1'
+- `created_at` datetime NOT NULL
+- `updated_at` datetime NOT NULL
+
+Indexes:
+
+- `PRIMARY` UNIQUE BTREE (`id`)
+- `idx_news_author` BTREE (`author_id`)
+
+Foreign keys:
+
+- `fk_news_author` (`author_id`) → `user` (`id`) ON DELETE SET NULL ON UPDATE NO ACTION
+
+## news_translation
+
+- engine InnoDB, collation utf8mb4_unicode_ci
+
+Columns:
+
+- `news_id` int unsigned NOT NULL
+- `locale` varchar(10) NOT NULL ascii/ascii_bin
+- `title` varchar(200) NOT NULL utf8mb4/utf8mb4_unicode_ci
+- `slug` varchar(100) NOT NULL ascii/ascii_bin
+- `perex` varchar(300) NOT NULL utf8mb4/utf8mb4_unicode_ci
+- `content` mediumtext NOT NULL utf8mb4/utf8mb4_unicode_ci
+- `meta_description` varchar(300) NOT NULL DEFAULT '' utf8mb4/utf8mb4_unicode_ci
+- `status` enum('draft','published') NOT NULL DEFAULT 'draft' utf8mb4/utf8mb4_unicode_ci
+- `version` int unsigned NOT NULL DEFAULT '1'
+- `created_at` datetime NOT NULL
+- `updated_at` datetime NOT NULL
+
+Indexes:
+
+- `PRIMARY` UNIQUE BTREE (`news_id`, `locale`)
+- `idx_news_translation_list` BTREE (`locale`, `status`)
+- `uq_news_translation_slug` UNIQUE BTREE (`locale`, `slug`)
+
+Foreign keys:
+
+- `fk_news_translation_news` (`news_id`) → `news` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION
+
 ## page
 
 - engine InnoDB, collation utf8mb4_unicode_ci
@@ -91,7 +141,7 @@ Columns:
 
 - `locale` varchar(10) NOT NULL ascii/ascii_bin
 - `old_path` varchar(500) NOT NULL ascii/ascii_bin
-- `target_type` enum('page') NOT NULL utf8mb4/utf8mb4_unicode_ci
+- `target_type` enum('page','news') NOT NULL utf8mb4/utf8mb4_unicode_ci
 - `target_id` int unsigned NOT NULL
 - `created_at` datetime NOT NULL
 

@@ -15,6 +15,8 @@ require __DIR__ . '/../bootstrap.php';
 // NULL-able columns that are intended, `table.column` => reason.
 const NULLABLE_ALLOWLIST = [
 	'page.parent_id' => 'NULL = stránka nejvyšší úrovně (strom bez umělého kořene)',
+	'news.published_at' => 'NULL = novinka ještě nemá datum publikace',
+	'news.author_id' => 'NULL = autor byl smazán (ON DELETE SET NULL)',
 ];
 
 $container = Bootstrap::bootForTests()->createContainer();

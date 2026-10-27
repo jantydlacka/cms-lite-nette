@@ -70,3 +70,14 @@ test('deleteForTarget removes every redirect to the target', function () use ($r
 test('the container autowires the redirect adapter', function () use ($container): void {
 	Assert::type(DatabasePathRedirectRepository::class, $container->getByType(PathRedirectRepository::class));
 });
+
+test('a redirect may target a news item; pages and news with the same id stay apart', function () use ($repo, $reset): void {
+	$reset();
+	$repo->record('cs', 'novinky/stary', new RedirectTarget('news', 1));
+	$repo->record('cs', 'stary', new RedirectTarget('page', 1));
+
+	Assert::same('news', $repo->findTarget('cs', 'novinky/stary')?->type);
+	$repo->deleteForTarget(new RedirectTarget('news', 1));
+	Assert::null($repo->findTarget('cs', 'novinky/stary'));
+	Assert::same('page', $repo->findTarget('cs', 'stary')?->type);
+});

@@ -19,6 +19,9 @@ services:
 	settingRepository:
 		create: App\Model\Setting\Database\DatabaseSettingRepository
 		type: App\Model\Setting\SettingRepository
+	newsRepository:
+		create: App\Model\News\Database\DatabaseNewsRepository
+		type: App\Model\News\NewsRepository
 	pathRedirectRepository: # named so a test can replace it
 		create: App\Model\Redirect\Database\DatabasePathRedirectRepository
 		type: App\Model\Redirect\PathRedirectRepository

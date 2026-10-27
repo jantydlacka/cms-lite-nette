@@ -98,6 +98,8 @@ function mutateAll(Connection $connection, int $round): void
 	$connection->query('INSERT INTO `user` (email, password_hash, name, role, created_at) VALUES (?, ?, ?, ?, NOW())', 'new-' . $round . '@example.com', 'x', 'New', 'editor');
 	$connection->query('UPDATE `user` SET active = 0');
 	$connection->query('DELETE FROM page_tree_lock');
+	$connection->query('INSERT INTO news (published_at, created_at, updated_at) VALUES (NOW(), NOW(), NOW())');
+	$connection->query('INSERT INTO news_translation (news_id, locale, title, slug, perex, content, created_at, updated_at) VALUES (LAST_INSERT_ID(), ?, ?, ?, ?, ?, NOW(), NOW())', 'cs', 'Nová', 'nova-' . $round, 'P', 'x');
 	$connection->query('UPDATE migrations SET executed = executed - INTERVAL 1 DAY');
 }
 
