@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Presentation\Error\Error5xx;
 
+use App\Presentation\Admin\AdminArea;
 use App\Presentation\BasePresenter;
 use Nette\Application\Request;
 use Throwable;
@@ -24,6 +25,10 @@ final class Error5xxPresenter extends BasePresenter
 		if (!$this->getRequest()->isMethod(Request::FORWARD)) {
 			$this->error();
 		}
+
+		if (AdminArea::contains($this->getHttpRequest()->getUrl()->getRelativePath())) {
+			$this->setLayout(AdminArea::Layout);
+		}
 	}
 
 
@@ -31,5 +36,6 @@ final class Error5xxPresenter extends BasePresenter
 	{
 		$this->logger->log($exception, ILogger::EXCEPTION);
 		$this->getHttpResponse()->setCode(500);
+		$this->template->demoData = $this->cmsConfig->demoData;
 	}
 }

@@ -15,6 +15,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\StreamableInputInterface;
+use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 
@@ -93,18 +94,21 @@ final class CreateUserCommand extends Command
 	}
 
 
-	/** Null when no input came, false when the two entries differ. */
+	/** Null when not interactive, false when the two entries differ. */
 	private function ask(InputInterface $input, OutputInterface $output): string|false|null
 	{
+		if (!$input->isInteractive()) {
+			return null;
+		}
+
 		$helper = new QuestionHelper();
 		$first = (new Question('Password: '))->setHidden(true);
 		$second = (new Question('Repeat password: '))->setHidden(true);
-		$password = $helper->ask($input, $output, $first);
-		$repeat = $helper->ask($input, $output, $second);
 
-		if (!is_string($password) || !is_string($repeat)) {
-			return null;
-		}
+		// An empty entry comes back as the default (null); it is an empty password, which the service refuses.
+		$password = $helper->ask($input, $output, $first) ?? '';
+		$repeat = $helper->ask($input, $output, $second) ?? '';
+		assert(is_string($password) && is_string($repeat));
 
 		return $password === $repeat ? $password : false;
 	}
@@ -112,7 +116,7 @@ final class CreateUserCommand extends Command
 
 	private function fail(OutputInterface $output, string $message): int
 	{
-		$output->writeln($message);
+		($output instanceof ConsoleOutputInterface ? $output->getErrorOutput() : $output)->writeln($message);
 
 		return Command::FAILURE;
 	}

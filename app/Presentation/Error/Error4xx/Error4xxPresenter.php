@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Presentation\Error\Error4xx;
 
 use App\Core\Routing\LocaleStrategy;
+use App\Presentation\Admin\AdminArea;
 use App\Presentation\BasePresenter;
 use Nette\Application\BadRequestException;
 use Nette\Application\Request;
@@ -31,8 +32,8 @@ final class Error4xxPresenter extends BasePresenter
 			$this->error();
 		}
 
-		if (explode('/', $path, 2)[0] === 'admin') {
-			$this->setLayout(__DIR__ . '/../../Admin/@layout.latte');
+		if (AdminArea::contains($path)) {
+			$this->setLayout(AdminArea::Layout);
 		}
 	}
 

@@ -129,14 +129,12 @@ The public site starts no session. The only technical cookie it may set is `_nss
 
 ## Deployment note
 
-Behind a reverse proxy, set Nette's trusted proxies, otherwise the rate limit sees the proxy's address instead of the client's and one client can block everyone:
+Behind a reverse proxy, set Nette's trusted proxies. Without them the rate limit sees the proxy's address instead of the client's, so one client can block everyone, and behind a TLS-terminating proxy the application does not detect HTTPS (from `X-Forwarded-Proto`/`Forwarded`), so the browser receives `http://` asset URLs on an HTTPS page (mixed content). Asset URLs and redirect `Location` headers are absolute URLs built from the request `Host`, so also set `ServerName` at deployment.
 
 ```neon
 http:
 	proxy: [192.0.2.10]  # address or CIDR range of your proxy
 ```
-
-Asset URLs and redirect `Location` headers are absolute URLs built from the request `Host`, so set `ServerName` (or trusted proxies) at deployment. Behind a TLS-terminating reverse proxy, configure trusted proxies and HTTPS detection in the application; otherwise the browser receives `http://` asset URLs on an HTTPS page (mixed content).
 
 Clear `temp/cache` on every deploy: in production mode the container and template caches are not rebuilt when the code changes.
 

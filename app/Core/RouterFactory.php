@@ -6,6 +6,7 @@ namespace App\Core;
 
 use App\Core\Routing\LocaleStrategy;
 use App\Model\CmsConfig;
+use App\Model\Page\ReservedSegments;
 use Nette\Application\Routers\Route;
 use Nette\Application\Routers\RouteList;
 
@@ -28,8 +29,8 @@ final class RouterFactory
 		// An underscore never occurs in a path, so this cannot shadow a page.
 		$router->addRoute('_health', 'Health:default');
 		// Before the pages; `admin` is a reserved segment. The locale is fixed, so links carry no `?locale=`.
-		$router->addRoute('admin', ['presenter' => 'Admin:Dashboard', 'action' => 'default', 'locale' => $config->defaultLocale]);
-		$router->addRoute('admin/sign-in', ['presenter' => 'Admin:Sign', 'action' => 'in', 'locale' => $config->defaultLocale]);
+		$router->addRoute(ReservedSegments::ADMIN, ['presenter' => 'Admin:Dashboard', 'action' => 'default', 'locale' => $config->defaultLocale]);
+		$router->addRoute(ReservedSegments::ADMIN . '/sign-in', ['presenter' => 'Admin:Sign', 'action' => 'in', 'locale' => $config->defaultLocale]);
 		foreach ($prefixes as $locale => $prefix) {
 			// Route masks match with an optional trailing slash; Presenter canonicalization turns that into a 301.
 			$router->addRoute($prefix, [

@@ -147,11 +147,14 @@ test('the compiled dummy hash matches the configured hasher, or unknown accounts
 	Assert::false($container->getByType(PasswordHasher::class)->needsRehash($container->getByType(CmsAuthenticator::class)->dummyHash()));
 });
 
-test('a password longer than 72 bytes is rejected even if its first 72 bytes match', function () use ($auth, $reset, $code, $users, $hasher): void {
+test('a password longer than 72 bytes is rejected even if its first 72 bytes match', function () use ($auth, $reset, $code, $users, $hasher, $attempts): void {
 	$id = $reset();
 	$users->updatePasswordHash($id, $hasher->hash(str_repeat('a', 72)));
 	Assert::same($id, $auth->authenticate('admin@example.com', str_repeat('a', 72))->getId());
+	Assert::same(0, $attempts());
 	Assert::same(CmsAuthenticator::InvalidCredential, $code($auth, 'admin@example.com', str_repeat('a', 73)));
+	// Counted as a failure: the pair is not cleared as after a success.
+	Assert::same(1, $attempts());
 });
 
 test('a failed sign-in leaves the stored hash unchanged even when it would need a rehash', function () use ($reset, $code, $users, $explorer, $dummyHash): void {

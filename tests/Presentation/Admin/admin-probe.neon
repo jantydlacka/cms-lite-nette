@@ -1,4 +1,4 @@
-# Test-only administration page with a component signal (AccessTest).
+# Test-only administration pages: a component signal, an administrator-only page and a failing page.
 application:
 	mapping:
 		AdminTest: Tests\Presentation\Admin\fixtures\*Presenter
@@ -6,7 +6,9 @@ application:
 services:
 	- Tests\Presentation\Admin\fixtures\ProbePresenter
 	- Tests\Presentation\Admin\fixtures\UsersProbePresenter
+	- Tests\Presentation\Admin\fixtures\ThrowingProbePresenter
 	router:
 		setup:
 			- prepend(Nette\Application\Routers\Route('admin/probe', [presenter: 'AdminTest:Probe', action: default, locale: cs]))
 			- prepend(Nette\Application\Routers\Route('admin/users-probe', [presenter: 'AdminTest:UsersProbe', action: default, locale: cs]))
+			- prepend(Nette\Application\Routers\Route('admin/throwing-probe', [presenter: 'AdminTest:ThrowingProbe', action: default, locale: cs]))

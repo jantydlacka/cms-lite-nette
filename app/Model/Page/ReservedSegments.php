@@ -9,7 +9,8 @@ use App\Model\CmsConfig;
 /** First path segments that belong to the application, not to pages. */
 final class ReservedSegments
 {
-	public const FIXED = ['admin', 'novinky', 'news', 'sitemap.xml'];
+	public const ADMIN = 'admin';
+	public const FIXED = [self::ADMIN, 'novinky', 'news', 'sitemap.xml'];
 
 
 	public function __construct(private readonly CmsConfig $config)

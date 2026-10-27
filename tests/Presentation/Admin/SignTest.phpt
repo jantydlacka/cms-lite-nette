@@ -255,7 +255,7 @@ test('the demo banner shows only while demo data are enabled', function (): void
 	try {
 		foreach (['1' => true, '0' => false] as $env => $demoData) {
 			putenv('CMS_DEMO_DATA=' . $env);
-			$app = HttpApplication::boot();
+			$app = HttpApplication::boot([__DIR__ . '/admin-probe.neon']);
 			AdminBrowser::seed($app->container, EDITOR, 'Eva Editorová', Role::Editor);
 			$expected = $demoData ? 'Běží demo data – účty se známým heslem, nepoužívat na ostrém webu.' : null;
 
@@ -263,6 +263,9 @@ test('the demo banner shows only while demo data are enabled', function (): void
 			$notFound = $app->get('/admin/neexistuje');
 			Assert::same(404, $notFound->code);
 			Assert::same($expected, $notFound->text('demo-banner'), "admin 404, CMS_DEMO_DATA=$env");
+			$failed = $app->get('/admin/throwing-probe');
+			Assert::same(500, $failed->code);
+			Assert::same($expected, $failed->text('demo-banner'), "admin 500, CMS_DEMO_DATA=$env");
 			AdminBrowser::signIn($app, EDITOR);
 			Assert::same($expected, $app->get('/admin')->text('demo-banner'), "dashboard, CMS_DEMO_DATA=$env");
 		}

@@ -207,7 +207,7 @@ test('IP key: zone id is stripped', function () use ($throttle, $reset): void {
 
 test('IP key: unparsable, empty and non-ASCII values become "unknown"', function () use ($throttle, $reset, $explorer): void {
 	$reset();
-	foreach (['', 'zzz', "Å¾", 'x%y'] as $ip) {
+	foreach (['', 'zzz', 'ž', 'x%y'] as $ip) {
 		Assert::true($throttle->attempt('a@x.cz', $ip));
 	}
 	Assert::same(['unknown'], $explorer->query('SELECT DISTINCT ip FROM login_attempt')->fetchPairs(null, 'ip'));

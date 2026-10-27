@@ -21,7 +21,7 @@ $run = static function (array $input, array $lines, bool $interactive = true) us
 	/** @var list<string> $lines */
 	$tester = new CommandTester($container->getByType(CreateUserCommand::class));
 	$tester->setInputs($lines);
-	$tester->execute($input, ['interactive' => $interactive, 'capture_stderr_separately' => false]);
+	$tester->execute($input, ['interactive' => $interactive, 'capture_stderr_separately' => true]);
 
 	return $tester;
 };
@@ -39,6 +39,17 @@ test('interactive double entry creates an admin', function () use ($run, $users,
 	Assert::notContains('correct horse battery', $t->getDisplay());
 });
 
+test('an empty interactive entry is an empty password, refused by the service', function () use ($run, $count, $reset): void {
+	$reset();
+	$t = $run(['email' => 'a@example.com', 'name' => 'A'], ['', '']);
+
+	Assert::same(1, $t->getStatusCode());
+	Assert::contains('Password must be at least 12 characters.', $t->getErrorOutput());
+	Assert::notContains('--password-stdin', $t->getErrorOutput());
+	Assert::same('', $t->getDisplay());
+	Assert::same(0, $count());
+});
+
 test('--role=editor', function () use ($run, $users, $reset): void {
 	$reset();
 	$t = $run(['email' => 'ed@example.com', 'name' => 'Ed', '--role' => 'editor'], ['correct horse battery', 'correct horse battery']);
@@ -52,8 +63,8 @@ test('mismatching passwords store nothing', function () use ($run, $count, $rese
 	$t = $run(['email' => 'a@example.com', 'name' => 'A'], ['correct horse battery', 'another horse battery']);
 
 	Assert::same(1, $t->getStatusCode());
-	Assert::contains('Passwords do not match.', $t->getDisplay());
-	Assert::notContains('horse battery', $t->getDisplay());
+	Assert::contains('Passwords do not match.', $t->getErrorOutput());
+	Assert::notContains('horse battery', $t->getDisplay() . $t->getErrorOutput());
 	Assert::same(0, $count());
 });
 
@@ -74,7 +85,7 @@ foreach (['trailing space' => "correct horse battery \n", 'leading space' => " c
 		$t = $run(['email' => 'a@example.com', 'name' => 'A', '--password-stdin' => true], [$line], false);
 
 		Assert::same(1, $t->getStatusCode());
-		Assert::contains('Password must not start or end with whitespace.', $t->getDisplay());
+		Assert::contains('Password must not start or end with whitespace.', $t->getErrorOutput());
 		Assert::same(0, $count());
 	});
 }
@@ -84,7 +95,7 @@ test('--password-stdin with a NUL byte fails with a message, not an uncaught err
 	$t = $run(['email' => 'a@example.com', 'name' => 'A', '--password-stdin' => true], ["correct\0horse battery\n"], false);
 
 	Assert::same(1, $t->getStatusCode());
-	Assert::contains('Password contains characters that are not allowed.', $t->getDisplay());
+	Assert::contains('Password contains characters that are not allowed.', $t->getErrorOutput());
 	Assert::same(0, $count());
 });
 
@@ -93,7 +104,7 @@ test('--password-stdin with empty input fails', function () use ($run, $count, $
 	$t = $run(['email' => 'a@example.com', 'name' => 'A', '--password-stdin' => true], [], false);
 
 	Assert::same(1, $t->getStatusCode());
-	Assert::contains('No password given on standard input.', $t->getDisplay());
+	Assert::contains('No password given on standard input.', $t->getErrorOutput());
 	Assert::same(0, $count());
 });
 
@@ -102,7 +113,7 @@ test('non-interactive run without --password-stdin says how to pass the password
 	$t = $run(['email' => 'a@example.com', 'name' => 'A'], [], false);
 
 	Assert::same(1, $t->getStatusCode());
-	Assert::contains('No password given; use --password-stdin when not running interactively.', $t->getDisplay());
+	Assert::contains('No password given; use --password-stdin when not running interactively.', $t->getErrorOutput());
 	Assert::same(0, $count());
 });
 
@@ -120,8 +131,9 @@ foreach ($failures as $title => [$input, $password, $message]) {
 		$t = $run($input, [$password, $password]);
 
 		Assert::same(1, $t->getStatusCode());
-		Assert::contains($message, $t->getDisplay());
-		Assert::notContains($password, $t->getDisplay());
+		Assert::contains($message, $t->getErrorOutput());
+		Assert::notContains($message, $t->getDisplay());
+		Assert::notContains($password, $t->getDisplay() . $t->getErrorOutput());
 		Assert::same(0, $count());
 	});
 }
@@ -132,6 +144,6 @@ test('failure: duplicate e-mail', function () use ($run, $count, $reset): void {
 	$t = $run(['email' => 'A@Example.com', 'name' => 'B'], ['correct horse battery', 'correct horse battery']);
 
 	Assert::same(1, $t->getStatusCode());
-	Assert::contains('A user with this e-mail already exists.', $t->getDisplay());
+	Assert::contains('A user with this e-mail already exists.', $t->getErrorOutput());
 	Assert::same(1, $count());
 });

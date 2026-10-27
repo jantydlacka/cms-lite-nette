@@ -49,6 +49,15 @@ The administration has no language prefix and runs in the default language; its 
 | Sign-out | The signal `signOut!` (`/admin?do=signOut`), only by a POST from the same origin: signs out, 303 to `/admin/sign-in` with `admin.sign.outDone`. A GET is refused (405); a cross-site POST only redirects (303) and signs nobody out. |
 | A sign-in POST from another site | Not processed: 303 back to the form. |
 | `/admin/<anything else>` | 404 in the administration layout (default language). `/administrace` is a public 404. |
+| A server error under `/admin` | 500 with `error.500.title` in the administration layout; the error is logged. |
+
+### Stored requests
+
+Every implementation stores and restores requests by the same rules:
+
+- Only a GET without a signal (`?do=…`), or a POST from the same origin, is stored for after sign-in. Any other request redirects to `/admin/sign-in` without a backlink.
+- A cross-site POST therefore gets no backlink. (A cross-site GET without a signal is stored: restoring it only shows a page.)
+- A restored request never executes an action: a restored POST shows its page without running its signal or form handler, and a restored GET is a plain redirect to the stored address.
 
 A deactivated account is signed out at its next request. The session cookie has no expiry (it ends with the browser), is `HttpOnly` and `SameSite=Lax`. Public pages never start a session.
 

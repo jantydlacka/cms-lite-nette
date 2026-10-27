@@ -14,7 +14,7 @@ use Nette\Security\AuthenticationException;
 final class SignPresenter extends BasePresenter
 {
 	/** Key of the request stored before the redirect here, see AdminPresenter::startup(). */
-	public string $backlink = '';
+	private string $backlink = '';
 
 	#[Inject]
 	public FormFactory $formFactory;

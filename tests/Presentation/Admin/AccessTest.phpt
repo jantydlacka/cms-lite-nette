@@ -10,9 +10,12 @@ use App\Model\Setting\SettingRepository;
 use App\Model\User\Role;
 use Nette\Database\Explorer;
 use Tester\Assert;
+use Tests\FakeLogger;
 use Tests\Presentation\Admin\AdminBrowser;
 use Tests\Presentation\Admin\fixtures\ProbeControl;
+use Tests\Presentation\Admin\fixtures\ThrowingProbePresenter;
 use Tests\Support\HttpApplication;
+use Tracy\ILogger;
 
 require __DIR__ . '/../../bootstrap.php';
 
@@ -296,4 +299,19 @@ test('an unknown address under /admin is a 404 in the administration layout, /ad
 	Assert::same(404, $result->code);
 	Assert::contains('front.css', $result->body);
 	Assert::notContains('admin.css', $result->body);
+});
+
+
+test('a server error under /admin is a 500 in the administration layout and is logged', function () use ($app): void {
+	$app->newBrowser();
+	$result = $app->get('/admin/throwing-probe');
+	Assert::same(500, $result->code);
+	Assert::contains('Něco se pokazilo', (string) $result->text('error-title'));
+	Assert::contains('admin.css', $result->body);
+	Assert::notContains('front.css', $result->body);
+	Assert::false($result->sessionStarted());
+	$logger = $result->container->getService('tracy.logger');
+	assert($logger instanceof FakeLogger);
+	Assert::notSame(null, ThrowingProbePresenter::$thrown);
+	Assert::same([[ThrowingProbePresenter::$thrown, ILogger::EXCEPTION]], $logger->records);
 });
