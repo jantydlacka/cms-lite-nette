@@ -7,6 +7,7 @@ namespace App\Core\DI;
 use App\Core\Security\CmsAuthenticator;
 use App\Model\CmsConfig;
 use App\Model\Login\LoginLimits;
+use DateTimeZone;
 use Nette\DI\CompilerExtension;
 use Nette\DI\Definitions\ServiceDefinition;
 use Nette\Schema\Expect;
@@ -29,6 +30,8 @@ final class CmsExtension extends CompilerExtension
 				->mergeDefaults(false)
 				->assert(static fn (mixed $locales): bool => is_array($locales) && count($locales) === count(array_unique($locales, SORT_REGULAR)), 'locales must not contain duplicates'),
 			'newsPerPage' => Expect::int(10)->min(1),
+			'timezone' => Expect::string('Europe/Prague')->assert(static fn (mixed $zone): bool => is_string($zone) && in_array($zone, DateTimeZone::listIdentifiers(), true), 'timezone must be a valid time zone identifier'),
+			'newsInMenu' => Expect::bool(true),
 			'login' => Expect::structure([
 				'maxPairFailures' => Expect::int(5)->min(1),
 				'maxIpFailures' => Expect::int(20)->min(1),
@@ -57,6 +60,8 @@ final class CmsExtension extends CompilerExtension
 				$config->locales,
 				$config->newsPerPage,
 				$demoData === true,
+				$config->timezone,
+				$config->newsInMenu,
 			]);
 		$this->getContainerBuilder()->addDefinition($this->prefix('loginLimits'))
 			->setFactory(LoginLimits::class, [

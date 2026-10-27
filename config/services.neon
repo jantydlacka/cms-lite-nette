@@ -2,6 +2,7 @@ services:
 	router: App\Core\RouterFactory::createRouter
 	- App\Core\Routing\PrefixLocaleStrategy
 	- App\Core\Localization\CurrentLocale
+	- App\Core\Localization\SiteTime
 	translator: App\Core\Localization\NeonTranslator(langDir: %appDir%/../lang, strict: %debugMode%)
 	- App\Core\SystemClock
 	# Implementations of App\Model ports are typed as their port, so only the interface is autowired

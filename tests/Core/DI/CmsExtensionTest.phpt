@@ -42,6 +42,8 @@ test('defaults are applied', function (): void {
 	Assert::same('cs', $config->defaultLocale);
 	Assert::same(['cs'], $config->locales);
 	Assert::same(10, $config->newsPerPage);
+	Assert::same('Europe/Prague', $config->timezone);
+	Assert::true($config->newsInMenu);
 });
 
 
@@ -111,4 +113,20 @@ test('the real application config exposes CmsConfig', function (): void {
 	$config = Bootstrap::bootForTests()->createContainer()->getByType(CmsConfig::class);
 	Assert::same('CMS Lite', $config->siteName);
 	Assert::same('cs', $config->defaultLocale);
+});
+
+
+test('timezone and newsInMenu may be overridden', function (): void {
+	$config = compile("\tsiteName: Demo\n\ttimezone: Asia/Tokyo\n\tnewsInMenu: false")->getByType(CmsConfig::class);
+	Assert::same('Asia/Tokyo', $config->timezone);
+	Assert::false($config->newsInMenu);
+});
+
+
+test('an unknown timezone is a configuration error naming the key', function (): void {
+	Assert::exception(
+		fn () => compile("\tsiteName: Demo\n\ttimezone: Mars/Base"),
+		InvalidConfigurationException::class,
+		'%a%timezone%a%',
+	);
 });

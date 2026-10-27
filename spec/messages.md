@@ -79,3 +79,5 @@ Translation keys of the public UI and the administration with their Czech (`lang
 | `admin.pages.deleted` | Stránka byla smazána. | The page has been deleted. |
 | `admin.pages.hasChildren` | Stránku s podstránkami nejde smazat. | A page with subpages cannot be deleted. |
 | `error.403.title` | Na tuto stránku nemáte oprávnění. | You do not have permission to view this page. |
+| `format.date` | j. n. Y | j M Y |
+| `format.dateTime` | j. n. Y H:i | j M Y H:i |

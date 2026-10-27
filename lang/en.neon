@@ -73,3 +73,5 @@ admin.pages.deleteConfirm: 'Really delete the page “%title%”? All languages 
 admin.pages.deleteBack: Back
 admin.pages.deleted: The page has been deleted.
 admin.pages.hasChildren: A page with subpages cannot be deleted.
+format.date: 'j M Y'
+format.dateTime: 'j M Y H:i'

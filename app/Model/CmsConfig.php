@@ -16,6 +16,8 @@ final readonly class CmsConfig
 		public int $newsPerPage,
 		/** The administration warns that accounts with a known password exist. */
 		public bool $demoData = false,
+		public string $timezone = 'Europe/Prague',
+		public bool $newsInMenu = true,
 	) {
 	}
 }

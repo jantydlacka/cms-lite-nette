@@ -73,3 +73,5 @@ admin.pages.deleteConfirm: 'Opravdu smazat stránku „%title%“? Smažou se v�
 admin.pages.deleteBack: Zpět
 admin.pages.deleted: Stránka byla smazána.
 admin.pages.hasChildren: Stránku s podstránkami nejde smazat.
+format.date: 'j. n. Y'
+format.dateTime: 'j. n. Y H:i'
