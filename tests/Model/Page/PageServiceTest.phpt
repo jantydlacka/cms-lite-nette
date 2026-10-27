@@ -320,6 +320,24 @@ test('a hierarchical strategy moves descendants and redirects their old paths', 
 	Assert::same($parent, $redirectId('cs', 'firma'));
 });
 
+test('a saved translation and a recomputed descendant path get the clock instant of the save', function () use ($reset, $service, $cmd, $pages, $tree, $clock): void {
+	$reset();
+	$parent = $pages->createPage(null, 0, true);
+	$child = $pages->createPage($parent, 0, true);
+	$service(null, $tree)->saveTranslation($cmd($parent, 'firma'));
+	$service(null, $tree)->saveTranslation($cmd($child, 'tym'));
+	$before = $clock->now();
+	$clock->modify('+1 hour');
+	try {
+		$service(null, $tree)->saveTranslation($cmd($parent, 'spolecnost', version: 1));
+
+		Assert::same($clock->now()->getTimestamp(), $pages->findTranslation($parent, 'cs')?->updatedAt->getTimestamp());
+		Assert::same($clock->now()->getTimestamp(), $pages->findTranslation($child, 'cs')?->updatedAt->getTimestamp());
+	} finally {
+		$clock->set($before);
+	}
+});
+
 test('a descendant path that collides rolls the whole save back', function () use ($reset, $service, $cmd, $pages, $counts): void {
 	$reset();
 	$parent = $pages->createPage(null, 0, true);
@@ -1114,4 +1132,32 @@ test('setHomepage, deletePage and the homepage check in saveTranslation take the
 	$calls = $log->getArrayCopy();
 	Assert::same('acquire', $calls[0] ?? null, 'saveTranslation');
 	Assert::contains('setting.get', $calls, 'saveTranslation');
+});
+
+
+test('every write refuses to run inside an already open transaction and writes nothing', function () use ($reset, $service, $cmd, $create, $pages, $transaction, $withStatus, $fullSnapshot): void {
+	$reset();
+	$id = $pages->createPage(null, 0, true);
+	$service()->saveTranslation($withStatus($id, 'cs', 'uvod', PublicationStatus::Published, null));
+	$before = $fullSnapshot();
+	$writes = [
+		'createPage' => static fn () => $service()->createPage($create(null, 'nova')),
+		'saveTranslation' => static fn () => $service()->saveTranslation($cmd($id, 'jina', version: 1)),
+		'updatePage' => static fn () => $service()->updatePage(new UpdatePage($id, null, false, 1)),
+		'moveUp' => static fn () => $service()->moveUp($id),
+		'moveDown' => static fn () => $service()->moveDown($id),
+		'setHomepage' => static fn () => $service()->setHomepage($id),
+		'deletePage' => static fn () => $service()->deletePage($id),
+	];
+	foreach ($writes as $label => $write) {
+		$thrown = null;
+		try {
+			$transaction->run($write);
+		} catch (Throwable $thrown) {
+		}
+		Assert::type(LogicException::class, $thrown, $label);
+		assert($thrown instanceof LogicException);
+		Assert::match('Page writes must start their own transaction%a%', $thrown->getMessage(), $label);
+		Assert::same($before, $fullSnapshot(), $label);
+	}
 });

@@ -50,7 +50,7 @@ interface PageRepository
 
 
 	/**
-	 * Inserts or updates by (pageId, locale); updatedAt of the argument is ignored, the clock is used.
+	 * Inserts or updates by (pageId, locale) and stores updatedAt of the argument; the version argument is ignored (the store counts).
 	 *
 	 * @throws InvalidSlugException when the (locale, path) pair belongs to another page
 	 */

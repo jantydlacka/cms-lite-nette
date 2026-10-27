@@ -18,4 +18,7 @@ interface Transaction
 	 * @return T
 	 */
 	public function run(callable $work): mixed;
+
+
+	public function inTransaction(): bool;
 }

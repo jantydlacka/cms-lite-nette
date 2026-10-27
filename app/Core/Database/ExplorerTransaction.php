@@ -18,4 +18,10 @@ final class ExplorerTransaction implements Transaction
 	{
 		return $this->explorer->transaction(static fn (): mixed => $work());
 	}
+
+
+	public function inTransaction(): bool
+	{
+		return $this->explorer->getConnection()->getPdo()->inTransaction();
+	}
 }

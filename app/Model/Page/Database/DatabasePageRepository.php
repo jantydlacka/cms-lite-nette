@@ -156,7 +156,7 @@ final class DatabasePageRepository implements PageRepository
 
 	public function saveTranslation(PageTranslation $translation): void
 	{
-		$now = $this->now();
+		$now = $translation->updatedAt->setTimezone(new DateTimeZone('UTC'))->format(self::FORMAT);
 		$values = [
 			'title' => $translation->title,
 			'slug' => $translation->slug,

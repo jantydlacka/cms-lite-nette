@@ -11,6 +11,7 @@ use App\Model\Redirect\RedirectTarget;
 use App\Model\Setting\SettingRepository;
 use App\Model\Transaction;
 use InvalidArgumentException;
+use LogicException;
 use Nette\Utils\Strings;
 use Psr\Clock\ClockInterface;
 use UnexpectedValueException;
@@ -46,6 +47,7 @@ final class PageService
 	 */
 	public function createPage(CreatePage $command): PageTranslation
 	{
+		$this->assertOwnTransaction();
 		[$title, $slug] = $this->checkInput($command->locale, $command->title, $command->slug, $command->metaDescription);
 
 		return $this->transaction->run(function () use ($command, $title, $slug): PageTranslation {
@@ -82,6 +84,7 @@ final class PageService
 	 */
 	public function saveTranslation(SavePageTranslation $command): PageTranslation
 	{
+		$this->assertOwnTransaction();
 		[$title, $slug] = $this->checkInput($command->locale, $command->title, $command->slug, $command->metaDescription);
 
 		return $this->transaction->run(function () use ($command, $title, $slug): PageTranslation {
@@ -124,6 +127,7 @@ final class PageService
 	 */
 	public function updatePage(UpdatePage $command): Page
 	{
+		$this->assertOwnTransaction();
 		return $this->transaction->run(function () use ($command): Page {
 			$this->treeLock->acquire();
 			$page = $this->pages->lockPage($command->pageId)
@@ -188,6 +192,7 @@ final class PageService
 	 */
 	public function setHomepage(int $pageId): void
 	{
+		$this->assertOwnTransaction();
 		$this->transaction->run(function () use ($pageId): void {
 			$this->treeLock->acquire();
 			if ($this->pages->getPage($pageId) === null) {
@@ -210,6 +215,7 @@ final class PageService
 	 */
 	public function deletePage(int $pageId): void
 	{
+		$this->assertOwnTransaction();
 		$this->transaction->run(function () use ($pageId): void {
 			$this->treeLock->acquire();
 			if ($this->pages->getPage($pageId) === null) {
@@ -255,6 +261,7 @@ final class PageService
 
 	private function move(int $pageId, int $step): void
 	{
+		$this->assertOwnTransaction();
 		$this->transaction->run(function () use ($pageId, $step): void {
 			$this->treeLock->acquire();
 			$page = $this->pages->getPage($pageId)
@@ -303,6 +310,18 @@ final class PageService
 			$ancestorSlugs[] = $translation->slug;
 		}
 		$this->recomputeDescendantPaths($page->id, $locale, $ancestorSlugs, []);
+	}
+
+
+	/**
+	 * A write must open its transaction itself: joining an outer one would read rows the outer transaction saw
+	 * before the tree lock was taken.
+	 */
+	private function assertOwnTransaction(): void
+	{
+		if ($this->transaction->inTransaction()) {
+			throw new LogicException('Page writes must start their own transaction; one is already open.');
+		}
 	}
 
 
@@ -465,7 +484,7 @@ final class PageService
 			$translation->content,
 			$translation->metaDescription,
 			$translation->status,
-			$translation->updatedAt,
+			$this->clock->now(),
 			1,
 		));
 	}

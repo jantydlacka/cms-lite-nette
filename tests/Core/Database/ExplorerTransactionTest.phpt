@@ -96,3 +96,12 @@ test('an outer run that catches the inner exception commits the inner writes too
 	Assert::true(settingExists($db, 'outer'));
 	Assert::true(settingExists($db, 'inner'));
 });
+
+
+test('inTransaction is true only inside run()', function (): void {
+	$transaction = container()->getByType(Transaction::class);
+
+	Assert::false($transaction->inTransaction());
+	Assert::true($transaction->run(static fn (): bool => $transaction->inTransaction()));
+	Assert::false($transaction->inTransaction());
+});

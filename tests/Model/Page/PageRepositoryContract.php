@@ -21,7 +21,7 @@ final class PageRepositoryContract
 {
 	/**
 	 * @param callable(): void $reset empties the store between scenarios
-	 * @param callable(DateTimeImmutable): void $setNow moves the clock the repository writes updatedAt from
+	 * @param callable(DateTimeImmutable): void $setNow moves the clock of the repository (if it has one)
 	 */
 	public static function run(PageRepository $repo, callable $reset, callable $setNow): void
 	{
@@ -148,7 +148,7 @@ final class PageRepositoryContract
 			Assert::same([$root], array_map(static fn (MenuItem $i): int => $i->pageId, $repo->findBreadcrumbs($root, 'cs')));
 		});
 
-		test('updatedAt is the clock instant in UTC, whatever the argument or the default timezone says', function () use ($repo, $reset, $setNow): void {
+		test('updatedAt is the instant of the argument in UTC, whatever the clock or the default timezone says', function () use ($repo, $reset, $setNow): void {
 			$reset();
 			$previous = date_default_timezone_get();
 			date_default_timezone_set('Europe/Prague');
@@ -157,13 +157,13 @@ final class PageRepositoryContract
 					'DST edge' => new DateTimeImmutable('2026-03-29 01:30:00', new DateTimeZone('UTC')),
 					// 02:30 does not exist in Europe/Prague on that day.
 					'skipped local hour' => new DateTimeImmutable('2026-03-29 02:30:00', new DateTimeZone('UTC')),
-					'non-UTC clock' => new DateTimeImmutable('2026-03-29T03:30:00+02:00'),
+					'non-UTC argument' => new DateTimeImmutable('2026-03-29T03:30:00+02:00'),
 				];
+				// The clock must not win over the argument.
+				$setNow(new DateTimeImmutable('2000-01-01 00:00:00', new DateTimeZone('UTC')));
 				foreach ($cases as $label => $instant) {
-					$setNow($instant);
 					$id = $repo->createPage(null, 0, false);
-					// The argument carries 2000-01-01 and must not win over the clock.
-					$repo->saveTranslation(self::translation($id, 'cs', 'time-' . strlen($label), 'Time', PublicationStatus::Draft));
+					$repo->saveTranslation(self::translation($id, 'cs', 'time-' . strlen($label), 'Time', PublicationStatus::Draft, $instant));
 
 					$read = $repo->findTranslation($id, 'cs')?->updatedAt;
 					assert($read !== null);
@@ -313,10 +313,16 @@ final class PageRepositoryContract
 	}
 
 
-	public static function translation(int $pageId, string $locale, string $path, string $title, PublicationStatus $status): PageTranslation
-	{
+	public static function translation(
+		int $pageId,
+		string $locale,
+		string $path,
+		string $title,
+		PublicationStatus $status,
+		?DateTimeImmutable $updatedAt = null,
+	): PageTranslation {
 		$slug = substr($path, (int) strrpos('/' . $path, '/'));
 
-		return new PageTranslation($pageId, $locale, $title, $slug, $path, 'content', 'description', $status, new DateTimeImmutable('2000-01-01'), 99);
+		return new PageTranslation($pageId, $locale, $title, $slug, $path, 'content', 'description', $status, $updatedAt ?? new DateTimeImmutable('2000-01-01'), 99);
 	}
 }
