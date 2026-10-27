@@ -55,6 +55,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
           BEFORE: ${{ github.event.before }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           if [ "$EVENT_NAME" = pull_request ]; then
@@ -66,7 +67,13 @@ jobs:
           else
             base="HEAD~1"
           fi
-          bin/check-migrations-immutable "$base"
+          # On a push to another branch, files merged in from main are "added" against the previous push:
+          # the migration order is judged against origin/main instead (a push to main keeps its own base).
+          order=()
+          if [ "$EVENT_NAME" != pull_request ] && [ "$REF_NAME" != main ] && git rev-parse --verify --quiet origin/main > /dev/null; then
+            order=(--order-base origin/main)
+          fi
+          bin/check-migrations-immutable "${order[@]}" "$base"
 
       - uses: shivammathur/setup-php@v2
         with:

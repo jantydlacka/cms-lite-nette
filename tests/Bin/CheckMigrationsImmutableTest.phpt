@@ -53,9 +53,9 @@ function guardRepository(): string
 
 
 /** @return array{int, string} */
-function runGuard(string $dir, string $base = 'main'): array
+function runGuard(string $dir, string $base = 'main', string ...$options): array
 {
-	$result = execIn($dir, [GUARD, $base]);
+	$result = execIn($dir, [GUARD, ...array_values($options), $base]);
 	Helpers::purge($dir);
 	rmdir($dir);
 
@@ -141,6 +141,151 @@ test('a migration added to the base after the branch was created passes', functi
 	commitAll($dir);
 
 	Assert::same(0, runGuard($dir)[0]);
+});
+
+
+/**
+ * Commits files to `main` and returns to `work`.
+ *
+ * @param array<string, string> $files content by path
+ */
+function addToMain(string $dir, array $files): void
+{
+	gitIn($dir, 'checkout', '-q', 'main');
+	foreach ($files as $path => $content) {
+		if (!is_dir(dirname($dir . '/' . $path))) {
+			mkdir(dirname($dir . '/' . $path), 0777, true);
+		}
+		file_put_contents($dir . '/' . $path, $content);
+	}
+	commitAll($dir);
+	gitIn($dir, 'checkout', '-q', 'work');
+}
+
+
+test('an added migration that sorts before the latest one in the base fails, in any group', function (): void {
+	$dir = guardRepository();
+	addToMain($dir, ['migrations/structures/0005.sql' => "SELECT 5;\n"]);
+	gitIn($dir, 'merge', '-q', 'main');
+	mkdir($dir . '/migrations/dummy-data');
+	file_put_contents($dir . '/migrations/dummy-data/0003.sql', "SELECT 3;\n");
+	commitAll($dir);
+	[$code, $output] = runGuard($dir);
+
+	Assert::same(1, $code, $output);
+	Assert::contains('migrations/dummy-data/0003.sql', $output);
+	Assert::contains('0005.sql', $output);
+});
+
+
+test('an added migration equal to the latest basename in the base fails', function (): void {
+	$dir = guardRepository();
+	mkdir($dir . '/migrations/dummy-data');
+	file_put_contents($dir . '/migrations/dummy-data/0001.sql', "SELECT 1;\n");
+	commitAll($dir);
+	[$code, $output] = runGuard($dir);
+
+	Assert::same(1, $code, $output);
+	Assert::contains('migrations/dummy-data/0001.sql', $output);
+});
+
+
+test('an added migration in another group that sorts after the latest one in the base passes', function (): void {
+	$dir = guardRepository();
+	mkdir($dir . '/migrations/dummy-data');
+	file_put_contents($dir . '/migrations/dummy-data/0002.sql', "SELECT 2;\n");
+	commitAll($dir);
+	[$code, $output] = runGuard($dir);
+
+	Assert::same(0, $code, $output);
+});
+
+
+test('a migration the base got later with a higher number makes the branch rename its own', function (): void {
+	$dir = guardRepository();
+	file_put_contents($dir . '/migrations/structures/0002.sql', "SELECT 2;\n");
+	commitAll($dir);
+	addToMain($dir, ['migrations/dummy-data/0003.sql' => "SELECT 3;\n"]);
+	[$code, $output] = runGuard($dir);
+
+	Assert::same(1, $code, $output);
+	Assert::contains('migrations/structures/0002.sql', $output);
+});
+
+
+/**
+ * Branch Y added 0007 (its tip is returned, as CI's previous push), then main got 0006 from branch X and Y merged main.
+ *
+ * @return array{string, string} directory and the commit before the merge
+ */
+function mergedMainAfterPush(): array
+{
+	$dir = guardRepository();
+	file_put_contents($dir . '/migrations/structures/0007.sql', "SELECT 7;\n");
+	commitAll($dir);
+	[, $before] = execIn($dir, ['git', 'rev-parse', 'HEAD']);
+	addToMain($dir, ['migrations/structures/0006.sql' => "SELECT 6;\n"]);
+	gitIn($dir, 'merge', '-q', '--no-edit', 'main');
+
+	return [$dir, trim($before)];
+}
+
+
+test('a released migration merged in from main is not refused when the order is checked against main', function (): void {
+	[$dir, $before] = mergedMainAfterPush();
+	[$code, $output] = runGuard($dir, $before, '--order-base', 'main');
+
+	Assert::same(0, $code, $output);
+});
+
+
+test('without --order-base the previous push is the order base too', function (): void {
+	[$dir, $before] = mergedMainAfterPush();
+	[$code, $output] = runGuard($dir, $before);
+
+	Assert::same(1, $code, $output);
+	Assert::contains('migrations/structures/0006.sql', $output);
+});
+
+
+test('with --order-base a file sorting before the latest migration of main still fails', function (): void {
+	[$dir, $before] = mergedMainAfterPush();
+	file_put_contents($dir . '/migrations/structures/0005.sql', "SELECT 5;\n");
+	commitAll($dir);
+	[$code, $output] = runGuard($dir, $before, '--order-base', 'main');
+
+	Assert::same(1, $code, $output);
+	Assert::contains('migrations/structures/0005.sql', $output);
+	Assert::notContains('migrations/structures/0006.sql', $output);
+});
+
+
+test('with --order-base an edited migration is still judged against the positional base', function (): void {
+	[$dir, $before] = mergedMainAfterPush();
+	file_put_contents($dir . '/migrations/structures/0007.sql', "SELECT 8;\n");
+	commitAll($dir);
+	[$code, $output] = runGuard($dir, $before, '--order-base', 'main');
+
+	Assert::same(1, $code, $output);
+	Assert::contains('migrations/structures/0007.sql', $output);
+});
+
+
+test('a missing order base fails with code 2', function (): void {
+	$dir = guardRepository();
+
+	Assert::same(2, runGuard($dir, 'main', '--order-base', 'origin/main')[0]);
+});
+
+
+test('an added hidden file such as .gitkeep is not a migration', function (): void {
+	$dir = guardRepository();
+	mkdir($dir . '/migrations/basic-data');
+	file_put_contents($dir . '/migrations/basic-data/.gitkeep', '');
+	commitAll($dir);
+	[$code, $output] = runGuard($dir);
+
+	Assert::same(0, $code, $output);
 });
 
 

@@ -1,19 +1,51 @@
 #!/usr/bin/env bash
-# Fails when a migration that exists in <base> was modified, deleted, renamed or changed type.
-# Added files are fine. Usage: bin/check-migrations-immutable [base]   (default: origin/main)
+# Fails when a migration that exists in <base> was modified, deleted, renamed or changed type, or when an added
+# migration does not sort after every migration in the order base (the runner refuses a pending file named before an
+# executed one in any related group, and all groups are related). Hidden files such as .gitkeep are no migrations.
+# Usage: bin/check-migrations-immutable [--order-base <ref>] [base]   (default base: origin/main; order base: base)
+# --order-base exists for a push whose base is the previous push: files merged in from main count as added against
+# it, so the order is judged against the main line instead.
 set -eu
+export LC_ALL=C
 
+order_base=""
+if [ "${1:-}" = --order-base ]; then
+	order_base="${2:?--order-base needs a ref}"
+	shift 2
+fi
 base="${1:-origin/main}"
+order_base="${order_base:-$base}"
 cd "$(git rev-parse --show-toplevel)"
 
-if ! git rev-parse --verify --quiet "${base}^{commit}" > /dev/null; then
-	echo "ERROR: base '${base}' not found" >&2
-	exit 2
-fi
+for ref in "$base" "$order_base"; do
+	if ! git rev-parse --verify --quiet "${ref}^{commit}" > /dev/null; then
+		echo "ERROR: base '${ref}' not found" >&2
+		exit 2
+	fi
+done
 
 changed="$(git diff --name-status --diff-filter=MDRT "${base}...HEAD" -- migrations/)"
 if [ -n "$changed" ]; then
 	echo "ERROR: released migrations must not be edited, deleted or renamed (write a new migration):" >&2
 	echo "$changed" >&2
+	exit 1
+fi
+
+latest="$(git ls-tree -r --name-only "$order_base" -- migrations/ | sed 's~.*/~~' | grep -v '^\.' | sort | tail -n 1 || true)"
+misplaced=""
+while IFS= read -r path; do
+	name="${path##*/}"
+	if [ -z "$path" ] || [ "${name#.}" != "$name" ]; then
+		continue
+	fi
+	if [ -n "$latest" ] && [[ ! "$name" > "$latest" ]]; then
+		misplaced="${misplaced}${path}"$'\n'
+	fi
+done <<< "$(git diff --name-only --diff-filter=A "${order_base}...HEAD" -- migrations/)"
+
+if [ -n "$misplaced" ]; then
+	echo "ERROR: a new migration must sort after the latest migration in ${order_base} (${latest}), in every group;" >&2
+	echo "rename it to the next number of the global YYYY-MM-DD-NNNN sequence:" >&2
+	printf '%s' "$misplaced" >&2
 	exit 1
 fi

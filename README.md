@@ -22,7 +22,7 @@ docker compose up -d --wait
 docker compose exec app bin/console migrations:continue
 ```
 
-Migration files are ordered by file name across all groups (`structures`, `basic-data`, `dummy-data`), not per group: a new file must sort after the latest one already executed (use the next date/number prefix), or the runner refuses it.
+Migration files are ordered by file name across all groups (`structures`, `basic-data`, `dummy-data`), not per group: `migrations:continue` refuses the whole run when a pending file sorts before the latest executed one in any group. Hence the rule for development: every new migration file, in any group, gets a name that sorts strictly after every migration name in the base branch, across all groups. All groups share one sequence, `YYYY-MM-DD-NNNN-name.sql`; never backdate a file or reuse a number. When two branches add migrations, whoever merges second renames their files to follow the other branch's. `bin/check-migrations-immutable` enforces this (see [Quality](#quality)).
 
 Released migrations are never edited; a fix is always a new migration.
 
@@ -92,7 +92,21 @@ E2E_BASE_URL=http://localhost:8080 npx playwright test
 
 Set `E2E_BASE_URL` to your `CMS_HTTP_PORT`. Against a debug-mode stack (`NETTE_DEBUG=1`) the 404 checks fail and the Tracy bar logs console errors; add `E2E_IGNORE_CONSOLE_PATTERN=_tracy_bar` to skip those, see [`spec/README.md`](spec/README.md). Return to development mode with `unset NETTE_DEBUG CMS_DEMO_DATA; rm -rf temp/cache; docker compose up -d --wait`.
 
-The pre-push hook and CI also run `bin/check-migrations-immutable [base]`, which fails when a migration that exists in the base branch was modified, deleted or renamed. The hook compares against `origin/main`; without it, against the merge base with the local `main` branch. It prints a warning and skips the check when neither exists or when `main` itself is checked out.
+The pre-push hook and CI also run `bin/check-migrations-immutable [--order-base <ref>] [base]`. It makes two checks:
+
+- **Immutability:** fails when a migration that exists in `base` was modified, deleted or renamed (compared from the merge base of `base` and `HEAD`).
+- **Order:** fails when a migration added since the order base does not sort after every migration at the tip of the order base. The order base is `--order-base` when given, otherwise `base`; hidden files such as `.gitkeep` are ignored.
+
+Which base each check uses:
+
+| Where | Immutability | Order |
+| --- | --- | --- |
+| pre-push hook | `origin/main`; without it, the merge base with the local `main` | the same |
+| CI, pull request | `origin/<target branch>` | the same |
+| CI, push to a branch other than `main` | the previous push (a new branch: the merge base with `origin/main`) | `origin/main` |
+| CI, push to `main` | the previous push | the same |
+
+On a branch push the order is judged against `origin/main`, because files merged in from `main` count as added against the previous push. The hook prints a warning and skips both checks when neither `origin/main` nor `main` exists, or when `main` itself is checked out.
 
 ## Demo accounts
 
@@ -135,6 +149,8 @@ Behind a reverse proxy, set Nette's trusted proxies. Without them the rate limit
 http:
 	proxy: [192.0.2.10]  # address or CIDR range of your proxy
 ```
+
+Run `bin/console migrations:continue` on every deploy. It stops before applying anything when a pending migration sorts before an already executed one (see the naming rule under [Quick start](#quick-start)); a release must never ship such a file.
 
 Clear `temp/cache` on every deploy: in production mode the container and template caches are not rebuilt when the code changes.
 
