@@ -8,6 +8,7 @@ front.news.empty: 'Zatím tu nejsou žádné novinky.'
 front.news.older: Starší novinky
 front.news.newer: Novější novinky
 front.news.pageOf: 'Strana %page% z %count%'
+front.news.pagination: Stránkování novinek
 front.news.back: Zpět na novinky
 error.404.title: Stránka nenalezena
 error.4xx.title: Požadavek nelze vyřídit

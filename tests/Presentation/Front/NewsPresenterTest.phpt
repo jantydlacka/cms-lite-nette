@@ -130,6 +130,7 @@ test('the first page lists the 10 newest items with a link to older news', funct
 	Assert::same('12. 1. 2026', $result->text('news-item-date'));
 
 	Assert::contains('Strana 1 z 2', (string) $result->text('news-pagination'));
+	Assert::same('Stránkování novinek', (string) $result->dom()->find('nav[data-testid="news-pagination"]')[0]['aria-label']);
 	$older = $result->dom()->find('[data-testid="news-older"]');
 	Assert::count(1, $older);
 	Assert::same('/novinky?strana=2', (string) $older[0]['href']);
@@ -256,6 +257,7 @@ test('the English list pages with ?page=N', function (): void {
 	Assert::count(10, itemTitles($first));
 	Assert::same('/en/news?page=2', (string) $first->dom()->find('[data-testid="news-older"]')[0]['href']);
 	Assert::contains('Page 1 of 2', (string) $first->text('news-pagination'));
+	Assert::same('News pages', (string) $first->dom()->find('nav[data-testid="news-pagination"]')[0]['aria-label']);
 
 	$second = $app->get('/en/news?page=2');
 	Assert::same(200, $second->code);

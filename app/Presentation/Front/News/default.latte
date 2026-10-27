@@ -14,7 +14,7 @@
 		</article>
 	</li>
 </ul>
-<nav n:if="$paginator->getPageCount() > 1" class="news-pagination" data-testid="news-pagination">
+<nav n:if="$paginator->getPageCount() > 1" class="news-pagination" aria-label="{_front.news.pagination}" data-testid="news-pagination">
 	<a n:if="!$paginator->isFirst()" n:href="default, page: $paginator->getPage() - 1" rel="prev" data-testid="news-newer">{_front.news.newer}</a>
 	<span>{_front.news.pageOf, [page: $paginator->getPage(), count: $paginator->getPageCount()]}</span>
 	<a n:if="!$paginator->isLast()" n:href="default, page: $paginator->getPage() + 1" rel="next" data-testid="news-older">{_front.news.older}</a>

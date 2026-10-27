@@ -14,6 +14,7 @@ Translation keys of the public UI and the administration with their Czech (`lang
 | `front.news.older` | Starší novinky | Older news |
 | `front.news.newer` | Novější novinky | Newer news |
 | `front.news.pageOf` | Strana %page% z %count% | Page %page% of %count% |
+| `front.news.pagination` | Stránkování novinek | News pages |
 | `front.news.back` | Zpět na novinky | Back to news |
 | `error.404.title` | Stránka nenalezena | Page not found |
 | `error.4xx.title` | Požadavek nelze vyřídit | The request cannot be processed |

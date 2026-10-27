@@ -8,6 +8,7 @@ front.news.empty: 'There is no news yet.'
 front.news.older: Older news
 front.news.newer: Newer news
 front.news.pageOf: 'Page %page% of %count%'
+front.news.pagination: News pages
 front.news.back: Back to news
 error.404.title: Page not found
 error.4xx.title: The request cannot be processed
