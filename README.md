@@ -5,7 +5,7 @@
 
 A small, well-structured CMS built on [Nette](https://nette.org): pages, news, images and a contact form. It is the first of a planned family, `cms-lite-<framework>`: every implementation follows the same specification in [`spec/`](spec/) and is checked by the same browser-level end-to-end suite in `e2e/`.
 
-Status: phases 1 (skeleton), 2 (pages) and 3a (sign-in) are done - application bootstrap, Docker setup, migrations, translator, clock, light/dark theme, quality gate and CI configuration; public pages from the database with translations, flat URLs, menu, breadcrumbs, 301 redirects from old paths and safely rendered Markdown. Sign-in, roles and an administration skeleton exist (phase 3a); there is no page administration yet: pages are written by the demo data and the tests. Page administration, news, images and the contact form come in later phases. The CI workflow is configured but has not run yet, so there are no published runs, and the coverage badge shows as broken until the first CI run on `main` publishes it.
+Status: phases 1 (skeleton), 2 (pages) and 3a (sign-in) are done - application bootstrap, Docker setup, migrations, translator, clock, light/dark theme, quality gate and CI configuration; public pages from the database with translations, flat URLs, menu, breadcrumbs, 301 redirects from old paths and safely rendered Markdown. Sign-in, roles and an administration skeleton exist (phase 3a), and editors and administrators manage pages in the administration (phase 3b). News, images and the contact form come in later phases. The CI workflow is configured but has not run yet, so there are no published runs, and the coverage badge shows as broken until the first CI run on `main` publishes it.
 
 ## Quick start
 
@@ -140,6 +140,18 @@ Failed sign-ins are rate limited per e-mail and IP address and per IP address al
 ### Cookies
 
 The public site starts no session. The only technical cookie it may set is `_nss`, Nette's CSRF fallback for browsers that do not send `Sec-Fetch-Site`. A session cookie exists only in the administration.
+
+## Administration
+
+Sign in at `/admin`. Editors and administrators manage pages under `/admin/pages`; the full list of addresses and responses is in [`spec/urls.md`](spec/urls.md#pages).
+
+- **Addresses:** `/admin/pages` (the tree), `/admin/pages/new`, `/admin/pages/<id>` (the default language), `/admin/pages/<id>/<locale>` (another enabled language; any other is 404) and `/admin/pages/<id>/delete` (the confirmation). Every change is a POST form from the same origin; a GET never changes anything.
+- **One screen per page:** the page properties (parent, menu flag) on top, below them one tab per enabled language with its own form; a save stores one language. Tabs appear only with more than one language; a missing translation is added from its tab. The parent dropdown offers neither the page itself nor its descendants. ↑/↓ in the tree swap a page with its sibling.
+- **Address (slug):** left empty, it is derived from the title (at most 100 characters). It then stays when the title changes; a manual change makes the old address redirect (301) to the new one.
+- **Preview:** **Náhled** renders the content below the form through the same Markdown renderer as the public site and saves nothing.
+- **Versions and concurrent edits:** the properties and every translation carry a version number that each save raises by one. A save based on an older version stores nothing and shows `admin.pages.stale`; the sent text stays in the form, to be copied over the current version. A save whose sign-in expired comes back after sign-in as the filled form, unsaved.
+- **Homepage:** **Nastavit jako úvodní** works only for a page with a published translation in the default language. The homepage cannot be deleted and its default-language translation cannot become a draft until another page is chosen. Its detail lists the enabled languages without a published translation, whose root (`/en/` …) is 404.
+- **Deleting:** only a whole page, with all its languages, after a confirmation screen. A page with subpages or the homepage cannot be deleted. Redirects to a deleted page are removed too, so its old addresses become 404. A single translation is hidden by switching it to a draft.
 
 ## Deployment note
 
