@@ -60,6 +60,23 @@ test('every error case of the specification is reported on its line with the mat
 });
 
 
+test('specified cases whose markers are all valid news components give no problem in a page', function (): void {
+	/** @var list<array{name: string, markdown: string, markers: list<array{type: string}>, errors: list<mixed>}> $cases */
+	$cases = Json::decode(FileSystem::read(__DIR__ . '/../../../spec/components-cases.json'), forceArrays: true);
+	$checked = 0;
+	foreach ($cases as $case) {
+		$types = array_unique(array_column($case['markers'], 'type'));
+		if ($case['errors'] !== [] || $types !== ['novinky']) {
+			continue;
+		}
+		Assert::same([], summary($case['markdown'], ContentKind::Page), $case['name']);
+		$checked++;
+	}
+
+	Assert::true($checked >= 10, 'the valid cases look truncated');
+});
+
+
 test('valid markers pass in a page and the news component is refused in a news item', function (): void {
 	Assert::same([], summary("Text\n\n::: novinky\n::: novinky 20\n", ContentKind::Page));
 	Assert::same(
