@@ -7,6 +7,8 @@ use App\Model\Content\MarkdownRenderer;
 use Latte\Loaders\StringLoader;
 use Latte\Runtime\Html;
 use Nette\Bridges\ApplicationLatte\LatteFactory;
+use Nette\Utils\FileSystem;
+use Nette\Utils\Json;
 use Tester\Assert;
 
 use function Tests\container;
@@ -94,4 +96,18 @@ test('latte filter markdown outputs html through the container wiring', function
 test('container binds the interface to the commonmark renderer', function (): void {
 	Assert::type(CommonMarkRenderer::class, container()->getByType(MarkdownRenderer::class));
 	Assert::type(Html::class, container()->getByType(LatteFactory::class)->create()->invokeFilter('markdown', ['**a**']));
+});
+
+
+test('content without component markers renders byte for byte as before markers existed', function (): void {
+	// The fixture holds the demo pages and news plus a few edge cases, rendered before component markers were parsed.
+	$cases = Json::decode(FileSystem::read(__DIR__ . '/fixtures/main-rendered-content.json'), forceArrays: true);
+	assert(is_array($cases));
+	Assert::true(count($cases) > 20, 'the fixture looks truncated');
+	$renderer = new CommonMarkRenderer();
+
+	foreach ($cases as $case) {
+		assert(is_array($case) && is_string($case['name']) && is_string($case['markdown']) && is_string($case['html']));
+		Assert::same($case['html'], $renderer->render($case['markdown']), $case['name']);
+	}
 });

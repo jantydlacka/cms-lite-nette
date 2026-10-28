@@ -1,0 +1,449 @@
+[
+	{
+		"name": "marker without arguments",
+		"markdown": "::: novinky\n",
+		"markers": [
+			{
+				"line": 1,
+				"type": "novinky",
+				"arguments": []
+			}
+		],
+		"errors": []
+	},
+	{
+		"name": "marker with an argument",
+		"markdown": "::: novinky 3\n",
+		"markers": [
+			{
+				"line": 1,
+				"type": "novinky",
+				"arguments": [
+					"3"
+				]
+			}
+		],
+		"errors": []
+	},
+	{
+		"name": "indentation up to three spaces and trailing spaces",
+		"markdown": "   ::: novinky 3  \n",
+		"markers": [
+			{
+				"line": 1,
+				"type": "novinky",
+				"arguments": [
+					"3"
+				]
+			}
+		],
+		"errors": []
+	},
+	{
+		"name": "several spaces between the parts",
+		"markdown": ":::   novinky   3\n",
+		"markers": [
+			{
+				"line": 1,
+				"type": "novinky",
+				"arguments": [
+					"3"
+				]
+			}
+		],
+		"errors": []
+	},
+	{
+		"name": "several arguments and hyphens",
+		"markdown": "::: slider-main home 2nd-row\n",
+		"markers": [
+			{
+				"line": 1,
+				"type": "slider-main",
+				"arguments": [
+					"home",
+					"2nd-row"
+				]
+			}
+		],
+		"errors": []
+	},
+	{
+		"name": "a marker interrupts a paragraph",
+		"markdown": "Text above\n::: novinky 3\nText below\n",
+		"markers": [
+			{
+				"line": 2,
+				"type": "novinky",
+				"arguments": [
+					"3"
+				]
+			}
+		],
+		"errors": []
+	},
+	{
+		"name": "two markers in a row",
+		"markdown": "::: novinky\n::: novinky 5\n",
+		"markers": [
+			{
+				"line": 1,
+				"type": "novinky",
+				"arguments": []
+			},
+			{
+				"line": 2,
+				"type": "novinky",
+				"arguments": [
+					"5"
+				]
+			}
+		],
+		"errors": []
+	},
+	{
+		"name": "marker on the last line without a line ending",
+		"markdown": "Text\n\n::: novinky 3",
+		"markers": [
+			{
+				"line": 3,
+				"type": "novinky",
+				"arguments": [
+					"3"
+				]
+			}
+		],
+		"errors": []
+	},
+	{
+		"name": "CRLF line endings",
+		"markdown": "Intro\r\n\r\n::: novinky 3\r\n\r\nOutro\r\n",
+		"markers": [
+			{
+				"line": 3,
+				"type": "novinky",
+				"arguments": [
+					"3"
+				]
+			}
+		],
+		"errors": []
+	},
+	{
+		"name": "CR line endings",
+		"markdown": "Intro\r\r::: novinky 3\rOutro",
+		"markers": [
+			{
+				"line": 3,
+				"type": "novinky",
+				"arguments": [
+					"3"
+				]
+			}
+		],
+		"errors": []
+	},
+	{
+		"name": "no space after the colons",
+		"markdown": ":::novinky\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 1,
+				"kind": "syntax"
+			}
+		]
+	},
+	{
+		"name": "upper-case letter in the name",
+		"markdown": "::: Novinky\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 1,
+				"kind": "syntax"
+			}
+		]
+	},
+	{
+		"name": "HTML as an argument",
+		"markdown": "::: novinky <b>\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 1,
+				"kind": "syntax"
+			}
+		]
+	},
+	{
+		"name": "colons alone",
+		"markdown": ":::\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 1,
+				"kind": "syntax"
+			}
+		]
+	},
+	{
+		"name": "four colons",
+		"markdown": ":::: novinky\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 1,
+				"kind": "syntax"
+			}
+		]
+	},
+	{
+		"name": "name starting with a digit",
+		"markdown": "::: 3d\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 1,
+				"kind": "syntax"
+			}
+		]
+	},
+	{
+		"name": "argument starting with a hyphen",
+		"markdown": "::: novinky -3\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 1,
+				"kind": "syntax"
+			}
+		]
+	},
+	{
+		"name": "tab instead of a space",
+		"markdown": "::: novinky\t3\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 1,
+				"kind": "syntax"
+			}
+		]
+	},
+	{
+		"name": "non-ASCII letter in the name",
+		"markdown": "::: slajdr-ž\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 1,
+				"kind": "syntax"
+			}
+		]
+	},
+	{
+		"name": "malformed marker inside a paragraph",
+		"markdown": "Text above\n:::novinky\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 2,
+				"kind": "syntax"
+			}
+		]
+	},
+	{
+		"name": "marker as a list item",
+		"markdown": "- ::: novinky\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 1,
+				"kind": "misplaced"
+			}
+		]
+	},
+	{
+		"name": "marker as an ordered list item",
+		"markdown": "1. ::: novinky\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 1,
+				"kind": "misplaced"
+			}
+		]
+	},
+	{
+		"name": "marker inside a quote",
+		"markdown": "> ::: novinky\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 1,
+				"kind": "misplaced"
+			}
+		]
+	},
+	{
+		"name": "marker indented into a list item",
+		"markdown": "- item\n\n  ::: novinky 3\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 3,
+				"kind": "misplaced"
+			}
+		]
+	},
+	{
+		"name": "malformed marker inside a list counts as malformed",
+		"markdown": "- :::novinky\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 1,
+				"kind": "syntax"
+			}
+		]
+	},
+	{
+		"name": "marker inside an HTML block",
+		"markdown": "<div>\n::: novinky 3\n</div>\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 2,
+				"kind": "misplaced"
+			}
+		]
+	},
+	{
+		"name": "malformed marker inside an HTML block",
+		"markdown": "<div>\n:::novinky\n</div>\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 2,
+				"kind": "misplaced"
+			}
+		]
+	},
+	{
+		"name": "marker after an HTML block and a blank line",
+		"markdown": "<div>\n\n::: novinky 3\n",
+		"markers": [
+			{
+				"line": 3,
+				"type": "novinky",
+				"arguments": [
+					"3"
+				]
+			}
+		],
+		"errors": []
+	},
+	{
+		"name": "marker right after a list item line",
+		"markdown": "- item\n::: novinky 3\n",
+		"markers": [
+			{
+				"line": 2,
+				"type": "novinky",
+				"arguments": [
+					"3"
+				]
+			}
+		],
+		"errors": []
+	},
+	{
+		"name": "marker right after a quote line",
+		"markdown": "> quote\n::: novinky 3\n",
+		"markers": [
+			{
+				"line": 2,
+				"type": "novinky",
+				"arguments": [
+					"3"
+				]
+			}
+		],
+		"errors": []
+	},
+	{
+		"name": "fenced code block",
+		"markdown": "```\n::: novinky 3\n```\n",
+		"markers": [],
+		"errors": [],
+		"html": "<pre><code>::: novinky 3\n</code></pre>\n"
+	},
+	{
+		"name": "tilde fenced code block",
+		"markdown": "~~~\n:::novinky\n~~~\n",
+		"markers": [],
+		"errors": [],
+		"html": "<pre><code>:::novinky\n</code></pre>\n"
+	},
+	{
+		"name": "indented code block",
+		"markdown": "    ::: novinky\n",
+		"markers": [],
+		"errors": [],
+		"html": "<pre><code>::: novinky\n</code></pre>\n"
+	},
+	{
+		"name": "four spaces inside a paragraph",
+		"markdown": "Text\n    ::: novinky\n",
+		"markers": [],
+		"errors": [],
+		"html": "<p>Text\n::: novinky</p>\n"
+	},
+	{
+		"name": "inline code",
+		"markdown": "`::: novinky`\n",
+		"markers": [],
+		"errors": [],
+		"html": "<p><code>::: novinky</code></p>\n"
+	},
+	{
+		"name": "escaped colons",
+		"markdown": "\\::: novinky\n",
+		"markers": [],
+		"errors": [],
+		"html": "<p>::: novinky</p>\n"
+	},
+	{
+		"name": "colons in the middle of a line",
+		"markdown": "Text ::: novinky\n",
+		"markers": [],
+		"errors": [],
+		"html": "<p>Text ::: novinky</p>\n"
+	},
+	{
+		"name": "two colons",
+		"markdown": ":: novinky\n",
+		"markers": [],
+		"errors": [],
+		"html": "<p>:: novinky</p>\n"
+	},
+	{
+		"name": "a marker line ends a code span opened on the line above",
+		"markdown": "`code\n::: novinky`\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 2,
+				"kind": "syntax"
+			}
+		]
+	},
+	{
+		"name": "empty content",
+		"markdown": "",
+		"markers": [],
+		"errors": [],
+		"html": ""
+	}
+]

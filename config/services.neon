@@ -35,6 +35,9 @@ services:
 	markdownRenderer:
 		create: App\Core\Markdown\CommonMarkRenderer
 		type: App\Model\Content\MarkdownRenderer
+	componentScanner:
+		create: App\Core\Markdown\Component\CommonMarkComponentScanner
+		type: App\Model\Content\ComponentScanner
 	passwordHasher:
 		create: App\Core\Security\NettePasswordHasher
 		type: App\Model\User\PasswordHasher

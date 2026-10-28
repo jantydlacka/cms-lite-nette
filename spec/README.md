@@ -4,6 +4,7 @@ Contract shared by every `cms-lite-<framework>` implementation. An implementatio
 
 - `urls.md` - routes and their behaviour
 - `messages.md` - translation keys and their Czech text
+- `components.md` - component markers in content (`components-cases.json` - the same as test cases)
 - `test-ids.md` - `data-testid` hooks the end-to-end tests rely on
 
 The end-to-end suite lives in `e2e/` and runs against any implementation in production mode with the demo data loaded: `E2E_BASE_URL=<url> npx playwright test`.

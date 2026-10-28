@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Markdown;
 
+use App\Core\Markdown\Component\ComponentExtension;
 use App\Model\Content\MarkdownRenderer;
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
@@ -22,6 +23,7 @@ final class CommonMarkRenderer implements MarkdownRenderer
 			'allow_unsafe_links' => false,
 		]);
 		$environment->addExtension(new CommonMarkCoreExtension());
+		$environment->addExtension(new ComponentExtension());
 		$this->converter = new MarkdownConverter($environment);
 	}
 
