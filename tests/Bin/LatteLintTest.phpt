@@ -48,3 +48,22 @@ test('an unknown filter fails', function (): void {
 test('a syntax error fails', function (): void {
 	Assert::same(1, lintTemplate('{if}')[0]);
 });
+
+
+test('the application templates lint without a reachable database', function (): void {
+	$dir = realpath(__DIR__ . '/../../app');
+	if ($dir === false) {
+		throw new RuntimeException('The app directory is missing.');
+	}
+
+	$process = proc_open([LINT, $dir], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, null, ['CMS_DB_HOST' => '127.0.0.1', 'CMS_DB_PORT' => '1'] + getenv());
+	if ($process === false) {
+		throw new RuntimeException('Cannot start the linter.');
+	}
+
+	$output = (string) stream_get_contents($pipes[1]) . (string) stream_get_contents($pipes[2]);
+	fclose($pipes[1]);
+	fclose($pipes[2]);
+
+	Assert::same(0, proc_close($process), $output);
+});

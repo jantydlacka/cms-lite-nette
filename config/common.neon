@@ -39,3 +39,5 @@ database:
 	dsn: 'mysql:host=%dbHost%;port=%dbPort%;dbname=%dbName%'
 	user: %dbUser%
 	password: %dbPassword%
+	options:
+		lazy: true # connect on the first query, so building the container needs no database
