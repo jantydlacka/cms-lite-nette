@@ -6,6 +6,8 @@ declare(strict_types=1);
 
 use App\Bootstrap;
 use App\Core\Database\ExplorerTransaction;
+use App\Model\Content\ComponentRegistry;
+use App\Model\Content\ContentComponent;
 use App\Model\Content\MarkdownRenderer;
 use App\Model\Page\Database\DatabasePageRepository;
 use App\Model\Page\PageRepository;
@@ -18,6 +20,9 @@ use Tester\Assert;
 require __DIR__ . '/../../bootstrap.php';
 
 const APP_DIR = __DIR__ . '/../../../app';
+
+/** Ports that any number of configured classes implement (`cms: components:`); they are reached through the registry, not autowired. */
+const PLUGIN_PORTS = [ContentComponent::class];
 
 
 function containerWith(?string $config = null): Container
@@ -98,6 +103,10 @@ function portViolations(Container $container, array $ports): array
 {
 	$violations = [];
 	foreach (array_keys($ports) as $port) {
+		if (in_array($port, PLUGIN_PORTS, true)) {
+			continue;
+		}
+
 		$autowired = $container->findAutowired($port);
 		if (count($autowired) !== 1) {
 			$violations[] = $port . ': ' . count($autowired) . ' autowired services (' . implode(', ', $autowired) . ')';
@@ -187,4 +196,12 @@ test('an adapter autowired under its own class is reported', function () use ($i
 		['App\\Model\\Page\\Database\\DatabasePageTreeLock: autowired under its own class as lockByClass'],
 		implementationViolations(containerWith('adapter-by-class.neon'), $implementations),
 	);
+});
+
+
+test('content components are never autowired, however many are configured', function (): void {
+	$container = containerWith('two-components.neon');
+	Assert::same([], $container->findAutowired(ContentComponent::class));
+	Assert::same(['novinky', 'uvod'], $container->getByType(ComponentRegistry::class)->names());
+	Assert::same([], portViolations($container, modelPorts(appTypes())));
 });

@@ -5,12 +5,16 @@ declare(strict_types=1);
 use App\Bootstrap;
 use App\Core\DI\CmsExtension;
 use App\Model\CmsConfig;
+use App\Model\Content\ComponentRegistry;
 use App\Model\Login\LoginLimits;
+use App\Model\News\NewsListComponent;
 use Nette\Bootstrap\Configurator;
 use Nette\DI\Container;
 use Nette\DI\InvalidConfigurationException;
 use Nette\Utils\FileSystem;
 use Tester\Assert;
+use Tests\Support\FakeNewsRepository;
+use Tests\Support\SliderComponent;
 
 require __DIR__ . '/../../bootstrap.php';
 
@@ -21,7 +25,8 @@ function compile(string $cms, string $parameters = ''): Container
 	$dir .= '/cms-extension-' . bin2hex(random_bytes(6));
 	FileSystem::createDir($dir);
 	$file = $dir . '/config.neon';
-	file_put_contents($file, $parameters . "extensions:\n\tcms: " . CmsExtension::class . "\n\ncms:\n" . $cms);
+	// The default news component needs a NewsRepository, which the full application config provides.
+	file_put_contents($file, $parameters . "extensions:\n\tcms: " . CmsExtension::class . "\n\ncms:\n" . $cms . "\n\nservices:\n\t- " . FakeNewsRepository::class . "\n");
 
 	try {
 		$configurator = new Configurator();
@@ -98,6 +103,9 @@ $invalid = [
 	'maxIpFailures below 1' => ["\tsiteName: Demo\n\tlogin:\n\t\tmaxIpFailures: 0", '%a%maxIpFailures%a%'],
 	'windowMinutes below 1' => ["\tsiteName: Demo\n\tlogin:\n\t\twindowMinutes: 0", '%a%windowMinutes%a%'],
 	'unknown login key' => ["\tsiteName: Demo\n\tlogin:\n\t\tfoo: 1", '%a%foo%a%'],
+	'component class that does not exist' => ["\tsiteName: Demo\n\tcomponents:\n\t\tnovinky: App\\Model\\News\\Neexistuje", '%a%components%a%novinky%a%'],
+	'component class without the interface' => ["\tsiteName: Demo\n\tcomponents:\n\t\tnovinky: stdClass", '%a%components%a%novinky%a%'],
+	'component name in upper case' => ["\tsiteName: Demo\n\tcomponents:\n\t\tNovinky: App\\Model\\News\\NewsListComponent", '%a%components%a%'],
 	// Demo data come only from the static %demoData% parameter (env CMS_DEMO_DATA or debug mode).
 	'demoData key' => ["\tsiteName: Demo\n\tdemoData: no", '%a%demoData%a%'],
 ];
@@ -129,4 +137,32 @@ test('an unknown timezone is a configuration error naming the key', function ():
 		InvalidConfigurationException::class,
 		'%a%timezone%a%',
 	);
+});
+
+
+test('the news component is registered by default', function (): void {
+	$registry = compile("\tsiteName: Demo")->getByType(ComponentRegistry::class);
+	Assert::same(['novinky'], $registry->names());
+	Assert::type(NewsListComponent::class, $registry->get('novinky'));
+});
+
+
+test('a configured component is registered next to the default one', function (): void {
+	$registry = compile("\tsiteName: Demo\n\tcomponents:\n\t\tuvod: Tests\\Support\\IntroComponent")->getByType(ComponentRegistry::class);
+	Assert::same(['novinky', 'uvod'], $registry->names());
+});
+
+
+test('a component whose name differs from its key fails when the registry is built', function (): void {
+	Assert::exception(
+		fn () => compile("\tsiteName: Demo\n\tcomponents:\n\t\tjine: Tests\\Support\\IntroComponent")->getByType(ComponentRegistry::class),
+		InvalidArgumentException::class,
+	);
+});
+
+
+test('a hyphenated component name is registered', function (): void {
+	$registry = compile("\tsiteName: Demo\n\tcomponents:\n\t\tslider-main: Tests\\Support\\SliderComponent")->getByType(ComponentRegistry::class);
+	Assert::same(['novinky', 'slider-main'], $registry->names());
+	Assert::type(SliderComponent::class, $registry->get('slider-main'));
 });

@@ -6,9 +6,13 @@ namespace App\Core\DI;
 
 use App\Core\Security\CmsAuthenticator;
 use App\Model\CmsConfig;
+use App\Model\Content\ComponentRegistry;
+use App\Model\Content\ContentComponent;
 use App\Model\Login\LoginLimits;
+use App\Model\News\NewsListComponent;
 use DateTimeZone;
 use Nette\DI\CompilerExtension;
+use Nette\DI\Definitions\Reference;
 use Nette\DI\Definitions\ServiceDefinition;
 use Nette\Schema\Expect;
 use Nette\Schema\Schema;
@@ -32,6 +36,13 @@ final class CmsExtension extends CompilerExtension
 			'newsPerPage' => Expect::int(10)->min(1),
 			'timezone' => Expect::string('Europe/Prague')->assert(static fn (mixed $zone): bool => is_string($zone) && in_array($zone, DateTimeZone::listIdentifiers(), true), 'timezone must be a valid time zone identifier'),
 			'newsInMenu' => Expect::bool(true),
+			'components' => Expect::arrayOf(
+				Expect::string()->assert(
+					static fn (mixed $class): bool => is_string($class) && is_a($class, ContentComponent::class, true),
+					'component class must exist and implement ' . ContentComponent::class,
+				),
+				Expect::string()->pattern('[a-z][a-z0-9-]*'),
+			)->default(['novinky' => NewsListComponent::class]),
 			'login' => Expect::structure([
 				'maxPairFailures' => Expect::int(5)->min(1),
 				'maxIpFailures' => Expect::int(20)->min(1),
@@ -69,6 +80,22 @@ final class CmsExtension extends CompilerExtension
 				$login->maxIpFailures,
 				$login->windowMinutes,
 			]);
+
+		// Typed as the port and not autowired: the registry is the only way to them.
+		$components = [];
+		/** @var array<string, class-string<ContentComponent>> $classes */
+		$classes = $config->components;
+		foreach (array_keys($classes) as $index => $name) {
+			// Numbered, because a component name may contain hyphens, which a service name may not.
+			$service = $this->prefix('component' . $index);
+			$this->getContainerBuilder()->addDefinition($service)
+				->setFactory($classes[$name])
+				->setType(ContentComponent::class)
+				->setAutowired(false);
+			$components[$name] = new Reference($service);
+		}
+		$this->getContainerBuilder()->addDefinition($this->prefix('componentRegistry'))
+			->setFactory(ComponentRegistry::class, [$components]);
 	}
 
 

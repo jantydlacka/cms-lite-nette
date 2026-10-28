@@ -1,0 +1,4 @@
+# A second content component next to the default one.
+cms:
+	components:
+		uvod: Tests\Support\IntroComponent

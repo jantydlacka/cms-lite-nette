@@ -32,9 +32,10 @@ final class ArchitectureTest
 			->classes(
 				Selector::inNamespace('App\Model'),
 				Selector::inNamespace('Nette\Utils'),
+				Selector::inNamespace('Nette\Schema'),
 				Selector::inNamespace('Psr\Clock'),
 			)
-			->because('The domain model may use only Nette\Utils and Psr\Clock from vendors.');
+			->because('The domain model may use only Nette\Utils, Nette\Schema and Psr\Clock from vendors.');
 	}
 
 
@@ -70,6 +71,7 @@ final class ArchitectureTest
 			->classes(
 				Selector::inNamespace('App\Model'),
 				Selector::inNamespace('Nette\Utils'),
+				Selector::inNamespace('Nette\Schema'),
 				Selector::inNamespace('Psr\Clock'),
 				Selector::inNamespace('Nette\Database'),
 			)

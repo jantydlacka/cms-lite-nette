@@ -98,6 +98,17 @@ test('Model class using Nette\Utils and Psr\Clock is accepted', function () use 
 });
 
 
+test('Model class using Nette\Schema is accepted', function () use ($errors): void {
+	Assert::true(is_file(FIXTURES . 'ModelWithSchema.php'));
+	Assert::false(isset($errors['ModelWithSchema.php']));
+});
+
+
+test('Model class using League\CommonMark is rejected', function () use ($errors): void {
+	Assert::same(['phpat.modelUsesOnlyAllowedVendorNamespaces'], $errors['ModelWithCommonMark.php'] ?? []);
+});
+
+
 test('Presentation and Core using a model database adapter are rejected', function () use ($errors): void {
 	Assert::same(['phpat.layersDoNotDependOnDatabaseAdapters'], $errors['PresentationWithAdapter.php'] ?? []);
 	Assert::same(['phpat.layersDoNotDependOnDatabaseAdapters'], $errors['CoreWithAdapter.php'] ?? []);
@@ -149,6 +160,7 @@ test('only the violating fixtures produce errors', function () use ($errors): vo
 		'CoreWithPresentation.php',
 		'DatabaseAdapterWithForms.php',
 		'LoginWithUserAdapter.php',
+		'ModelWithCommonMark.php',
 		'ModelWithCore.php',
 		'ModelWithExplorer.php',
 		'ModelWithPresenter.php',

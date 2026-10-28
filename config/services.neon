@@ -38,6 +38,7 @@ services:
 	componentScanner:
 		create: App\Core\Markdown\Component\CommonMarkComponentScanner
 		type: App\Model\Content\ComponentScanner
+	- App\Model\Content\ContentChecker
 	passwordHasher:
 		create: App\Core\Security\NettePasswordHasher
 		type: App\Model\User\PasswordHasher
