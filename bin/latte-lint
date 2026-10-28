@@ -17,7 +17,7 @@ if (!is_string($path)) {
 	exit(1);
 }
 
-// The test configuration needs no environment; building the engine does not connect to the database.
+// The test configuration needs no environment variables, but building the engine does connect to the database (the component services reach NewsRepository), so the database configuration must be available; the qa job in CI has a MySQL service.
 $configured = Bootstrap::bootForTests()->createContainer()->getByType(LatteFactory::class)->create();
 $linter = new Linter();
 $engine = $linter->getEngine();
