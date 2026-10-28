@@ -26,15 +26,13 @@ final class CommonMarkRenderer implements MarkdownRenderer
 
 	private readonly HtmlRenderer $htmlRenderer;
 
-	/** @var array<string, true> markers logged in this request, by kind, id, locale and line */
-	private array $logged = [];
-
 
 	public function __construct(
 		private readonly ContentChecker $checker,
 		private readonly ComponentRegistry $registry,
 		private readonly ComponentHtmlRenderer $components,
 		private readonly ILogger $logger,
+		private readonly ComponentWarningGate $warnings,
 	) {
 		$environment = CommonMarkEnvironment::create();
 		$this->parser = new MarkdownParser($environment);
@@ -78,7 +76,7 @@ final class CommonMarkRenderer implements MarkdownRenderer
 			$problem = $problems[$line] ?? null;
 			$html = $problem === null
 				? $this->componentHtml($marker, $context)
-				: $this->problemHtml($problem, $marker->type, $lines[$line - 1], $context);
+				: $this->problemHtml($problem, $marker->type, $lines[$line - 1], $markdown, $context);
 			if ($html === '') {
 				$marker->detach();
 			} else {
@@ -97,7 +95,7 @@ final class CommonMarkRenderer implements MarkdownRenderer
 					continue;
 				}
 				$problem = $problems[$start + $i] ?? throw new LogicException('A marker in an HTML block is always misplaced.');
-				$html = $this->problemHtml($problem, ComponentBlock::fromLine(ltrim($text, ' '))->type, $text, $context);
+				$html = $this->problemHtml($problem, ComponentBlock::fromLine(ltrim($text, ' '))->type, $text, $markdown, $context);
 				if ($html !== '') {
 					$after[] = new RenderedComponent($html);
 				}
@@ -119,17 +117,15 @@ final class CommonMarkRenderer implements MarkdownRenderer
 	}
 
 
-	/** The preview shows the problem; the website leaves the marker out and logs it, once per request. */
-	private function problemHtml(ContentProblem $problem, ?string $type, string $source, ContentContext $context): string
+	/** The preview shows the problem; the website leaves the marker out and logs it, as often as the gate lets it. */
+	private function problemHtml(ContentProblem $problem, ?string $type, string $source, string $markdown, ContentContext $context): string
 	{
 		if ($context->preview) {
 			return $this->components->renderProblem($problem);
 		}
 
-		$key = "{$context->kind->value} $context->id $context->locale $problem->line";
-		if (!isset($this->logged[$key])) {
-			$this->logged[$key] = true;
-			$what = $type !== null ? "\"$type\"" : 'malformed "' . trim($source) . '"';
+		if ($this->warnings->pass($context, $problem->line, $markdown)) {
+			$what = $type !== null ? "\"$type\"" : 'malformed "' . self::shorten(trim($source)) . '"';
 			$this->logger->log(
 				"Component marker left out: $what on line $problem->line of {$context->kind->value} $context->id ($context->locale), $problem->messageKey.",
 				ILogger::WARNING,
@@ -137,6 +133,13 @@ final class CommonMarkRenderer implements MarkdownRenderer
 		}
 
 		return '';
+	}
+
+
+	/** A log line quotes at most 80 characters of the source line. */
+	private static function shorten(string $source): string
+	{
+		return mb_strlen($source) > 80 ? mb_substr($source, 0, 79) . '…' : $source;
 	}
 
 

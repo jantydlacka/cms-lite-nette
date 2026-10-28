@@ -6,6 +6,7 @@ use App\Core\Markdown\CommonMarkEnvironment;
 use App\Core\Markdown\CommonMarkRenderer;
 use App\Core\Markdown\Component\CommonMarkComponentScanner;
 use App\Core\Markdown\Component\ComponentStartParser;
+use App\Core\Markdown\ComponentWarningGate;
 use App\Model\Content\ComponentRegistry;
 use App\Model\Content\ContentChecker;
 use App\Model\Content\ContentContext;
@@ -16,6 +17,7 @@ use App\Model\News\NewsListComponent;
 use Latte\Loaders\StringLoader;
 use Latte\Runtime\Html;
 use Nette\Bridges\ApplicationLatte\LatteFactory;
+use Nette\Caching\Storages\MemoryStorage;
 use Nette\Utils\FileSystem;
 use Nette\Utils\Json;
 use Tester\Assert;
@@ -30,7 +32,8 @@ use function Tests\container;
 require __DIR__ . '/../../bootstrap.php';
 
 
-function renderer(?FakeComponentHtmlRenderer $components = null, ?FakeLogger $logger = null): CommonMarkRenderer
+// A shared $gate stands for the persistent cache that separate requests share.
+function renderer(?FakeComponentHtmlRenderer $components = null, ?FakeLogger $logger = null, ?ComponentWarningGate $gate = null): CommonMarkRenderer
 {
 	$registry = new ComponentRegistry(['novinky' => new NewsListComponent(new FakeNewsRepository()), 'uvod' => new IntroComponent()]);
 
@@ -39,6 +42,7 @@ function renderer(?FakeComponentHtmlRenderer $components = null, ?FakeLogger $lo
 		$registry,
 		$components ?? new FakeComponentHtmlRenderer(),
 		$logger ?? new FakeLogger(),
+		$gate ?? new ComponentWarningGate(new MemoryStorage()),
 	);
 }
 
@@ -257,6 +261,34 @@ test('a broken marker is logged at most once per content, language and line', fu
 		'Component marker left out: "neznamy" on line 1 of page 2 (cs), content.component.unknown.',
 		'Component marker left out: "neznamy" on line 1 of news 1 (cs), content.component.unknown.',
 	], loggedWarnings($logger));
+});
+
+
+test('separate requests log a broken marker once until the content changes', function (): void {
+	$logger = new FakeLogger();
+	$gate = new ComponentWarningGate(new MemoryStorage());
+
+	renderer(logger: $logger, gate: $gate)->render("::: neznamy\n", website(id: 1));
+	renderer(logger: $logger, gate: $gate)->render("::: neznamy\n", website(id: 1));
+	renderer(logger: $logger, gate: $gate)->render("::: neznamy\n\nText\n", website(id: 1));
+
+	Assert::same([
+		'Component marker left out: "neznamy" on line 1 of page 1 (cs), content.component.unknown.',
+		'Component marker left out: "neznamy" on line 1 of page 1 (cs), content.component.unknown.',
+	], loggedWarnings($logger));
+});
+
+
+test('a long malformed marker is logged shortened', function (): void {
+	$logger = new FakeLogger();
+
+	renderer(logger: $logger)->render(':::' . str_repeat('x', 200) . "\n", website(id: 1));
+
+	$warnings = loggedWarnings($logger);
+	Assert::count(1, $warnings);
+	Assert::match('Component marker left out: malformed ":::xxx%a%…" on line 1 of page 1 (cs), content.component.syntax.', $warnings[0]);
+	Assert::same(1, preg_match('~malformed "([^"]*)"~u', $warnings[0], $m));
+	Assert::same(80, mb_strlen($m[1] ?? ''));
 });
 
 

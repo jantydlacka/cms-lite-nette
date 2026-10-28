@@ -8,3 +8,6 @@ services:
 	latte.latteFactory:
 		setup:
 			- setAutoRefresh(true)
+	# Per container, so each request logs as a first one and no warning outlives a test run.
+	componentWarningGate:
+		arguments: [storage: Nette\Caching\Storages\MemoryStorage()]

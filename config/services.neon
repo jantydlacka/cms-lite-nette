@@ -35,6 +35,8 @@ services:
 	markdownRenderer:
 		create: App\Core\Markdown\CommonMarkRenderer
 		type: App\Model\Content\MarkdownRenderer
+	componentWarningGate: # named so the tests can give it a storage of their own
+		create: App\Core\Markdown\ComponentWarningGate
 	componentScanner:
 		create: App\Core\Markdown\Component\CommonMarkComponentScanner
 		type: App\Model\Content\ComponentScanner
