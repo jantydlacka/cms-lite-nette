@@ -118,6 +118,20 @@ test('the dummy-data group creates the demo news', function () use ($container):
 });
 
 
+test('the demo homepage shows the latest news through the component in both languages', function () use ($container): void {
+	TestDatabase::resetDummyData($container);
+	$connection = $container->getByType(Connection::class);
+
+	$homepage = $connection->fetchField('SELECT value FROM setting WHERE `key` = ? AND locale = ?', 'homepage', '');
+	foreach (['cs' => '## Novinky', 'en' => '## News'] as $locale => $heading) {
+		$content = $connection->fetchField('SELECT content FROM page_translation WHERE page_id = ? AND locale = ?', $homepage, $locale);
+		assert(is_string($content));
+		Assert::true(str_ends_with($content, "\n\n" . $heading . "\n\n::: novinky 3"), $locale);
+		Assert::same(1, substr_count($content, ":::"), $locale);
+	}
+});
+
+
 /**
  * @param array<string, string> $extraEnv
  * @return array{int, string}
