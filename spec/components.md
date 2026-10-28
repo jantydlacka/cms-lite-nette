@@ -38,7 +38,9 @@ digit          = "0" | "1" | ... | "9" ;
 rest           = { any character except a line ending } ;
 ```
 
-Lines end with LF, CRLF or CR, as in CommonMark; line numbers start at 1.
+Lines end with LF, CRLF or CR, as in CommonMark; line numbers start at 1. A byte order mark at the start of the document is not part of the first line.
+
+A tab indents by four columns, so a line starting with a tab and `:::` is an indented code block, or paragraph text when it continues a paragraph. A no-break space is not indentation, so a line starting with it is text.
 
 ## Where markers count
 
@@ -46,13 +48,14 @@ Lines end with LF, CRLF or CR, as in CommonMark; line numbers start at 1.
 |-------|--------|
 | A line of its own at the top level of the document | Marker. |
 | Right after a paragraph line, without a blank line | Marker; it ends the paragraph, like an ATX heading. |
-| Right after a list item line or a quote line, without a blank line | Marker at the top level; it ends the list or the quote (the line is not a lazy continuation). |
+| Right after a list item line or a quote line, also a nested one, without a blank line | Marker at the top level; it ends the list or the quote (the line is not a lazy continuation). |
 | Inside a list item or a quote (`- ::: novinky`, `> ::: novinky`, or indented into a list item) | Misplaced marker. |
 | Inside an HTML block (for example between `<div>` and `</div>` without blank lines) | Misplaced marker. |
 | Inside a fenced or indented code block | Text of the code block. |
 | Inside inline code on the same line (`` `::: novinky` ``) | Text of the code. |
 | Escaped as `\:::` | Text `:::`. |
-| Indented by four or more spaces | An indented code block, or text when it continues a paragraph. |
+| Indented by four or more spaces or by a tab | An indented code block, or text when it continues a paragraph. |
+| After a no-break space | Text. |
 | Not at the start of the line (`Text ::: novinky`) | Text. |
 
 A marker line belongs to the block structure, so it ends inline code opened on the line above, as an ATX heading would.
@@ -75,9 +78,15 @@ In a list item or a quote, a malformed marker is reported as malformed and a wel
 | `:::` | Malformed (no type). |
 | `- ::: novinky` | Misplaced (list item). |
 | `> ::: novinky` | Misplaced (quote). |
+| `> :::novinky` | Malformed (in a quote). |
 | `<div>` + `::: novinky 3` + `</div>` | Misplaced on line 2 (HTML block). |
 | `- item` + `::: novinky 3` | List, then marker on line 2. |
 | `> quote` + `::: novinky 3` | Quote, then marker on line 2. |
+| `- a` + `  - b` + `::: novinky 3` | Nested list, then marker on line 3. |
+| `Text` + a tab and `::: novinky 3` on the next line | One paragraph of the two lines, the tab dropped (no marker). |
+| A no-break space and `::: novinky 3` | Paragraph with that text (no marker). |
+| A byte order mark and `::: novinky 3` at the start of the document | Marker `novinky`, argument `3`, on line 1. |
+| `<div>` + `::: novinky 3` + `</div>` with CRLF or CR line endings | Misplaced on line 2 (HTML block). |
 | ```` ``` ```` + `::: novinky 3` + ```` ``` ```` | Code block with the text `::: novinky 3`. |
 | `` `::: novinky` `` | Inline code. |
 | `\::: novinky` | Text `::: novinky`. |

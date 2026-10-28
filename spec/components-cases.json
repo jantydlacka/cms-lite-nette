@@ -440,6 +440,168 @@
 		]
 	},
 	{
+		"name": "a tab before the colons continues a paragraph",
+		"markdown": "Text\n\t::: novinky 3\n",
+		"markers": [],
+		"errors": [],
+		"html": "<p>Text\n::: novinky 3</p>\n"
+	},
+	{
+		"name": "a tab before the colons starts an indented code block",
+		"markdown": "\t::: novinky 3\n",
+		"markers": [],
+		"errors": [],
+		"html": "<pre><code>::: novinky 3\n</code></pre>\n"
+	},
+	{
+		"name": "a no-break space before the colons continues a paragraph",
+		"markdown": "Text\n\u00a0::: novinky 3\n",
+		"markers": [],
+		"errors": [],
+		"html": "<p>Text\n\u00a0::: novinky 3</p>\n"
+	},
+	{
+		"name": "a no-break space before the colons is text",
+		"markdown": "\u00a0::: novinky 3\n",
+		"markers": [],
+		"errors": [],
+		"html": "<p>\u00a0::: novinky 3</p>\n"
+	},
+	{
+		"name": "a byte order mark at the start of the document",
+		"markdown": "\ufeff::: novinky 3\n",
+		"markers": [
+			{
+				"line": 1,
+				"type": "novinky",
+				"arguments": [
+					"3"
+				]
+			}
+		],
+		"errors": []
+	},
+	{
+		"name": "marker inside an HTML block with CRLF line endings",
+		"markdown": "<div>\r\n::: novinky 3\r\n</div>\r\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 2,
+				"kind": "misplaced"
+			}
+		]
+	},
+	{
+		"name": "marker inside an HTML block with CR line endings",
+		"markdown": "<div>\r::: novinky 3\r</div>\r",
+		"markers": [],
+		"errors": [
+			{
+				"line": 2,
+				"kind": "misplaced"
+			}
+		]
+	},
+	{
+		"name": "marker inside an HTML block in a list item",
+		"markdown": "- <div>\n  ::: novinky 3\n  </div>\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 2,
+				"kind": "misplaced"
+			}
+		]
+	},
+	{
+		"name": "marker inside an HTML block in a quote",
+		"markdown": "> <div>\n> ::: novinky 3\n> </div>\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 2,
+				"kind": "misplaced"
+			}
+		]
+	},
+	{
+		"name": "malformed marker inside a quote counts as malformed",
+		"markdown": "> :::novinky\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 1,
+				"kind": "syntax"
+			}
+		]
+	},
+	{
+		"name": "marker inside a quote without a space after the quote mark",
+		"markdown": ">::: novinky\n",
+		"markers": [],
+		"errors": [
+			{
+				"line": 1,
+				"kind": "misplaced"
+			}
+		]
+	},
+	{
+		"name": "marker right after a nested list item line",
+		"markdown": "- a\n  - b\n::: novinky 3\n",
+		"markers": [
+			{
+				"line": 3,
+				"type": "novinky",
+				"arguments": [
+					"3"
+				]
+			}
+		],
+		"errors": []
+	},
+	{
+		"name": "marker right after a nested quote line",
+		"markdown": "> > quote\n::: novinky 3\n",
+		"markers": [
+			{
+				"line": 2,
+				"type": "novinky",
+				"arguments": [
+					"3"
+				]
+			}
+		],
+		"errors": []
+	},
+	{
+		"name": "marker right after a quote line in a list item",
+		"markdown": "- > quote\n::: novinky 3\n",
+		"markers": [
+			{
+				"line": 2,
+				"type": "novinky",
+				"arguments": [
+					"3"
+				]
+			}
+		],
+		"errors": []
+	},
+	{
+		"name": "marker right after a continued paragraph of a list item",
+		"markdown": "- a\n  b\n::: novinky\n",
+		"markers": [
+			{
+				"line": 3,
+				"type": "novinky",
+				"arguments": []
+			}
+		],
+		"errors": []
+	},
+	{
 		"name": "empty content",
 		"markdown": "",
 		"markers": [],
