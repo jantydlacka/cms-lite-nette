@@ -28,7 +28,7 @@ The project is meant to be read as much as used. Worth a look:
 | --- | --- |
 | ![Page detail in the administration with an unsaved preview](docs/images/admin-page-preview.png) | ![List of news in the administration with their publication status per language](docs/images/admin-news.png) |
 
-Status: MVP – pages, sign-in, page and news administration, components. Images and a contact form are planned next. The CI workflow is configured but has not run yet, so there are no published runs, and the coverage badge shows as broken until the first CI run on `main` publishes it.
+Status: MVP – pages, sign-in, page and news administration, components. Images and a contact form are planned next.
 
 ## Quick start
 
