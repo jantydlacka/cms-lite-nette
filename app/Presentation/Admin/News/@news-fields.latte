@@ -11,6 +11,7 @@
 	{var $title = $form['title']}
 	{var $slug = $form['slug']}
 	{var $perex = $form['perex']}
+	{var $content = $form['content']}
 	{var $meta = $form['metaDescription']}
 	<label n:name="title" />
 	<input n:name="title" n:attr="aria-invalid: $title->hasErrors() ? 'true', aria-describedby: $title->hasErrors() ? $title->getHtmlId() . '-error'" data-testid="news-title-input">
@@ -20,7 +21,7 @@
 	<label n:name="perex" />
 	<textarea n:name="perex" rows="3" n:attr="aria-invalid: $perex->hasErrors() ? 'true', aria-describedby: $perex->hasErrors() ? $perex->getHtmlId() . '-error'" data-testid="news-perex-input"></textarea>
 	<label n:name="content" />
-	<textarea n:name="content" rows="14" data-testid="news-content-input"></textarea>
+	<textarea n:name="content" rows="14" n:attr="aria-invalid: $content->hasErrors() ? 'true', aria-describedby: $content->hasErrors() ? $content->getHtmlId() . '-error'" data-testid="news-content-input"></textarea>
 	<label n:name="metaDescription" />
 	<textarea n:name="metaDescription" rows="3" n:attr="aria-invalid: $meta->hasErrors() ? 'true', aria-describedby: $meta->hasErrors() ? $meta->getHtmlId() . '-error'" data-testid="news-meta-input"></textarea>
 	<label n:name="status" />

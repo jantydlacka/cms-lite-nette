@@ -6,6 +6,7 @@ namespace App\Presentation\Admin\News;
 
 use App\Core\Localization\SiteTime;
 use App\Core\Security\Resource;
+use App\Model\Content\InvalidContentException;
 use App\Model\InvalidSlugException;
 use App\Model\News\CreateNews;
 use App\Model\News\News;
@@ -294,6 +295,10 @@ final class NewsPresenter extends AdminPresenter
 				$data->metaDescription,
 				$data->status,
 			));
+		} catch (InvalidContentException $e) {
+			$this->refuseContent($form, $e);
+
+			return;
 		} catch (InvalidSlugException $e) {
 			self::control($form, 'slug')->addError(self::slugMessage($e));
 
@@ -351,6 +356,10 @@ final class NewsPresenter extends AdminPresenter
 				$data->status,
 				$data->version === '' ? null : (int) $data->version,
 			));
+		} catch (InvalidContentException $e) {
+			$this->refuseContent($form, $e);
+
+			return;
 		} catch (InvalidSlugException $e) {
 			self::control($form, 'slug')->addError(self::slugMessage($e));
 
@@ -370,6 +379,17 @@ final class NewsPresenter extends AdminPresenter
 
 		$this->flashMessage('admin.news.saved');
 		$this->redirect('this');
+	}
+
+
+	/** One error per problem at the content field, in line order; the posted text stays in the form. */
+	private function refuseContent(Form $form, InvalidContentException $e): void
+	{
+		$content = self::control($form, 'content');
+		foreach ($e->problems as $problem) {
+			// Parameters are translated here: the control would translate the key without them.
+			$content->addError($this->translator->translate($problem->messageKey, $problem->parameters), translate: false);
+		}
 	}
 
 

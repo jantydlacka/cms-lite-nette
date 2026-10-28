@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Model\News;
 
 use App\Model\CmsConfig;
+use App\Model\Content\ContentChecker;
+use App\Model\Content\ContentKind;
+use App\Model\Content\InvalidContentException;
 use App\Model\InvalidSlugException;
 use App\Model\PublicationStatus;
 use App\Model\Redirect\PathRedirectRepository;
@@ -30,6 +33,7 @@ final class NewsService
 		private readonly Transaction $transaction,
 		private readonly CmsConfig $config,
 		private readonly ClockInterface $clock,
+		private readonly ContentChecker $contentChecker,
 	) {
 	}
 
@@ -37,6 +41,7 @@ final class NewsService
 	/**
 	 * Creates the item together with its first translation; a failing translation leaves no item.
 	 *
+	 * @throws InvalidContentException nothing is written then
 	 * @throws InvalidSlugException nothing is written then
 	 * @throws InvalidArgumentException when the input is invalid as in saveTranslation()
 	 */
@@ -44,6 +49,7 @@ final class NewsService
 	{
 		$this->assertOwnTransaction();
 		[$title, $slug, $perex] = $this->checkInput($command->locale, $command->title, $command->slug, $command->perex, $command->metaDescription);
+		$this->assertValidContent($command->content);
 
 		return $this->transaction->run(function () use ($command, $title, $slug, $perex): NewsTranslation {
 			$id = $this->news->createNews($command->publishedAt, $command->authorId);
@@ -68,6 +74,7 @@ final class NewsService
 	 * transaction); then under the row lock: missing item, stale version, slug taken. An empty slug is derived from the title.
 	 * A published translation of an undated item dates it now, leaving the item's version alone.
 	 *
+	 * @throws InvalidContentException nothing is written then
 	 * @throws InvalidSlugException nothing is written then
 	 * @throws StaleVersionException when the stored version differs from $command->expectedVersion; nothing is written then
 	 * @throws InvalidArgumentException when the item does not exist, the locale is not configured, or the title, perex or description is blank or too long
@@ -76,6 +83,7 @@ final class NewsService
 	{
 		$this->assertOwnTransaction();
 		[$title, $slug, $perex] = $this->checkInput($command->locale, $command->title, $command->slug, $command->perex, $command->metaDescription);
+		$this->assertValidContent($command->content);
 
 		return $this->transaction->run(function () use ($command, $title, $slug, $perex): NewsTranslation {
 			$news = $this->news->lockNews($command->newsId)
@@ -146,6 +154,16 @@ final class NewsService
 	 * A write must open its transaction itself and lock the news row first: under REPEATABLE READ a read before the
 	 * lock would fix a snapshot older than the lock.
 	 */
+	/** @throws InvalidContentException with every problem; needs no stored data */
+	private function assertValidContent(string $content): void
+	{
+		$problems = $this->contentChecker->check($content, ContentKind::News);
+		if ($problems !== []) {
+			throw new InvalidContentException($problems);
+		}
+	}
+
+
 	private function assertOwnTransaction(): void
 	{
 		if ($this->transaction->inTransaction()) {

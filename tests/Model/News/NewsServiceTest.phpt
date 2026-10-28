@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Core\Database\ExplorerTransaction;
 use App\Model\CmsConfig;
+use App\Model\Content\ContentChecker;
+use App\Model\Content\InvalidContentException;
 use App\Model\InvalidSlugException;
 use App\Model\News\CreateNews;
 use App\Model\News\Database\DatabaseNewsRepository;
@@ -35,7 +37,7 @@ $clock = new FrozenClock(new DateTimeImmutable('2026-01-15 12:00:00', new DateTi
 $news = new DatabaseNewsRepository($explorer, $clock);
 $redirects = new DatabasePathRedirectRepository($explorer, $clock);
 $config = new CmsConfig('Site', 'cs', ['cs', 'en'], 10);
-$service = new NewsService($news, $redirects, $transaction, $config, $clock);
+$service = new NewsService($news, $redirects, $transaction, $config, $clock, $container->getByType(ContentChecker::class));
 $reset = static function () use ($container, $explorer, $clock): int {
 	TestDatabase::prepare($container);
 	$clock->set(new DateTimeImmutable('2026-01-15 12:00:00', new DateTimeZone('UTC')));
@@ -382,7 +384,7 @@ test('two items created at the same time do not block each other', function () u
 			$this->inner->deleteForTarget($target);
 		}
 	};
-	$other = new NewsService(new DatabaseNewsRepository($otherExplorer, $clock), $hookedRedirects, new ExplorerTransaction($otherExplorer), $config, $clock);
+	$other = new NewsService(new DatabaseNewsRepository($otherExplorer, $clock), $hookedRedirects, new ExplorerTransaction($otherExplorer), $config, $clock, $container->getByType(ContentChecker::class));
 
 	$explorer->query('SET SESSION innodb_lock_wait_timeout = 1');
 	try {
@@ -454,7 +456,7 @@ test('two items changing their slug at the same time do not block each other', f
 			$this->inner->deleteForTarget($target);
 		}
 	};
-	$other = new NewsService(new DatabaseNewsRepository($otherExplorer, $clock), $hookedRedirects, new ExplorerTransaction($otherExplorer), $config, $clock);
+	$other = new NewsService(new DatabaseNewsRepository($otherExplorer, $clock), $hookedRedirects, new ExplorerTransaction($otherExplorer), $config, $clock, $container->getByType(ContentChecker::class));
 
 	$explorer->query('SET SESSION innodb_lock_wait_timeout = 1');
 	try {
@@ -472,4 +474,26 @@ test('two items changing their slug at the same time do not block each other', f
 
 test('the container autowires NewsService', function () use ($container): void {
 	Assert::type(NewsService::class, $container->getByType(NewsService::class));
+});
+
+test('a component not allowed in news, or a broken marker, refuses createNews and saveTranslation and writes nothing', function () use ($reset, $service, $news, $snapshot): void {
+	$author = $reset();
+	$id = $service->createNews(new CreateNews(null, $author, 'cs', 'Stored', 'stored', 'Perex', 'ok', '', PublicationStatus::Published))->newsId;
+	$before = $snapshot();
+	$content = "text\n\n::: novinky\n\n:::novinky\n";
+
+	foreach ([PublicationStatus::Draft, PublicationStatus::Published] as $status) {
+		$attempts = [
+			'create' => static fn () => $service->createNews(new CreateNews(null, $author, 'cs', 'New', 'new', 'Perex', $content, '', $status)),
+			'save' => static fn () => $service->saveTranslation(new SaveNewsTranslation($id, 'cs', 'Stored', 'stored', 'Perex', $content, '', $status, 1)),
+		];
+		foreach ($attempts as $label => $attempt) {
+			$e = Assert::exception($attempt, InvalidContentException::class);
+			assert($e instanceof InvalidContentException);
+			Assert::same([3, 5], array_map(static fn ($p): int => $p->line, $e->problems), $label);
+			Assert::same(['content.component.notAllowedInNews', 'content.component.syntax'], array_map(static fn ($p): string => $p->messageKey, $e->problems), $label);
+			Assert::same($before, $snapshot(), $label . ' ' . $status->value);
+		}
+	}
+	Assert::same('ok', $news->findTranslation($id, 'cs')?->content);
 });

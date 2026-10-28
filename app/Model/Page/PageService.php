@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Model\Page;
 
 use App\Model\CmsConfig;
+use App\Model\Content\ContentChecker;
+use App\Model\Content\ContentKind;
+use App\Model\Content\InvalidContentException;
 use App\Model\InvalidSlugException;
 use App\Model\PublicationStatus;
 use App\Model\Redirect\PathRedirectRepository;
@@ -35,6 +38,7 @@ final class PageService
 		private readonly ClockInterface $clock,
 		private readonly Homepage $homepage,
 		private readonly SettingRepository $settings,
+		private readonly ContentChecker $contentChecker,
 	) {
 	}
 
@@ -42,6 +46,7 @@ final class PageService
 	/**
 	 * Creates the page as the last of its siblings together with its first translation; a failing translation leaves no page.
 	 *
+	 * @throws InvalidContentException nothing is written then
 	 * @throws InvalidSlugException nothing is written then
 	 * @throws InvalidArgumentException when the parent does not exist, or the input is invalid as in saveTranslation()
 	 */
@@ -49,6 +54,7 @@ final class PageService
 	{
 		$this->assertOwnTransaction();
 		[$title, $slug] = $this->checkInput($command->locale, $command->title, $command->slug, $command->metaDescription);
+		$this->assertValidContent($command->content);
 
 		return $this->transaction->run(function () use ($command, $title, $slug): PageTranslation {
 			$this->treeLock->acquire();
@@ -78,6 +84,7 @@ final class PageService
 	 * An empty slug is derived from the title and then checked the same way.
 	 * Descendant paths the strategy changes are written too, which raises those translations' versions by 1.
 	 *
+	 * @throws InvalidContentException nothing is written then
 	 * @throws InvalidSlugException nothing is written then
 	 * @throws StaleVersionException when the stored version differs from $command->expectedVersion; nothing is written then
 	 * @throws HomepageProtectedException PROTECTED when the homepage's default-locale translation would become a draft; nothing is written then
@@ -87,6 +94,7 @@ final class PageService
 	{
 		$this->assertOwnTransaction();
 		[$title, $slug] = $this->checkInput($command->locale, $command->title, $command->slug, $command->metaDescription);
+		$this->assertValidContent($command->content);
 
 		return $this->transaction->run(function () use ($command, $title, $slug): PageTranslation {
 			$this->treeLock->acquire();
@@ -353,6 +361,16 @@ final class PageService
 			$ancestorSlugs[] = $translation->slug;
 		}
 		$this->recomputeDescendantPaths($page->id, $locale, $ancestorSlugs, []);
+	}
+
+
+	/** @throws InvalidContentException with every problem; needs no stored data */
+	private function assertValidContent(string $content): void
+	{
+		$problems = $this->contentChecker->check($content, ContentKind::Page);
+		if ($problems !== []) {
+			throw new InvalidContentException($problems);
+		}
 	}
 
 

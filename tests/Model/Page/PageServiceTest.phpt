@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Model\CmsConfig;
+use App\Model\Content\ContentChecker;
+use App\Model\Content\InvalidContentException;
 use App\Model\InvalidSlugException;
 use App\Model\Page\CreatePage;
 use App\Model\Page\Database\DatabasePageRepository;
@@ -63,6 +65,7 @@ $service = static fn (?PageRepository $repo = null, ?PagePathStrategy $strategy 
 	$clock,
 	new Homepage($settingRepo ?? $settings, $repo ?? $pages, $config),
 	$settingRepo ?? $settings,
+	$container->getByType(ContentChecker::class),
 );
 $cmd = static fn (int $pageId, string $slug, string $locale = 'cs', string $title = 'Title', string $meta = 'description', ?int $version = null): SavePageTranslation => new SavePageTranslation(
 	$pageId,
@@ -362,11 +365,11 @@ test('a descendant path that collides rolls the whole save back', function () us
 	Assert::same('firma', $pages->findTranslation($parent, 'cs')?->path);
 });
 
-test('an unknown locale is rejected before anything is written', function () use ($reset, $cmd, $pages, $counts, $redirects, $transaction, $treeLock, $clock, $settings): void {
+test('an unknown locale is rejected before anything is written', function () use ($reset, $cmd, $pages, $counts, $redirects, $transaction, $treeLock, $clock, $settings, $container): void {
 	$reset();
 	$id = $pages->createPage(null, 0, true);
 	$csOnly = new CmsConfig('Site', 'cs', ['cs'], 10);
-	$service = new PageService($pages, $redirects, new FlatPagePathStrategy(), new ReservedSegments($csOnly), $transaction, $treeLock, $csOnly, $clock, new Homepage($settings, $pages, $csOnly), $settings);
+	$service = new PageService($pages, $redirects, new FlatPagePathStrategy(), new ReservedSegments($csOnly), $transaction, $treeLock, $csOnly, $clock, new Homepage($settings, $pages, $csOnly), $settings, $container->getByType(ContentChecker::class));
 
 	Assert::exception(fn () => $service->saveTranslation($cmd($id, 'o-nas', 'de')), InvalidArgumentException::class);
 	Assert::exception(fn () => $service->saveTranslation($cmd($id, 'o-nas', 'en')), InvalidArgumentException::class);
@@ -1259,4 +1262,33 @@ test('every write refuses to run inside an already open transaction and writes n
 		Assert::match('Page writes must start their own transaction%a%', $thrown->getMessage(), $label);
 		Assert::same($before, $fullSnapshot(), $label);
 	}
+});
+
+test('broken component markers refuse createPage and saveTranslation, draft or published, new or stored, and write nothing', function () use ($reset, $service, $pages, $fullSnapshot): void {
+	$reset();
+	$id = $service()->createPage(new CreatePage(null, true, 'cs', 'Stored', 'stored', 'ok', '', PublicationStatus::Published))->pageId;
+	$before = $fullSnapshot();
+	$content = "text\n\n::: novinkyy\n\n::: novinky 0\n";
+
+	foreach ([PublicationStatus::Draft, PublicationStatus::Published] as $status) {
+		$attempts = [
+			'create' => static fn () => $service()->createPage(new CreatePage(null, true, 'cs', 'New', 'new', $content, '', $status)),
+			'save' => static fn () => $service()->saveTranslation(new SavePageTranslation($id, 'cs', 'Stored', 'stored', $content, '', $status, 1)),
+		];
+		foreach ($attempts as $label => $attempt) {
+			$e = Assert::exception($attempt, InvalidContentException::class);
+			assert($e instanceof InvalidContentException);
+			Assert::same([3, 5], array_map(static fn ($p): int => $p->line, $e->problems), $label);
+			Assert::same(['content.component.unknown', 'news.component.arguments'], array_map(static fn ($p): string => $p->messageKey, $e->problems), $label);
+			Assert::same($before, $fullSnapshot(), $label . ' ' . $status->value);
+		}
+	}
+	Assert::same('ok', $pages->findTranslation($id, 'cs')?->content);
+});
+
+test('valid component markers are saved', function () use ($reset, $service, $pages): void {
+	$reset();
+	$saved = $service()->createPage(new CreatePage(null, true, 'cs', 'New', 'new', "a\n\n::: novinky 5\n", '', PublicationStatus::Published));
+
+	Assert::same("a\n\n::: novinky 5\n", $pages->findTranslation($saved->pageId, 'cs')?->content);
 });

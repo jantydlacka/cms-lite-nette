@@ -712,3 +712,46 @@ test('with one language there are no tabs', function () use ($app): void {
 	Assert::count(0, nodes($result->dom(), '//*[@data-testid="news-tab"]'));
 	Assert::same(404, $app->get("/admin/news/$id/en")->code);
 });
+
+
+test('a news item refuses the news component and a broken marker, ordered by line, and the text stays', function () use ($app): void {
+	[$editor] = resetNews($app);
+	$id = createNews($app, $editor, 'Novinka s komponentou');
+	signedIn($app);
+	$content = "Úvod\n\n::: novinky\n\n:::novinky\n";
+	$expected = [
+		'Řádek 3: komponentu „novinky“ nejde vložit do novinky.',
+		'Řádek 5: značku komponenty se nepodařilo přečíst. Tvar je „::: název argumenty“; obyčejný text začínající „:::“ napište jako „\:::“.',
+	];
+	$stored = newsTranslation($app, $id);
+	foreach (['draft', 'published'] as $status) {
+		[$action, $body] = formSubmit($app->get("/admin/news/$id"), TRANSLATION_FORM, 'news-save', ['content' => $content, 'status' => $status]);
+		$result = $app->post($action, $body);
+		Assert::same(200, $result->code, $status);
+		Assert::same($expected, errors($result, TRANSLATION_FORM), $status);
+		Assert::contains($expected[0], describedBy($result, 'news-content-input'));
+		Assert::same($content, fieldValue($result, 'news-content-input'), $status);
+		Assert::same([], flashes($result));
+		Assert::same($stored?->content, newsTranslation($app, $id)?->content);
+		Assert::same($stored?->version, newsTranslation($app, $id)?->version);
+	}
+
+	$count = newsCount($app);
+	[$action, $body] = formSubmit($app->get('/admin/news/new'), NEW_FORM, 'news-save', ['title' => 'Nová s chybou', 'perex' => 'Perex.', 'content' => $content]);
+	$result = $app->post($action, $body);
+	Assert::same(200, $result->code);
+	Assert::same($expected, errors($result, NEW_FORM));
+	Assert::same($content, fieldValue($result, 'news-content-input'));
+	Assert::same($count, newsCount($app));
+});
+
+
+test('a news item without component markers is saved', function () use ($app): void {
+	[$editor] = resetNews($app);
+	$id = createNews($app, $editor, 'Čistá novinka');
+	signedIn($app);
+	[$action, $body] = formSubmit($app->get("/admin/news/$id"), TRANSLATION_FORM, 'news-save', ['content' => "Text\n\n\\::: novinky\n"]);
+
+	Assert::same(303, $app->post($action, $body)->code);
+	Assert::same("Text\n\n\\::: novinky\n", newsTranslation($app, $id)?->content);
+});

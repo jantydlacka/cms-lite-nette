@@ -991,3 +991,53 @@ test('with one language there are no language tabs', function (): void {
 	Assert::count(0, nodes($result->dom(), '//*[@data-testid="page-tab"]'));
 	Assert::same(404, $app->get('/admin/pages/' . pageId($app, 'O nás') . '/en')->code);
 });
+
+
+test('a broken component marker is refused at the content field with its line, draft or published, and the text stays', function () use ($app): void {
+	resetDemo($app);
+	signedIn($app);
+	$contact = pageId($app, 'Kontakt');
+	$stored = translation($app, $contact);
+	assert($stored !== null);
+	$content = "Úvod\n\n::: novinkyy\n\n::: novinky 0\n";
+	foreach (['draft', 'published'] as $status) {
+		[$action, $body] = formSubmit($app->get("/admin/pages/$contact"), 'page-translation-form', 'page-save', ['content' => $content, 'status' => $status]);
+		$result = $app->post($action, $body);
+		Assert::same(200, $result->code, $status);
+		Assert::same([
+			'Řádek 3: neznámá komponenta „novinkyy“. Dostupné: novinky.',
+			'Řádek 5: zápis je „::: novinky“ nebo „::: novinky počet“, počet je celé číslo od 1 do 20.',
+		], errors($result, 'page-translation-form'), $status);
+		Assert::same('true', (string) nodes($result->dom(), '//*[@data-testid="page-content-input"]')[0]['aria-invalid'], $status);
+		Assert::same($content, fieldValue($result, 'page-content-input'), $status);
+		Assert::null($result->text('flash'));
+		Assert::same($stored->content, translation($app, $contact)?->content);
+		Assert::same(1, translation($app, $contact)?->version);
+	}
+});
+
+
+test('a page with a valid component marker is saved', function () use ($app): void {
+	resetDemo($app);
+	signedIn($app);
+	$contact = pageId($app, 'Kontakt');
+	[$action, $body] = formSubmit($app->get("/admin/pages/$contact"), 'page-translation-form', 'page-save', ['content' => "Úvod\n\n::: novinky 5\n"]);
+
+	Assert::same(303, $app->post($action, $body)->code);
+	Assert::same("Úvod\n\n::: novinky 5\n", translation($app, $contact)?->content);
+});
+
+
+test('a new page with a broken component marker keeps the form and creates nothing', function () use ($app): void {
+	resetDemo($app);
+	signedIn($app);
+	$count = $app->container->getByType(Explorer::class)->table('page')->count('*');
+	$content = ":::novinky\n";
+	[$action, $body] = formSubmit($app->get('/admin/pages/new'), 'page-new-form', 'page-save', ['title' => 'Nová s chybou', 'content' => $content]);
+
+	$result = $app->post($action, $body);
+	Assert::same(200, $result->code);
+	Assert::same(['Řádek 1: značku komponenty se nepodařilo přečíst. Tvar je „::: název argumenty“; obyčejný text začínající „:::“ napište jako „\:::“.'], errors($result, 'page-new-form'));
+	Assert::same($content, fieldValue($result, 'page-content-input'));
+	Assert::same($count, $app->container->getByType(Explorer::class)->table('page')->count('*'));
+});
