@@ -115,6 +115,7 @@ content.component.syntax: 'Line %line%: the component marker cannot be read. The
 content.component.misplaced: 'Line %line%: a component must stand on its own line outside lists and quotes.'
 content.component.unknown: 'Line %line%: unknown component “%type%”. Available: %available%.'
 content.component.notAllowedInNews: 'Line %line%: the component “%type%” cannot be placed in a news item.'
+content.component.notAllowedInPage: 'Line %line%: the component “%type%” cannot be placed in a page.'
 news.component.arguments: 'Line %line%: write “::: novinky” or “::: novinky count”, where count is a whole number from 1 to 20.'
 front.news.component.all: 'All news →'
 admin.content.preview.noNews: 'No published news yet.'

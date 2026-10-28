@@ -51,7 +51,10 @@ final class ContentChecker
 		}
 
 		if (!$component->allowedIn($kind)) {
-			return new ContentProblem($line, 'content.component.notAllowedInNews', ['line' => $line, 'type' => $type]);
+			return new ContentProblem($line, match ($kind) {
+				ContentKind::Page => 'content.component.notAllowedInPage',
+				ContentKind::News => 'content.component.notAllowedInNews',
+			}, ['line' => $line, 'type' => $type]);
 		}
 
 		try {

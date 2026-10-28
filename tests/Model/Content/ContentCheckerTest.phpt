@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Core\Markdown\Component\CommonMarkComponentScanner;
 use App\Model\Content\ComponentRegistry;
 use App\Model\Content\ContentChecker;
+use App\Model\Content\ContentComponent;
 use App\Model\Content\ContentKind;
 use App\Model\Content\ContentProblem;
 use App\Model\News\NewsListComponent;
@@ -69,6 +70,39 @@ test('valid markers pass in a page and the news component is refused in a news i
 		summary("Text\n\n::: novinky\n::: novinky 20\n", ContentKind::News),
 	);
 	Assert::same([], summary("Plain text, `::: novinky`, \\::: novinky\n\n```\n::: novinky 0\n```\n", ContentKind::News));
+});
+
+
+test('a component not allowed in pages is refused in a page with the message for pages', function (): void {
+	$newsOnly = new class() implements ContentComponent {
+		public function name(): string
+		{
+			return 'jen-novinky';
+		}
+
+
+		public function allowedIn(ContentKind $kind): bool
+		{
+			return $kind === ContentKind::News;
+		}
+
+
+		/**
+		 * @param list<string> $arguments
+		 * @return array<string, mixed>
+		 */
+		public function arguments(array $arguments): array
+		{
+			return [];
+		}
+	};
+	$checker = new ContentChecker(new CommonMarkComponentScanner(), new ComponentRegistry(['jen-novinky' => $newsOnly]));
+
+	Assert::equal(
+		[new ContentProblem(2, 'content.component.notAllowedInPage', ['line' => 2, 'type' => 'jen-novinky'])],
+		$checker->check("Text\n::: jen-novinky\n", ContentKind::Page),
+	);
+	Assert::same([], $checker->check("Text\n::: jen-novinky\n", ContentKind::News));
 });
 
 

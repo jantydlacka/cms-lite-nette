@@ -121,6 +121,7 @@ Translation keys of the public UI and the administration with their Czech (`lang
 | `content.component.misplaced` | Řádek %line%: komponenta musí stát na samostatném řádku mimo seznam a citaci. | Line %line%: a component must stand on its own line outside lists and quotes. |
 | `content.component.unknown` | Řádek %line%: neznámá komponenta „%type%“. Dostupné: %available%. | Line %line%: unknown component “%type%”. Available: %available%. |
 | `content.component.notAllowedInNews` | Řádek %line%: komponentu „%type%“ nejde vložit do novinky. | Line %line%: the component “%type%” cannot be placed in a news item. |
+| `content.component.notAllowedInPage` | Řádek %line%: komponentu „%type%“ nejde vložit do stránky. | Line %line%: the component “%type%” cannot be placed in a page. |
 | `news.component.arguments` | Řádek %line%: zápis je „::: novinky“ nebo „::: novinky počet“, počet je celé číslo od 1 do 20. | Line %line%: write “::: novinky” or “::: novinky count”, where count is a whole number from 1 to 20. |
 | `front.news.component.all` | Všechny novinky → | All news → |
 | `admin.content.preview.noNews` | Zatím žádná zveřejněná novinka. | No published news yet. |

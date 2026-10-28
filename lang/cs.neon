@@ -115,6 +115,7 @@ content.component.syntax: 'Řádek %line%: značku komponenty se nepodařilo př
 content.component.misplaced: 'Řádek %line%: komponenta musí stát na samostatném řádku mimo seznam a citaci.'
 content.component.unknown: 'Řádek %line%: neznámá komponenta „%type%“. Dostupné: %available%.'
 content.component.notAllowedInNews: 'Řádek %line%: komponentu „%type%“ nejde vložit do novinky.'
+content.component.notAllowedInPage: 'Řádek %line%: komponentu „%type%“ nejde vložit do stránky.'
 news.component.arguments: 'Řádek %line%: zápis je „::: novinky“ nebo „::: novinky počet“, počet je celé číslo od 1 do 20.'
 front.news.component.all: 'Všechny novinky →'
 admin.content.preview.noNews: 'Zatím žádná zveřejněná novinka.'
