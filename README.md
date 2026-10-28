@@ -5,7 +5,7 @@
 
 A small, well-structured CMS built on [Nette](https://nette.org): pages, news, images and a contact form. It is the first of a planned family, `cms-lite-<framework>`: every implementation follows the same specification in [`spec/`](spec/) and is checked by the same browser-level end-to-end suite in `e2e/`.
 
-Status: phases 1 (skeleton), 2 (pages), 3a (sign-in), 3b (page administration) and 4a (news) are done - application bootstrap, Docker setup, migrations, translator, clock, light/dark theme, quality gate and CI configuration; public pages from the database with translations, flat URLs, menu, breadcrumbs, 301 redirects from old paths and safely rendered Markdown. Sign-in, roles and an administration skeleton exist (phase 3a), and editors and administrators manage pages in the administration (phase 3b). News (phase 4a) has a paginated public list with detail pages and is managed in the administration, including scheduled publication. Images and the contact form come in later phases. The CI workflow is configured but has not run yet, so there are no published runs, and the coverage badge shows as broken until the first CI run on `main` publishes it.
+Status: phases 1 (skeleton), 2 (pages), 3a (sign-in), 3b (page administration), 4a (news) and 4b (components in content) are done - application bootstrap, Docker setup, migrations, translator, clock, light/dark theme, quality gate and CI configuration; public pages from the database with translations, flat URLs, menu, breadcrumbs, 301 redirects from old paths and safely rendered Markdown. Sign-in, roles and an administration skeleton exist (phase 3a), and editors and administrators manage pages in the administration (phase 3b). News (phase 4a) has a paginated public list with detail pages and is managed in the administration, including scheduled publication. Content can place components such as a list of the latest news (phase 4b). Images and the contact form come in later phases. The CI workflow is configured but has not run yet, so there are no published runs, and the coverage badge shows as broken until the first CI run on `main` publishes it.
 
 ## Quick start
 
@@ -72,6 +72,7 @@ The `cms:` section of `config/common.neon` (override it in `config/local.neon`; 
 | `timezone` | `Europe/Prague` | Time zone for showing and entering dates (news publication). Must be a valid identifier; times are stored in UTC. |
 | `newsInMenu` | `true` | Shows the news link at the end of the top menu. |
 | `newsPerPage` | `10` | News items per page of the public list. |
+| `components` | `novinky: App\Model\News\NewsListComponent` | Map of component name to a class implementing `App\Model\Content\ContentComponent`; see [Components](#components). |
 
 ## Quality
 
@@ -166,6 +167,22 @@ Sign in at `/admin`. Editors and administrators manage pages under `/admin/pages
 ### News
 
 Editors and administrators manage news under `/admin/news` (addresses and responses in [`spec/urls.md`](spec/urls.md#admin-news)). A news item has a publication date shared by its languages and one translation per language (title, address, perex, Markdown content, search description, draft/published status). It is visible on the website when its translation is published and the date has passed, so a future date schedules it. The date is entered in the `timezone` of the configuration; empty means "now" at the moment of publishing. A changed address redirects the old one (301), and deleting the item removes the redirects.
+
+### Components
+
+The content of a page or a news item can place a component on a line of its own. The built-in one lists the latest news:
+
+```
+## News
+
+::: novinky 3
+```
+
+`::: novinky N` shows the N newest visible news items of the content's language (N is a whole number from 1 to 20; `::: novinky` means 3), each with title, date and perex, followed by a link to the full list. Without visible news the website shows nothing and the preview says so. The component cannot be placed in a news item. The demo homepage uses it.
+
+Saving content with an unknown, malformed or misplaced marker is refused with the line number, and the text stays in the form. The preview shows the problem in place of the marker. To write a line that starts with `:::` as plain text, write `\:::`; in a fenced or inline code span nothing is processed. The full grammar and examples are in [`spec/components.md`](spec/components.md).
+
+To add a component, implement `ContentComponent` and register it under a name in `cms: components:` (keep `novinky` when you override the map).
 
 ## Deployment note
 
