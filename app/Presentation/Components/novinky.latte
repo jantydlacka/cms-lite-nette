@@ -6,7 +6,7 @@
 <section n:if="$items" class="component-news" data-testid="component-news">
 	<ul class="news-list">
 		<li n:foreach="$items as $item" data-testid="component-news-item">
-			{include '../Front/News/@news-item.latte', item: $item}
+			{include '../Front/News/@news-item.latte', item: $item, heading: 'h3'}
 		</li>
 	</ul>
 	<p><a n:href=":Front:News:default, locale: $context->locale" data-testid="component-news-all">{_front.news.component.all}</a></p>

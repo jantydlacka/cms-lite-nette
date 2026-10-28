@@ -125,6 +125,8 @@ test('the first page lists the 10 newest items with a link to older news', funct
 	Assert::match('%A%<title>Novinky | CMS Lite</title>%A%', $result->body);
 	Assert::same(['Novinka 12', 'Novinka 11', 'Novinka 10', 'Novinka 9', 'Novinka 8', 'Novinka 7', 'Novinka 6', 'Novinka 5', 'Novinka 4', 'Novinka 3'], itemTitles($result));
 	Assert::count(10, $result->dom()->find('[data-testid="news-list"] [data-testid="news-item"]'));
+	Assert::count(10, $result->dom()->find('[data-testid="news-item"] h2 > [data-testid="news-item-title"]'), 'list items have h2 headings');
+	Assert::count(0, $result->dom()->find('[data-testid="news-list"] h3'));
 	Assert::same('/novinky/novinka-12', (string) $result->dom()->find('[data-testid="news-item-title"]')[0]['href']);
 	Assert::same('Perex', $result->text('news-item-perex'));
 	Assert::same('12. 1. 2026', $result->text('news-item-date'));

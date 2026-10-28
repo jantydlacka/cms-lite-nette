@@ -221,5 +221,19 @@ test('an item of the component is the same html as the item of the news list', f
 
 	$component = $item($app->get('/'), 'component-news-item');
 	Assert::contains('data-testid="news-item-title"', $component);
-	Assert::same($item($app->get('/novinky'), 'news-item'), $component);
+	// Only the heading level differs: the item sits one level below the heading the editor writes above the marker.
+	Assert::same($item($app->get('/novinky'), 'news-item'), str_replace(['<h3>', '</h3>'], ['<h2>', '</h2>'], $component));
+});
+
+
+test('component items have h3 headings under the heading of the content', function () use ($app): void {
+	resetNewsDemo($app);
+	news($app, 'jedna', '2026-01-01 10:00:00');
+	news($app, 'dva', '2026-01-02 10:00:00');
+	storeHomepage($app, 'cs', "## Novinky\n\n::: novinky 2");
+
+	$result = $app->get('/');
+	Assert::count(2, $result->dom()->find('[data-testid="component-news-item"] h3 > [data-testid="news-item-title"]'));
+	Assert::count(0, $result->dom()->find('[data-testid="component-news"] h2'));
+	Assert::match('%A%<h2>Novinky</h2>%A%data-testid="component-news"%A%', (string) $result->dom()->find('[data-testid="page-content"]')[0]->asXML());
 });

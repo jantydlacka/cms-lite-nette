@@ -111,6 +111,14 @@ ul.news-list li {
 	list-style: none;
 }
 
+/* Items of the news component have h3 headings, but look like the h2 items of the news list. */
+.component-news article > h3 {
+	--pico-font-size: 1.75rem;
+	--pico-line-height: 1.15;
+	--pico-typography-spacing-top: 2.625rem;
+	--pico-color: var(--pico-h2-color);
+}
+
 .breadcrumbs-separator {
 	margin-left: 0.25rem;
 	color: var(--pico-muted-color);

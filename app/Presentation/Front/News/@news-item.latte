@@ -1,7 +1,8 @@
-{* One news item; the only markup of an item, shared by the news list and the news component. Expects $item. *}
+{* One news item; the only markup of an item, shared by the news list and the news component. Expects $item; $heading is h2 or h3. *}
 {varType App\Model\News\NewsListItem $item}
+{default string $heading = 'h2'}
 <article>
-	<h2><a n:href=":Front:News:detail, slug: $item->translation->slug, locale: $item->translation->locale" data-testid="news-item-title">{$item->translation->title}</a></h2>
+	<h2 n:tag="$heading"><a n:href=":Front:News:detail, slug: $item->translation->slug, locale: $item->translation->locale" data-testid="news-item-title">{$item->translation->title}</a></h2>
 	<p><small><time datetime="{$item->news->publishedAt->format('c')}" data-testid="news-item-date">{$item->news->publishedAt|siteDate}</time></small></p>
 	<p data-testid="news-item-perex">{$item->translation->perex}</p>
 </article>
