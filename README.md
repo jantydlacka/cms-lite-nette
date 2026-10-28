@@ -3,9 +3,32 @@
 [![CI](https://github.com/jantydlacka/cms-lite-nette/actions/workflows/ci.yml/badge.svg)](https://github.com/jantydlacka/cms-lite-nette/actions/workflows/ci.yml)
 [![Coverage](https://raw.githubusercontent.com/jantydlacka/cms-lite-nette/badges/coverage.svg)](https://github.com/jantydlacka/cms-lite-nette/actions/workflows/ci.yml)
 
-A small, well-structured CMS built on [Nette](https://nette.org): pages, news, images and a contact form. It is the first of a planned family, `cms-lite-<framework>`: every implementation follows the same specification in [`spec/`](spec/) and is checked by the same browser-level end-to-end suite in `e2e/`.
+A small, well-structured CMS built on [Nette](https://nette.org) 3.3 and PHP 8.3+: pages, news and components in Markdown content, with an administration for editors. It is the first of a planned family, `cms-lite-<framework>`: every implementation follows the same specification in [`spec/`](spec/) and is checked by the same browser-level end-to-end suite in [`e2e/`](e2e/).
 
-Status: phases 1 (skeleton), 2 (pages), 3a (sign-in), 3b (page administration), 4a (news) and 4b (components in content) are done - application bootstrap, Docker setup, migrations, translator, clock, light/dark theme, quality gate and CI configuration; public pages from the database with translations, flat URLs, menu, breadcrumbs, 301 redirects from old paths and safely rendered Markdown. Sign-in, roles and an administration skeleton exist (phase 3a), and editors and administrators manage pages in the administration (phase 3b). News (phase 4a) has a paginated public list with detail pages and is managed in the administration, including scheduled publication. Content can place components such as a list of the latest news (phase 4b). Images and the contact form come in later phases. The CI workflow is configured but has not run yet, so there are no published runs, and the coverage badge shows as broken until the first CI run on `main` publishes it.
+The project is meant to be read as much as used. Worth a look:
+
+- **Architecture with ports and adapters.** The domain (`app/Model/`) talks to the database only through interfaces such as `PageRepository` and `NewsRepository`; the Nette Database implementations live in a `Database/` sub-namespace of each domain (`app/Model/Page/Database/`). The dependency direction is enforced by [phpat](https://github.com/carlosas/phpat) rules in PHPStan: the domain may use only `Nette\Utils`, `Nette\Schema` and `Psr\Clock` from vendors, never the presentation layer or `App\Core`, and nothing above the domain may reach an adapter directly. The reasons are in [`docs/design.md`](docs/design.md) and [`docs/adr/`](docs/adr/).
+- **Tests on every level.** Nette Tester unit and integration tests against MySQL (each parallel test thread gets its own database), architecture rules, and Playwright end-to-end tests that check production behaviour in a real browser. PHPStan at level max without a baseline and Psalm taint analysis run in the same gate.
+- **Multilingual-ready.** Pages and news are stored as one item with a translation per language; the default language has no URL prefix (`/o-nas`), other languages have one (`/en/about-us`). The demo data enables English next to Czech. All UI texts go through a translator.
+- **Safe Markdown with components.** Raw HTML in content is escaped and unsafe links are dropped. A line such as `::: novinky 3` places a component (the latest news); unknown or malformed markers are refused on save with the line number.
+
+![Public homepage with the latest news placed by a component](docs/images/homepage.png)
+
+## Features
+
+- Public pages from the database: flat URLs, menu, breadcrumbs, 301 redirects from old addresses, light/dark theme.
+- News: a paginated public list and detail pages, scheduled publication.
+- Sign-in with two roles (editor, administrator), rate-limited failed attempts, users created from the command line.
+- Page administration: the page tree, one screen per page with a tab per language, preview, optimistic locking against concurrent edits, homepage selection.
+- News administration with publication dates and drafts.
+- Components in content, with a preview in the administration.
+- Demo data with public demo accounts, for trying it out.
+
+| Page detail with the preview of `::: novinky 2` | News in the administration |
+| --- | --- |
+| ![Page detail in the administration with an unsaved preview](docs/images/admin-page-preview.png) | ![List of news in the administration with their publication status per language](docs/images/admin-news.png) |
+
+Status: MVP – pages, sign-in, page and news administration, components. Images and a contact form are planned next. The CI workflow is configured but has not run yet, so there are no published runs, and the coverage badge shows as broken until the first CI run on `main` publishes it.
 
 ## Quick start
 
@@ -14,7 +37,7 @@ Requires only Docker (with Compose).
 ```bash
 git clone https://github.com/jantydlacka/cms-lite-nette.git
 cd cms-lite-nette
-# Linux: run the app container as your user, so vendor/, temp/ and log/ stay yours
+# Linux only (GNU sed; macOS/Windows: skip the next line): run the app container as your user, so vendor/, temp/ and log/ stay yours
 touch .env && sed -i '/^CMS_[UG]ID=/d' .env && printf 'CMS_UID=%s\nCMS_GID=%s\n' "$(id -u)" "$(id -g)" >> .env
 docker compose up -d --build
 docker compose exec app composer install
@@ -22,19 +45,26 @@ docker compose up -d --wait
 docker compose exec app bin/console migrations:continue
 ```
 
-Migration files are ordered by file name across all groups (`structures`, `basic-data`, `dummy-data`), not per group: `migrations:continue` refuses the whole run when a pending file sorts before the latest executed one in any group. Hence the rule for development: every new migration file, in any group, gets a name that sorts strictly after every migration name in the base branch, across all groups. All groups share one sequence, `YYYY-MM-DD-NNNN-name.sql`; never backdate a file or reuse a number. When two branches add migrations, whoever merges second renames their files to follow the other branch's. `bin/check-migrations-immutable` enforces this (see [Quality](#quality)).
+Then open <http://localhost:8080> and sign in at <http://localhost:8080/admin> with a [demo account](#demo-accounts).
 
-Released migrations are never edited; a fix is always a new migration.
-
-After pulling a new version, run `docker compose exec app bin/console migrations:continue` to apply new migrations.
-
-After upgrading from a build in which a released migration was edited locally, run `migrations:reset` on the development database (it drops all data); `migrations:continue` refuses a changed migration. Enabling the demo data on a database migrated without it also needs `migrations:reset`: migrations are ordered globally by file name, so demo files that sort before already executed ones are refused.
-
-Then open <http://localhost:8080>.
+From a fresh clone to a signed-in demo administrator took about 2.5 minutes (141 seconds of command time) in a measured run on Linux, with the `mysql:8.4` and `composer:2` images already present; the PHP base image and the Composer packages were downloaded during the run. Most of it, about 100 seconds, was building the PHP image, which later starts reuse.
 
 On Linux the `.env` line matters: the container runs as `CMS_UID:CMS_GID` (default `1000:1000`), and files it creates in the bind-mounted project belong to that user. `.env` must contain the actual numbers (Compose does not evaluate `$(id -u)` inside `.env`); the command above writes them (it replaces any earlier `CMS_UID`/`CMS_GID` lines, so running it twice adds no duplicates).
 
 The order matters: the container health check requests `/_health`, which needs `vendor/`, so the first `up` cannot become healthy until `composer install` has run; the second `up -d --wait` waits for that. `/_health` does not use the database, so it turns healthy before the migrations run; it answers `503` while an asset the layout needs is missing.
+
+## Demo accounts
+
+When demo data is enabled (`CMS_DEMO_DATA=1`, or unset in debug mode), two accounts exist. Their passwords are public:
+
+| E-mail | Password | Role |
+| --- | --- | --- |
+| `admin@example.com` | `demo-admin-password` | admin |
+| `editor@example.com` | `demo-editor-password` | editor |
+
+**Demo data must never run on a live site.** While it is enabled, the administration shows a warning banner. Sign in at <http://localhost:8080/admin>.
+
+## Configuration
 
 Database settings come from the `CMS_DB_*` environment variables. In production all of them must be set and non-empty, otherwise boot fails; the development defaults apply only in debug mode. `config/local.neon` (gitignored), if present, is loaded in every mode and may override any setting, including `database:`, on top of those values.
 
@@ -44,8 +74,6 @@ Both ports are published on `127.0.0.1` only. They can be changed in `.env`:
 CMS_HTTP_PORT=8081
 CMS_DB_HOST_PORT=3308
 ```
-
-Optional `config/local.neon` (gitignored) is loaded when present, for machine-specific overrides.
 
 ### Environment variables
 
@@ -63,7 +91,7 @@ Optional `config/local.neon` (gitignored) is loaded when present, for machine-sp
 
 `NETTE_DEBUG=1` is the default in the compose setup. In this mode an unknown URL shows the Tracy error screen, not the 404 page. Set `NETTE_DEBUG=0` (in `.env` or the shell, then `docker compose up -d`) to see production behaviour. `CMS_DEMO_DATA=1` or `0` forces demo data on or off; when unset it follows debug mode. Demo data also enables the `en` language; to enable a second language without it, add `cms: locales: [cs, en]` to `config/local.neon`.
 
-## Configuration
+### Application settings
 
 The `cms:` section of `config/common.neon` (override it in `config/local.neon`; when demo data is enabled, `config/demo.neon` is loaded as well and only sets `locales: [cs, en]`). Keys not set there use the defaults below:
 
@@ -73,6 +101,18 @@ The `cms:` section of `config/common.neon` (override it in `config/local.neon`; 
 | `newsInMenu` | `true` | Shows the news link at the end of the top menu. |
 | `newsPerPage` | `10` | News items per page of the public list. |
 | `components` | `novinky: App\Model\News\NewsListComponent` | Map of component name to a class implementing `App\Model\Content\ContentComponent`; see [Components](#components). |
+
+## Development
+
+### Migrations
+
+Migration files are ordered by file name across all groups (`structures`, `basic-data`, `dummy-data`), not per group: `migrations:continue` refuses the whole run when a pending file sorts before the latest executed one in any group. Hence the rule for development: every new migration file, in any group, gets a name that sorts strictly after every migration name in the base branch, across all groups. All groups share one sequence, `YYYY-MM-DD-NNNN-name.sql`; never backdate a file or reuse a number. When two branches add migrations, whoever merges second renames their files to follow the other branch's. `bin/check-migrations-immutable` enforces this (see [Quality](#quality)).
+
+Released migrations are never edited; a fix is always a new migration.
+
+After pulling a new version, run `docker compose exec app bin/console migrations:continue` to apply new migrations.
+
+After upgrading from a build in which a released migration was edited locally, run `migrations:reset` on the development database (it drops all data); `migrations:continue` refuses a changed migration. Enabling the demo data on a database migrated without it also needs `migrations:reset`: migrations are ordered globally by file name, so demo files that sort before already executed ones are refused.
 
 ## Quality
 
@@ -118,17 +158,6 @@ Which base each check uses:
 | CI, push to `main` | the previous push | the same |
 
 On a branch push the order is judged against `origin/main`, because files merged in from `main` count as added against the previous push. The hook prints a warning and skips both checks when neither `origin/main` nor `main` exists, or when `main` itself is checked out.
-
-## Demo accounts
-
-When demo data is enabled (`CMS_DEMO_DATA=1`, or unset in debug mode), two accounts exist. Their passwords are public:
-
-| E-mail | Password | Role |
-| --- | --- | --- |
-| `admin@example.com` | `demo-admin-password` | admin |
-| `editor@example.com` | `demo-editor-password` | editor |
-
-**Demo data must never run on a live site.** While it is enabled, the administration shows a warning banner. Sign in at <http://localhost:8080/admin>.
 
 ## First administrator
 
@@ -193,7 +222,7 @@ http:
 	proxy: [192.0.2.10]  # address or CIDR range of your proxy
 ```
 
-Run `bin/console migrations:continue` on every deploy. It stops before applying anything when a pending migration sorts before an already executed one (see the naming rule under [Quick start](#quick-start)); a release must never ship such a file.
+Run `bin/console migrations:continue` on every deploy. It stops before applying anything when a pending migration sorts before an already executed one (see the naming rule under [Migrations](#migrations)); a release must never ship such a file.
 
 Clear `temp/cache` on every deploy: in production mode the container and template caches are not rebuilt when the code changes.
 
@@ -202,7 +231,8 @@ Deploy `www/assets/` together with the templates: when an asset file referenced 
 ## Documentation
 
 - [`docs/design.md`](docs/design.md) - architecture and decisions
-- [`spec/`](spec/) - the specification shared by all `cms-lite-<framework>` implementations
+- [`docs/adr/`](docs/adr/) - architecture decision records for the interfaces
+- [`spec/`](spec/) - the specification shared by all `cms-lite-<framework>` implementations (URLs, messages, components, test ids)
 
 ## License
 
