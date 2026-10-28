@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Support;
 
 use Nette\DI\Container;
+use SimpleXMLElement;
 use Tester\DomQuery;
 
 final readonly class HttpResult
@@ -55,6 +56,13 @@ final readonly class HttpResult
 			return null;
 		}
 
-		return trim((string) preg_replace('~\s+~u', ' ', dom_import_simplexml($found[0])->textContent));
+		return trim((string) preg_replace('~\s+~u', ' ', self::textContent($found[0])));
+	}
+
+
+	/** Text of the element and its descendants; dom_import_simplexml() throws on nodes Tester already imported (PHP 8.4). */
+	public static function textContent(SimpleXMLElement $element): string
+	{
+		return html_entity_decode(strip_tags((string) $element->asXML()), ENT_QUOTES | ENT_XML1, 'UTF-8');
 	}
 }

@@ -62,7 +62,7 @@ function states(HttpResult $result, string $title): array
 		if (is_array($found) && $found !== []) {
 			$states = [];
 			foreach ($row->xpath('.//*[@data-testid="admin-news-state"]') ?? [] as $state) {
-				$states[(string) $state['data-locale']] = trim((string) preg_replace('~\s+~u', ' ', dom_import_simplexml($state)->textContent));
+				$states[(string) $state['data-locale']] = trim((string) preg_replace('~\s+~u', ' ', HttpResult::textContent($state)));
 			}
 
 			return $states;

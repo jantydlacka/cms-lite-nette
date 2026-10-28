@@ -101,7 +101,7 @@ function formSubmit(HttpResult $result, string $formTestId, string $buttonTestId
 		$body[(string) $input['name']] = $type === 'checkbox' && !isset($input['value']) ? 'on' : (string) $input['value'];
 	}
 	foreach (nodes($form, './/textarea[@name]') as $textarea) {
-		$body[(string) $textarea['name']] = dom_import_simplexml($textarea)->textContent;
+		$body[(string) $textarea['name']] = HttpResult::textContent($textarea);
 	}
 	foreach (nodes($form, './/select[@name]') as $select) {
 		$selected = nodes($select, './/option[@selected]');
@@ -143,7 +143,7 @@ function fieldValue(HttpResult $result, string $testId): string
 	Assert::count(1, $found, $testId);
 	$element = $found[0];
 	if ($element->getName() === 'textarea') {
-		return dom_import_simplexml($element)->textContent;
+		return HttpResult::textContent($element);
 	}
 	if ($element->getName() === 'select') {
 		$selected = nodes($element, './/option[@selected]');

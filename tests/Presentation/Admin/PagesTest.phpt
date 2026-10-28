@@ -34,7 +34,7 @@ function resetDemo(HttpApplication $app): void
 function treeTitles(HttpResult $result): array
 {
 	return array_map(
-		static fn (SimpleXMLElement $title): string => trim((string) preg_replace('~\s+~u', ' ', dom_import_simplexml($title)->textContent)),
+		static fn (SimpleXMLElement $title): string => trim((string) preg_replace('~\s+~u', ' ', HttpResult::textContent($title))),
 		nodes($result->dom(), '//*[@data-testid="pages-tree"]//*[@data-testid="pages-item-title"]'),
 	);
 }

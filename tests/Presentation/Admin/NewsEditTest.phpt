@@ -129,7 +129,7 @@ function formSubmit(HttpResult $result, string $formXpath, string $buttonTestId,
 		$body[(string) $input['name']] = (string) $input['value'];
 	}
 	foreach (nodes($form, './/textarea[@name]') as $textarea) {
-		$body[(string) $textarea['name']] = dom_import_simplexml($textarea)->textContent;
+		$body[(string) $textarea['name']] = HttpResult::textContent($textarea);
 	}
 	foreach (nodes($form, './/select[@name]') as $select) {
 		$selected = nodes($select, './/option[@selected]');
@@ -159,7 +159,7 @@ function fieldValue(HttpResult $result, string $testId): string
 	Assert::count(1, $found, $testId);
 	$element = $found[0];
 	if ($element->getName() === 'textarea') {
-		return dom_import_simplexml($element)->textContent;
+		return HttpResult::textContent($element);
 	}
 	if ($element->getName() === 'select') {
 		$selected = nodes($element, './/option[@selected]');
@@ -200,7 +200,7 @@ function describedBy(HttpResult $result, string $testId): array
 function flashes(HttpResult $result): array
 {
 	return array_map(
-		static fn (SimpleXMLElement $item): string => trim((string) preg_replace('~\s+~u', ' ', dom_import_simplexml($item)->textContent)),
+		static fn (SimpleXMLElement $item): string => trim((string) preg_replace('~\s+~u', ' ', HttpResult::textContent($item))),
 		nodes($result->dom(), '//*[@data-testid="flash"]'),
 	);
 }
