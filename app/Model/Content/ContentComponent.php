@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Model\Content;
 
+/**
+ * Loading the data of a component must not throw for a missing target; such a target is left out instead.
+ */
 interface ContentComponent
 {
 	/** The type written after `:::`; lower case letters, digits and hyphens. */

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Core\Localization\CurrentLocale;
+use App\Model\Content\ComponentRegistry;
 use App\Model\Content\ContentContext;
 use App\Model\Content\ContentKind;
 use App\Model\News\News;
@@ -70,4 +71,14 @@ test('the locale of the request is back after a component threw', function () us
 		Error::class,
 	);
 	Assert::same('cs', $locale->get());
+});
+
+
+test('every registered component has its template', function () use ($container): void {
+	$names = $container->getByType(ComponentRegistry::class)->names();
+	Assert::notSame([], $names);
+
+	foreach ($names as $name) {
+		Assert::true(is_file(__DIR__ . "/../../../app/Presentation/Components/$name.latte"), "template of the component \"$name\"");
+	}
 });
