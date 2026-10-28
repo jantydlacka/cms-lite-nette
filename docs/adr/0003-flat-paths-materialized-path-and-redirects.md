@@ -1,0 +1,20 @@
+# 0003 Flat page URLs from a materialized path, with 301 redirects
+
+## Context
+
+Pages form a tree (menu, breadcrumbs), but a URL that follows the tree changes whenever an editor moves a page, which breaks links and search results. Some sites will still want hierarchical URLs (`/about-us/team`). Any changed URL has to keep working, and pages must never shadow the application's own segments (`/admin`, the news list).
+
+## Decision
+
+- **Each translation stores its full `path`** next to its `slug` (`page_translation.path`, `UNIQUE (locale, path)`, `migrations/structures/2026-10-26-0003-page-translation.sql`). The front page presenter (`app/Presentation/Front/Page/PagePresenter.php`) looks a page up by `(locale, path)` with one query (`PageRepository::findPublishedByPath()`), whatever the path shape.
+- **`PagePathStrategy` computes the path** from the slug and the ancestors' slugs (`app/Model/Page/PagePathStrategy.php`). The only implementation, `FlatPagePathStrategy`, returns the slug alone and ignores the ancestors on purpose, so moving a page in the tree never changes its URL. After a slug change or a move, `PageService` recomputes the path of the page and its descendants and redirects every old path, all in one transaction (`app/Model/Page/PageService.php`).
+- **Old paths become 301 redirects** in `path_redirect (locale, old_path) → (target_type, target_id)` (`app/Model/Redirect/`). A redirect points to the target's ID, not to a path, so chains do not arise and cycles are impossible. Live content wins: a path that a page or item takes again loses its redirect (`deleteByPath`). Deleting the target deletes its redirects, so the old addresses become 404. A redirect to a draft page stays but leads to 404 until the page is published again. The front presenters follow a redirect only to a target of their own type (`app/Presentation/Front/Page/PagePresenter.php`, `app/Presentation/Front/News/NewsPresenter.php`).
+- **The redirect key of a news item is `<segment>/<old slug>`** (`novinky/stary-slug`, `news/old-slug`), not the bare slug: the key `(locale, old_path)` is shared with pages, and a bare slug could equal a page path. The news segment is reserved for pages, so the two never claim the same key.
+- **Reserved first segments** are composed, never maintained by hand: `admin`, `sitemap.xml`, the news segments of every language and the configured language codes (`app/Model/Page/ReservedSegments.php`). Only the first segment is compared, case-insensitively, so the rule also holds for hierarchical paths. Both the slug and the computed path are checked before saving.
+
+## Consequences
+
+- Switching to hierarchical URLs means a new `PagePathStrategy`, a one-off recomputation of stored paths and widening `RouterFactory::PATH_PATTERN` (today one segment, `app/Core/RouterFactory.php`) to accept several; the schema, the redirects and the lookup query stay. There is no `cms:` switch for it, because it would double the tests before a site needs it.
+- With the flat strategy a save writes at most one redirect. A hierarchical strategy would rewrite and redirect the whole subtree; a descendant path that collides rolls the whole save back.
+- A page slug cannot be `admin`, `sitemap.xml`, `novinky` or `news` (in any language), nor a configured language code such as `en`; adding a language reserves its code.
+- Tests: `tests/Model/Page/FlatPagePathStrategyTest.phpt`, `tests/Model/Page/ReservedSegmentsTest.phpt`, `tests/Model/Page/PageServiceTest.phpt` (redirect recording, "another page taking an old path wins", "a hierarchical strategy moves descendants and redirects their old paths"), `tests/Model/News/NewsServiceTest.phpt` ("a page and a news item with the same slug do not collide"), `tests/Model/Redirect/DatabasePathRedirectRepositoryTest.phpt`, `tests/Presentation/Front/RoutingTest.phpt` (old path, old path of a draft page, homepage), `tests/Presentation/Front/NewsPresenterTest.phpt` (old slug in both languages), and the E2E specs `e2e/tests/pages.spec.ts` and `e2e/tests/news.spec.ts`.
