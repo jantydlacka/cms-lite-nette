@@ -1,6 +1,6 @@
 # Architecture decision records
 
-Short records of the decisions that shape the code: what the problem was, what was chosen and what it costs. Each record links to the code and the tests that implement it. The full design, including the decisions not recorded here, is in [`docs/design.md`](../design.md).
+Short records of the decisions that shape the code: what the problem was, what was chosen and what it costs. Each record links to the code and the tests that implement it.
 
 | # | Decision |
 |---|----------|

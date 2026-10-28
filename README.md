@@ -7,7 +7,7 @@ A small, well-structured CMS built on [Nette](https://nette.org) 3.3 and PHP 8.3
 
 The project is meant to be read as much as used. Worth a look:
 
-- **Architecture with ports and adapters.** The domain (`app/Model/`) talks to the database only through interfaces such as `PageRepository` and `NewsRepository`; the Nette Database implementations live in a `Database/` sub-namespace of each domain (`app/Model/Page/Database/`). The dependency direction is enforced by [phpat](https://github.com/carlosas/phpat) rules in PHPStan: the domain may use only `Nette\Utils`, `Nette\Schema` and `Psr\Clock` from vendors, never the presentation layer or `App\Core`, and nothing above the domain may reach an adapter directly. The reasons are in [`docs/design.md`](docs/design.md) and [`docs/adr/`](docs/adr/).
+- **Architecture with ports and adapters.** The domain (`app/Model/`) talks to the database only through interfaces such as `PageRepository` and `NewsRepository`; the Nette Database implementations live in a `Database/` sub-namespace of each domain (`app/Model/Page/Database/`). The dependency direction is enforced by [phpat](https://github.com/carlosas/phpat) rules in PHPStan: the domain may use only `Nette\Utils`, `Nette\Schema` and `Psr\Clock` from vendors, never the presentation layer or `App\Core`, and nothing above the domain may reach an adapter directly. The reasons are in [`docs/adr/`](docs/adr/).
 - **Tests on every level.** Nette Tester unit and integration tests against MySQL (each parallel test thread gets its own database), architecture rules, and Playwright end-to-end tests that check production behaviour in a real browser. PHPStan at level max without a baseline and Psalm taint analysis run in the same gate.
 - **Multilingual-ready.** Pages and news are stored as one item with a translation per language; the default language has no URL prefix (`/o-nas`), other languages have one (`/en/about-us`). The demo data enables English next to Czech. All UI texts go through a translator.
 - **Safe Markdown with components.** Raw HTML in content is escaped and unsafe links are dropped. A line such as `::: novinky 3` places a component (the latest news); unknown or malformed markers are refused on save with the line number.
@@ -230,7 +230,6 @@ Deploy `www/assets/` together with the templates: when an asset file referenced 
 
 ## Documentation
 
-- [`docs/design.md`](docs/design.md) - architecture and decisions
 - [`docs/adr/`](docs/adr/) - architecture decision records for the interfaces
 - [`spec/`](spec/) - the specification shared by all `cms-lite-<framework>` implementations (URLs, messages, components, test ids)
 
