@@ -182,7 +182,7 @@ The content of a page or a news item can place a component on a line of its own.
 
 Saving content with an unknown, malformed or misplaced marker is refused with the line number, and the text stays in the form. The preview shows the problem in place of the marker. To write a line that starts with `:::` as plain text, write `\:::`; in a fenced or inline code span nothing is processed. The full grammar and examples are in [`spec/components.md`](spec/components.md).
 
-To add a component, implement `ContentComponent` and register it under a name in `cms: components:` (keep `novinky` when you override the map).
+To add a component, implement `ContentComponent` and register it under a name in `cms: components:`. The components listed there are added to the built-in `novinky`, which cannot be removed.
 
 ## Deployment note
 
