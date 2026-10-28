@@ -150,10 +150,6 @@ final class NewsService
 	}
 
 
-	/**
-	 * A write must open its transaction itself and lock the news row first: under REPEATABLE READ a read before the
-	 * lock would fix a snapshot older than the lock.
-	 */
 	/** @throws InvalidContentException with every problem; needs no stored data */
 	private function assertValidContent(string $content): void
 	{
@@ -164,6 +160,10 @@ final class NewsService
 	}
 
 
+	/**
+	 * A write must open its transaction itself and lock the news row first: under REPEATABLE READ a read before the
+	 * lock would fix a snapshot older than the lock.
+	 */
 	private function assertOwnTransaction(): void
 	{
 		if ($this->transaction->inTransaction()) {

@@ -30,7 +30,6 @@ final class LatteComponentRenderer implements ComponentHtmlRenderer
 
 
 	/** @param array<string, mixed> $arguments */
-	/** @param array<string, mixed> $arguments */
 	public function render(ContentComponent $component, array $arguments, ContentContext $context): string
 	{
 		$parameters = ['component' => $component, 'arguments' => $arguments, 'context' => $context];
