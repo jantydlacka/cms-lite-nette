@@ -9,8 +9,9 @@ use Nette\Caching\Cache;
 use Nette\Caching\Storage;
 
 /**
- * Lets the warning about a broken stored marker through at most once a day per content, language and line;
- * the key holds a hash of the content, so an edited content is reported again.
+ * Lets the warning about a broken stored marker through about once a day per content, language and line;
+ * the key holds a hash of the content, so an edited content is reported again. Without a lock, concurrent first
+ * views can both pass, and a cache that cannot be written lets every view pass.
  */
 final class ComponentWarningGate
 {

@@ -101,7 +101,7 @@ The website and the preview render content with the same parser and the same che
 | Valid, but the component has nothing to show (`::: novinky` without visible news) | Nothing. | A note in its place (`admin.content.preview.noNews`), in the language of the admin. |
 | Malformed, misplaced, unknown, not allowed or with invalid arguments | Left out; a warning is logged with the type (or the malformed line, shortened to 80 characters), the line, the kind and id of the content and its language. | The problem, translated, in its place; inside an HTML block right after that block. |
 
-Saving refuses such content, so it is stored only through a direct edit of the database, from before markers were checked, after a component was removed from the configuration, or after the argument schema of a component was tightened. A warning is logged at most once a day per content, language and line; a changed content counts as a new one.
+Saving refuses such content, so it is stored only through a direct edit of the database, from before markers were checked, after a component was removed from the configuration, or after the argument schema of a component was tightened. A warning is logged about once a day per content, language and line (concurrent first views or a failing cache can log it more often); a changed content counts as a new one.
 
 A misplaced marker inside a list item leaves the item empty; a marker line inside an HTML block is removed from the block's text.
 

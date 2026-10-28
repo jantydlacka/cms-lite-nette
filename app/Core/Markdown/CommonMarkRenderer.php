@@ -125,7 +125,7 @@ final class CommonMarkRenderer implements MarkdownRenderer
 		}
 
 		if ($this->warnings->pass($context, $problem->line, $markdown)) {
-			$what = $type !== null ? "\"$type\"" : 'malformed "' . self::shorten(trim($source)) . '"';
+			$what = $type !== null ? '"' . self::shorten($type) . '"' : 'malformed "' . self::shorten(trim($source)) . '"';
 			$this->logger->log(
 				"Component marker left out: $what on line $problem->line of {$context->kind->value} $context->id ($context->locale), $problem->messageKey.",
 				ILogger::WARNING,
@@ -136,7 +136,7 @@ final class CommonMarkRenderer implements MarkdownRenderer
 	}
 
 
-	/** A log line quotes at most 80 characters of the source line. */
+	/** A log line quotes at most 80 characters of the type or the source line. */
 	private static function shorten(string $source): string
 	{
 		return mb_strlen($source) > 80 ? mb_substr($source, 0, 79) . '…' : $source;

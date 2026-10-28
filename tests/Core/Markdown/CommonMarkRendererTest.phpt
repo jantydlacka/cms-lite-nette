@@ -279,7 +279,7 @@ test('separate requests log a broken marker once until the content changes', fun
 });
 
 
-test('a long malformed marker is logged shortened', function (): void {
+test('a long malformed marker and a long type are logged shortened', function (): void {
 	$logger = new FakeLogger();
 
 	renderer(logger: $logger)->render(':::' . str_repeat('x', 200) . "\n", website(id: 1));
@@ -288,6 +288,15 @@ test('a long malformed marker is logged shortened', function (): void {
 	Assert::count(1, $warnings);
 	Assert::match('Component marker left out: malformed ":::xxx%a%…" on line 1 of page 1 (cs), content.component.syntax.', $warnings[0]);
 	Assert::same(1, preg_match('~malformed "([^"]*)"~u', $warnings[0], $m));
+	Assert::same(80, mb_strlen($m[1] ?? ''));
+
+	$logger = new FakeLogger();
+	renderer(logger: $logger)->render('::: ' . str_repeat('y', 10000) . "\n", website(id: 1));
+
+	$warnings = loggedWarnings($logger);
+	Assert::count(1, $warnings);
+	Assert::match('Component marker left out: "yyy%a%…" on line 1 of page 1 (cs), content.component.unknown.', $warnings[0]);
+	Assert::same(1, preg_match('~out: "([^"]*)"~u', $warnings[0], $m));
 	Assert::same(80, mb_strlen($m[1] ?? ''));
 });
 
