@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Latte;
 
 use App\Core\Localization\SiteTime;
+use App\Model\Content\ContentContext;
 use App\Model\Content\MarkdownRenderer;
 use DateTimeImmutable;
 use Latte\Extension;
@@ -25,7 +26,7 @@ final class CmsLatteExtension extends Extension
 	public function getFilters(): array
 	{
 		return [
-			'markdown' => fn (string $markdown): Html => new Html($this->markdown->render($markdown)),
+			'markdown' => fn (string $markdown, ContentContext $context): Html => new Html($this->markdown->render($markdown, $context)),
 			'siteDate' => fn (DateTimeImmutable $moment): string => $this->format($moment, 'format.date'),
 			'siteDateTime' => fn (DateTimeImmutable $moment): string => $this->format($moment, 'format.dateTime'),
 		];

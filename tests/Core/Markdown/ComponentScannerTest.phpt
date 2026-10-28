@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
-use App\Core\Markdown\CommonMarkRenderer;
 use App\Core\Markdown\Component\CommonMarkComponentScanner;
 use App\Model\Content\ComponentMarker;
 use App\Model\Content\ComponentScanner;
 use App\Model\Content\ContentBlocks;
+use App\Model\Content\ContentContext;
+use App\Model\Content\ContentKind;
+use App\Model\Content\MarkdownRenderer;
 use App\Model\Content\MarkerError;
 use Nette\Utils\FileSystem;
 use Nette\Utils\Json;
@@ -76,19 +78,13 @@ test('splitting by the found markers and joining again gives the original text',
 
 
 test('cases with html render to exactly that html', function (): void {
-	$renderer = new CommonMarkRenderer();
+	$renderer = container()->getByType(MarkdownRenderer::class);
 
 	foreach (cases() as $case) {
 		if (isset($case['html'])) {
-			Assert::same($case['html'], $renderer->render($case['markdown']), $case['name']);
+			Assert::same($case['html'], $renderer->render($case['markdown'], new ContentContext(ContentKind::Page, 1, 'cs', false)), $case['name']);
 		}
 	}
-});
-
-
-test('a component marker renders to nothing for now', function (): void {
-	Assert::same("<p>a</p>\n\n<p>b</p>\n", (new CommonMarkRenderer())->render("a\n::: novinky 3\nb\n"));
-	Assert::same('', (new CommonMarkRenderer())->render(":::novinky\n"));
 });
 
 

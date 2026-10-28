@@ -11,7 +11,7 @@
 	<h1 data-testid="page-title">{$article->translation->title}</h1>
 	<p><small><time datetime="{$article->news->publishedAt->format('c')}" data-testid="news-detail-date">{$article->news->publishedAt|siteDate}</time></small></p>
 	<div data-testid="page-content">
-		{$article->translation->content|markdown}
+		{$article->translation->content|markdown: $contentContext}
 	</div>
 	<p><a n:href="default" data-testid="news-back">{_front.news.back}</a></p>
 </article>

@@ -1,0 +1,3 @@
+{* The problem of a broken marker, in the preview only. *}
+{varType App\Model\Content\ContentProblem $problem}
+<p class="component-error" role="alert" data-testid="component-error">{_$problem->messageKey, $problem->parameters}</p>

@@ -7,11 +7,7 @@
 <p n:if="!$items" data-testid="news-empty">{_front.news.empty}</p>
 <ul n:if="$items" class="news-list" data-testid="news-list">
 	<li n:foreach="$items as $item" data-testid="news-item">
-		<article>
-			<h2><a n:href="detail, slug: $item->translation->slug" data-testid="news-item-title">{$item->translation->title}</a></h2>
-			<p><small><time datetime="{$item->news->publishedAt->format('c')}" data-testid="news-item-date">{$item->news->publishedAt|siteDate}</time></small></p>
-			<p data-testid="news-item-perex">{$item->translation->perex}</p>
-		</article>
+		{include '@news-item.latte', item: $item}
 	</li>
 </ul>
 <nav n:if="$paginator->getPageCount() > 1" class="news-pagination" aria-label="{_front.news.pagination}" data-testid="news-pagination">

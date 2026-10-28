@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Presentation\Admin\Pages;
 
 use App\Core\Security\Resource;
+use App\Model\Content\ContentContext;
+use App\Model\Content\ContentKind;
 use App\Model\Content\InvalidContentException;
 use App\Model\InvalidSlugException;
 use App\Model\Page\CreatePage;
@@ -135,6 +137,7 @@ final class PagesPresenter extends AdminPresenter
 		$this->template->isHomepage = $isHomepage;
 		$this->template->missingLocales = $isHomepage ? $this->homepage->missingLocales() : [];
 		$this->template->preview = $this->preview;
+		$this->template->previewContext = new ContentContext(ContentKind::Page, $this->page->id, $this->lang, true);
 		$this->template->deletedForm = $this->deletedForm;
 	}
 

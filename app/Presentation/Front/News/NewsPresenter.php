@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Presentation\Front\News;
 
+use App\Model\Content\ContentContext;
+use App\Model\Content\ContentKind;
 use App\Model\News\NewsListItem;
 use App\Model\News\NewsRepository;
 use App\Model\News\NewsSegments;
@@ -91,6 +93,7 @@ final class NewsPresenter extends FrontPresenter
 	{
 		$translation = $this->item->translation;
 		$this->template->article = $this->item;
+		$this->template->contentContext = new ContentContext(ContentKind::News, $this->item->news->id, $translation->locale, false);
 		$this->template->metaDescription = $translation->metaDescription !== '' ? $translation->metaDescription : $translation->perex;
 	}
 

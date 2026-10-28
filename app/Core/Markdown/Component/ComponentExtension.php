@@ -9,9 +9,10 @@ use League\CommonMark\Extension\ExtensionInterface;
 use League\CommonMark\Node\Node;
 use League\CommonMark\Renderer\ChildNodeRendererInterface;
 use League\CommonMark\Renderer\NodeRendererInterface;
+use LogicException;
 
 /**
- * Parses component markers into ComponentBlock nodes. They render to nothing so far.
+ * Parses component markers into ComponentBlock nodes. CommonMarkRenderer replaces each of them before rendering.
  */
 final class ComponentExtension implements ExtensionInterface, NodeRendererInterface
 {
@@ -19,12 +20,17 @@ final class ComponentExtension implements ExtensionInterface, NodeRendererInterf
 	{
 		$environment
 			->addBlockStartParser(new ComponentStartParser())
-			->addRenderer(ComponentBlock::class, $this);
+			->addRenderer(ComponentBlock::class, $this)
+			->addRenderer(RenderedComponent::class, $this);
 	}
 
 
 	public function render(Node $node, ChildNodeRendererInterface $childRenderer): string
 	{
-		return '';
+		if ($node instanceof RenderedComponent) {
+			return $node->html;
+		}
+
+		throw new LogicException('A component marker reached the HTML renderer unreplaced.');
 	}
 }

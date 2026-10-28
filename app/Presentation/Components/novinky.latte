@@ -1,0 +1,13 @@
+{* `::: novinky [count]`; rendered in the language of the content. Without visible news nothing (see novinky.empty.latte). *}
+{varType App\Model\News\NewsListComponent $component}
+{varType array<string, mixed> $arguments}
+{varType App\Model\Content\ContentContext $context}
+{var $items = $component->items($arguments, $context->locale)}
+<section n:if="$items" class="component-news" data-testid="component-news">
+	<ul class="news-list">
+		<li n:foreach="$items as $item" data-testid="component-news-item">
+			{include '../Front/News/@news-item.latte', item: $item}
+		</li>
+	</ul>
+	<p><a n:href=":Front:News:default, locale: $context->locale" data-testid="component-news-all">{_front.news.component.all}</a></p>
+</section>

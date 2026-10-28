@@ -171,6 +171,22 @@
 	border: 1px dashed var(--pico-muted-border-color);
 }
 
+.page-preview ul.news-list,
+.page-preview ul.news-list li {
+	padding: 0;
+	list-style: none;
+}
+
+.component-error,
+.component-empty {
+	padding: 0.75rem var(--cms-gap);
+	border-left: 4px solid var(--pico-del-color);
+}
+
+.component-empty {
+	border-left-color: var(--pico-muted-border-color);
+}
+
 .page-homepage-missing {
 	padding: 0.75rem var(--cms-gap);
 	border-left: 4px solid #b45309;

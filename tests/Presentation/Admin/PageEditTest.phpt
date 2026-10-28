@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Core\Localization\CurrentLocale;
+use App\Model\News\CreateNews;
+use App\Model\News\NewsService;
+use App\Model\Page\Homepage;
 use App\Model\Page\PageRepository;
 use App\Model\Page\PageService;
 use App\Model\Page\PageTranslation;
@@ -608,6 +612,100 @@ test('the preview escapes raw HTML as the public page does', function () use ($a
 	[$action, $body] = formSubmit($app->get("/admin/pages/$about"), 'page-translation-form', 'page-preview', ['content' => '<script>alert(1)</script>']);
 	$result = $app->post($action, $body);
 	Assert::count(0, nodes($result->dom(), '//*[@data-testid="page-preview-output"]//script'));
+});
+
+
+/** Replaces all news with one visible item per language and returns nothing; the dates are far in the past. */
+function previewNews(HttpApplication $app): void
+{
+	$app->container->getByType(Explorer::class)->query('DELETE FROM news');
+	$author = $app->container->getByType(Explorer::class)->table('user')->where('email', EDITOR)->fetch()?->id;
+	assert(is_int($author));
+	foreach (['cs' => 'Česká novinka', 'en' => 'English item'] as $locale => $title) {
+		$app->container->getByType(NewsService::class)->createNews(new CreateNews(
+			new DateTimeImmutable('2001-01-01 10:00:00', new DateTimeZone('UTC')),
+			$author,
+			$locale,
+			$title,
+			'',
+			'Perex',
+			'Text.',
+			'',
+			PublicationStatus::Published,
+		));
+	}
+}
+
+
+test('the preview of the English translation shows the English news', function () use ($app): void {
+	resetDemo($app);
+	previewNews($app);
+	signedIn($app);
+	$homepage = $app->container->getByType(Homepage::class)->pageId();
+	[$action, $body] = formSubmit($app->get("/admin/pages/$homepage/en"), 'page-translation-form', 'page-preview', ['content' => "Hello\n\n::: novinky"]);
+
+	$result = $app->post($action, $body);
+	Assert::same(200, $result->code);
+	$titles = nodes($result->dom(), '//*[@data-testid="page-preview-output"]//*[@data-testid="component-news-item"]//*[@data-testid="news-item-title"]');
+	Assert::same(['English item'], array_map(static fn (SimpleXMLElement $a): string => trim((string) $a), $titles));
+	$all = nodes($result->dom(), '//*[@data-testid="page-preview-output"]//a[@data-testid="component-news-all"]');
+	Assert::count(1, $all);
+	Assert::same('/en/news', (string) $all[0]['href']);
+	Assert::same('All news →', trim((string) $all[0]));
+	// The admin itself stays Czech, also for whatever renders after the preview.
+	Assert::same('Náhled (neuloženo)', trim((string) nodes($result->dom(), '//*[@id="page-preview-heading"]')[0]));
+	Assert::same('cs', $result->container->getByType(CurrentLocale::class)->get());
+});
+
+
+test('the preview of the English translation without English news says so in the language of the admin', function () use ($app): void {
+	resetDemo($app);
+	previewNews($app);
+	$app->container->getByType(Explorer::class)->query("DELETE n FROM news n JOIN news_translation t ON t.news_id = n.id WHERE t.locale = 'en'");
+	signedIn($app);
+	$homepage = $app->container->getByType(Homepage::class)->pageId();
+	[$action, $body] = formSubmit($app->get("/admin/pages/$homepage/en"), 'page-translation-form', 'page-preview', ['content' => '::: novinky']);
+
+	$result = $app->post($action, $body);
+	Assert::same(200, $result->code);
+	$empty = nodes($result->dom(), '//*[@data-testid="page-preview-output"]//*[@data-testid="component-empty"]');
+	Assert::count(1, $empty);
+	Assert::same('Zatím žádná zveřejněná novinka.', trim((string) $empty[0]));
+	Assert::count(0, nodes($result->dom(), '//*[@data-testid="component-news"]'));
+});
+
+
+test('the preview shows a broken marker as its problem, with the line', function () use ($app): void {
+	resetDemo($app);
+	previewNews($app);
+	signedIn($app);
+	$about = pageId($app, 'O nás');
+	[$action, $body] = formSubmit($app->get("/admin/pages/$about"), 'page-translation-form', 'page-preview', ['content' => "Text\n\n::: novinky 0\n\n::: novinkyy"]);
+
+	$result = $app->post($action, $body);
+	Assert::same(200, $result->code);
+	$problems = nodes($result->dom(), '//*[@data-testid="page-preview-output"]//*[@data-testid="component-error"]');
+	Assert::same([
+		'Řádek 3: zápis je „::: novinky“ nebo „::: novinky počet“, počet je celé číslo od 1 do 20.',
+		'Řádek 5: neznámá komponenta „novinkyy“. Dostupné: novinky.',
+	], array_map(static fn (SimpleXMLElement $p): string => trim((string) $p), $problems));
+	Assert::same([], errors($result, 'page-translation-form'));
+});
+
+
+test('the preview of the news component without news says there are none', function () use ($app): void {
+	resetDemo($app);
+	$app->container->getByType(Explorer::class)->query('DELETE FROM news');
+	signedIn($app);
+	$about = pageId($app, 'O nás');
+	[$action, $body] = formSubmit($app->get("/admin/pages/$about"), 'page-translation-form', 'page-preview', ['content' => '::: novinky']);
+
+	$result = $app->post($action, $body);
+	Assert::same(200, $result->code);
+	$empty = nodes($result->dom(), '//*[@data-testid="page-preview-output"]//*[@data-testid="component-empty"]');
+	Assert::count(1, $empty);
+	Assert::same('Zatím žádná zveřejněná novinka.', trim((string) $empty[0]));
+	Assert::count(0, nodes($result->dom(), '//*[@data-testid="component-news"]'));
 });
 
 

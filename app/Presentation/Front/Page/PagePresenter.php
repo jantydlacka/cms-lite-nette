@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Presentation\Front\Page;
 
+use App\Model\Content\ContentContext;
+use App\Model\Content\ContentKind;
 use App\Model\Page\PageTranslation;
 use App\Model\PublicationStatus;
 use App\Model\Redirect\PathRedirectRepository;
@@ -42,6 +44,7 @@ final class PagePresenter extends FrontPresenter
 	public function renderDefault(): void
 	{
 		$this->template->page = $this->page;
+		$this->template->contentContext = new ContentContext(ContentKind::Page, $this->page->pageId, $this->page->locale, false);
 		$this->template->breadcrumbs = $this->pages->findBreadcrumbs($this->page->pageId, $this->page->locale);
 	}
 

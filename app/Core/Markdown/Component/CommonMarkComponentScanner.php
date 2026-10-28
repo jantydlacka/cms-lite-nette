@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Core\Markdown\Component;
 
+use App\Core\Markdown\CommonMarkEnvironment;
 use App\Model\Content\ComponentMarker;
 use App\Model\Content\ComponentScanner;
 use App\Model\Content\ContentBlocks;
 use App\Model\Content\MarkerError;
-use League\CommonMark\Environment\Environment;
-use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
 use League\CommonMark\Extension\CommonMark\Node\Block\HtmlBlock;
 use League\CommonMark\Parser\MarkdownParser;
 use LogicException;
@@ -21,10 +20,7 @@ final class CommonMarkComponentScanner implements ComponentScanner
 
 	public function __construct()
 	{
-		$environment = new Environment();
-		$environment->addExtension(new CommonMarkCoreExtension());
-		$environment->addExtension(new ComponentExtension());
-		$this->parser = new MarkdownParser($environment);
+		$this->parser = new MarkdownParser(CommonMarkEnvironment::create());
 	}
 
 

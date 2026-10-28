@@ -12,7 +12,7 @@ Elements the end-to-end tests locate by `data-testid`.
 | `menu-news` | News link (`front.news.menu`), the last item of the top menu level; present when `cms: newsInMenu` is on; `aria-current="page"` on the news list and on a news detail. |
 | `news-list` | List of the news items of one page of `/novinky` (`/en/news`); absent when there is no news. |
 | `news-item` | One item of `news-list`. |
-| `news-item-title` | Link to the news detail with its title. |
+| `news-item-title` | Link to the news detail with its title; inside `news-item` and `component-news-item` alike. |
 | `news-item-date` | Publication date of the item in the site time zone (`format.date`), a `<time>` element. |
 | `news-item-perex` | Perex of the item, plain text. |
 | `news-empty` | Message `front.news.empty` on the news list when there is no news. |
@@ -25,6 +25,11 @@ Elements the end-to-end tests locate by `data-testid`.
 | `error-title` | Heading of an error page (403, 404, 500); the 403 and 404 pages under `/admin` use the administration layout. |
 | `page-title` | Main heading of a page, the homepage included; also of the news list (`front.news.title`) and of a news detail (its title). |
 | `page-content` | Rendered content of a page or of a news detail. |
+| `component-news` | The news component (`::: novinky`) in rendered content; absent when it has no visible news. |
+| `component-news-item` | One item of `component-news`; the same item markup as `news-item`. |
+| `component-news-all` | Link `front.news.component.all` under `component-news` to the news list of the content's language. |
+| `component-error` | Preview only: the problem of a broken marker, in its place (the message of `ContentChecker`, with the line). |
+| `component-empty` | Preview only: `admin.content.preview.noNews` in place of a news component without visible news. |
 | `sign-in-form` | Sign-in form of the administration (`/admin/sign-in`). |
 | `sign-in-email` | E-mail field of the sign-in form. |
 | `sign-in-password` | Password field of the sign-in form. |

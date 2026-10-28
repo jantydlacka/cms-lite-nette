@@ -81,3 +81,20 @@ In a list item or a quote, a malformed marker is reported as malformed and a wel
 | ```` ``` ```` + `::: novinky 3` + ```` ``` ```` | Code block with the text `::: novinky 3`. |
 | `` `::: novinky` `` | Inline code. |
 | `\::: novinky` | Text `::: novinky`. |
+
+## Rendering
+
+The website and the preview render content with the same parser and the same check as saving.
+
+| Marker | Website | Preview |
+|--------|---------|---------|
+| Valid | The component's HTML in place of the line. | The same. |
+| Valid, but the component has nothing to show (`::: novinky` without visible news) | Nothing. | A note in its place (`admin.content.preview.noNews`), in the language of the admin. |
+| Malformed, misplaced, unknown, not allowed or with invalid arguments | Left out; a warning is logged with the type (or the malformed line), the line, the kind and id of the content and its language. | The problem, translated, in its place; inside an HTML block right after that block. |
+
+Such stored content can exist only from before markers were checked or from a direct edit of the database: saving refuses it. A warning is logged at most once per request for the same content, language and line, so it is logged again on every view of the page.
+
+A misplaced marker inside a list item leaves the item empty; a marker line inside an HTML block is removed from the block's text.
+
+Components render in the language of the content, also in the preview of a translation; notes and problems for the editor in the preview are in the language of the admin. The news component (`::: novinky [count]`, count 1 to 20, 3 when missing; pages only) lists the newest visible news of that language with the same item markup as the news list, followed by a link to the news list of that language.
+

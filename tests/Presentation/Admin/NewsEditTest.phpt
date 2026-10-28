@@ -601,6 +601,21 @@ test('preview renders the Markdown below the form and saves nothing', function (
 });
 
 
+test('the preview of a news item shows the news component as not allowed there', function () use ($app): void {
+	[$editor] = resetNews($app);
+	$id = createNews($app, $editor, 'Náhledová novinka');
+	signedIn($app);
+	[$action, $body] = formSubmit($app->get("/admin/news/$id"), TRANSLATION_FORM, 'news-preview', ['content' => "Text\n\n::: novinky"]);
+
+	$result = $app->post($action, $body);
+	Assert::same(200, $result->code);
+	$problems = nodes($result->dom(), '//*[@data-testid="news-preview-output"]//*[@data-testid="component-error"]');
+	Assert::count(1, $problems);
+	Assert::same('Řádek 3: komponentu „novinky“ nejde vložit do novinky.', trim((string) $problems[0]));
+	Assert::count(0, nodes($result->dom(), '//*[@data-testid="component-news"]'));
+});
+
+
 test('the confirmation deletes only by POST', function () use ($app): void {
 	[$editor] = resetNews($app);
 	$id = createNews($app, $editor, 'Mazaná novinka');

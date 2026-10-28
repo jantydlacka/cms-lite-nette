@@ -41,6 +41,6 @@
 
 	<section n:if="$preview !== null" class="page-preview" aria-labelledby="news-preview-heading">
 		<h3 id="news-preview-heading">{_admin.pages.previewTitle}</h3>
-		<div data-testid="news-preview-output">{$preview|markdown}</div>
+		<div data-testid="news-preview-output">{$preview|markdown: $previewContext}</div>
 	</section>
 </section>

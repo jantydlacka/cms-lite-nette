@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Presentation\Front\Home;
 
+use App\Model\Content\ContentContext;
+use App\Model\Content\ContentKind;
 use App\Model\Page\PageTranslation;
 use App\Presentation\Front\FrontPresenter;
 
@@ -27,6 +29,7 @@ final class HomePresenter extends FrontPresenter
 	public function renderDefault(): void
 	{
 		$this->template->page = $this->page;
+		$this->template->contentContext = new ContentContext(ContentKind::Page, $this->page->pageId, $this->page->locale, false);
 		$this->template->breadcrumbs = [];
 	}
 }

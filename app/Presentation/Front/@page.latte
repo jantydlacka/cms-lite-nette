@@ -1,4 +1,4 @@
-{* Content of a page translation; shared by the homepage and the other pages. Expects $page, $breadcrumbs and $homepageId. *}
+{* Content of a page translation; shared by the homepage and the other pages. Expects $page, $contentContext, $breadcrumbs and $homepageId. *}
 {layout '../@layout.latte'}
 
 {block title}{$page->title} | {$siteName}{/block}
@@ -22,7 +22,7 @@
 <article>
 	<h1 data-testid="page-title">{$page->title}</h1>
 	<div data-testid="page-content">
-		{$page->content|markdown}
+		{$page->content|markdown: $contentContext}
 	</div>
 </article>
 {/block}

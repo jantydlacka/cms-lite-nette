@@ -6,6 +6,8 @@ namespace App\Presentation\Admin\News;
 
 use App\Core\Localization\SiteTime;
 use App\Core\Security\Resource;
+use App\Model\Content\ContentContext;
+use App\Model\Content\ContentKind;
 use App\Model\Content\InvalidContentException;
 use App\Model\InvalidSlugException;
 use App\Model\News\CreateNews;
@@ -190,6 +192,7 @@ final class NewsPresenter extends AdminPresenter
 		$this->template->defaultLocale = $this->cmsConfig->defaultLocale;
 		$this->template->timezone = $this->cmsConfig->timezone;
 		$this->template->preview = $this->preview;
+		$this->template->previewContext = new ContentContext(ContentKind::News, $this->item->id, $this->lang, true);
 		$this->template->deletedForm = $this->deletedForm;
 	}
 
